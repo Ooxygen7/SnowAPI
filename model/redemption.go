@@ -13,6 +13,7 @@ import (
 
 const (
 	RedemptionTypeQuota = "quota"
+	RedemptionTypeGroup = "group"
 )
 
 type Redemption struct {
@@ -34,8 +35,10 @@ type Redemption struct {
 }
 
 type RedemptionResult struct {
-	Type  string `json:"type"`
-	Quota int    `json:"quota"`
+	Type           string `json:"type"`
+	Quota          int    `json:"quota"`
+	GroupName      string `json:"group_name,omitempty"`
+	GroupExpiresAt int64  `json:"group_expires_at,omitempty"`
 }
 
 func GetAllRedemptions(startIdx int, num int) (redemptions []*Redemption, total int64, err error) {
@@ -110,7 +113,7 @@ func Redeem(key string, userID int) (result RedemptionResult, err error) {
 		if redemptionType == "" {
 			redemptionType = RedemptionTypeQuota
 		}
-		if redemptionType != RedemptionTypeQuota {
+		if redemptionType != RedemptionTypeQuota && redemptionType != RedemptionTypeGroup {
 			return errors.New("unsupported redemption type")
 		}
 		update := tx.Model(&Redemption{}).
@@ -127,8 +130,58 @@ func Redeem(key string, userID int) (result RedemptionResult, err error) {
 			return errors.New("redemption code is unavailable")
 		}
 		result.Type = redemptionType
-		result.Quota = redemption.Quota
-		return tx.Model(&User{}).Where("id = ?", userID).Update("quota", gorm.Expr("quota + ?", redemption.Quota)).Error
+		switch redemptionType {
+		case RedemptionTypeQuota:
+			if redemption.Quota <= 0 {
+				return errors.New("invalid redemption quota")
+			}
+			result.Quota = redemption.Quota
+			return tx.Model(&User{}).Where("id = ?", userID).Update("quota", gorm.Expr("quota + ?", redemption.Quota)).Error
+		case RedemptionTypeGroup:
+			expiresAt, err := applyUserGroupEntitlementTx(
+				tx,
+				userID,
+				redemption.GroupName,
+				redemption.GroupDurationMinutes,
+				common.GetTimestamp(),
+			)
+			if err != nil {
+				return err
+			}
+			if expiresAt > 0 {
+				var activePaidCount int64
+				if err := tx.Model(&UserSubscription{}).
+					Where("user_id = ? AND status = ? AND end_time > ? AND source <> ?", userID, "active", common.GetTimestamp(), "redemption").
+					Count(&activePaidCount).Error; err != nil {
+					return err
+				}
+				if activePaidCount == 0 {
+					var plan SubscriptionPlan
+					if err := tx.Where("enabled = ? AND upgrade_group = ?", true, redemption.GroupName).
+						Order("sort_order asc, id asc").
+						First(&plan).Error; err != nil {
+						if errors.Is(err, gorm.ErrRecordNotFound) {
+							return errors.New("no enabled subscription plan matches the redemption group")
+						}
+						return err
+					}
+					plan.NormalizeDefaults()
+					// The temporary user group is managed by the redemption entitlement.
+					// Keep the subscription snapshot focused on quota funding so both
+					// records expire independently without applying the group twice.
+					plan.UpgradeGroup = ""
+					plan.DowngradeGroup = ""
+					if _, err := CreateUserSubscriptionFromPlanTx(tx, userID, &plan, "redemption", expiresAt); err != nil {
+						return err
+					}
+				}
+			}
+			result.GroupName = redemption.GroupName
+			result.GroupExpiresAt = expiresAt
+			return nil
+		default:
+			return errors.New("unsupported redemption type")
+		}
 	})
 	if err != nil {
 		common.SysError("redemption failed: " + err.Error())
@@ -137,7 +190,15 @@ func Redeem(key string, userID int) (result RedemptionResult, err error) {
 	if err := invalidateUserCache(userID); err != nil {
 		common.SysError("failed to invalidate user cache after redemption: " + err.Error())
 	}
-	RecordLog(userID, LogTypeTopup, fmt.Sprintf("Redeemed quota %s, redemption ID %d", logger.LogQuota(redemption.Quota), redemption.Id))
+	if result.Type == RedemptionTypeGroup {
+		duration := "permanent"
+		if redemption.GroupDurationMinutes > 0 {
+			duration = fmt.Sprintf("%d minutes", redemption.GroupDurationMinutes)
+		}
+		RecordLog(userID, LogTypeTopup, fmt.Sprintf("Redeemed group entitlement %s (%s), redemption ID %d", redemption.GroupName, duration, redemption.Id))
+	} else {
+		RecordLog(userID, LogTypeTopup, fmt.Sprintf("Redeemed quota %s, redemption ID %d", logger.LogQuota(redemption.Quota), redemption.Id))
+	}
 	return result, nil
 }
 

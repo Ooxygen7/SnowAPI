@@ -3,6 +3,7 @@ package controller
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/QuantumNous/new-api/common"
@@ -10,6 +11,7 @@ import (
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
+	"github.com/QuantumNous/new-api/setting/ratio_setting"
 
 	"github.com/gin-gonic/gin"
 )
@@ -85,11 +87,9 @@ func AddRedemption(c *gin.Context) {
 		common.ApiErrorI18n(c, i18n.MsgRedemptionCountMax)
 		return
 	}
-	if redemption.Type != "" && redemption.Type != model.RedemptionTypeQuota {
-		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+	if !normalizeRedemptionBenefit(c, &redemption) {
 		return
 	}
-	redemption.Type = model.RedemptionTypeQuota
 	if valid, msg := validateExpiredTime(c, redemption.ExpiredTime); !valid {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": msg})
 		return
@@ -98,13 +98,15 @@ func AddRedemption(c *gin.Context) {
 	for i := 0; i < redemption.Count; i++ {
 		key := common.GetUUID()
 		cleanRedemption := model.Redemption{
-			UserId:      c.GetInt("id"),
-			Name:        redemption.Name,
-			Key:         key,
-			CreatedTime: common.GetTimestamp(),
-			Quota:       redemption.Quota,
-			Type:        model.RedemptionTypeQuota,
-			ExpiredTime: redemption.ExpiredTime,
+			UserId:               c.GetInt("id"),
+			Name:                 redemption.Name,
+			Key:                  key,
+			CreatedTime:          common.GetTimestamp(),
+			Quota:                redemption.Quota,
+			Type:                 redemption.Type,
+			GroupName:            redemption.GroupName,
+			GroupDurationMinutes: redemption.GroupDurationMinutes,
+			ExpiredTime:          redemption.ExpiredTime,
 		}
 		err = cleanRedemption.Insert()
 		if err != nil {
@@ -119,10 +121,12 @@ func AddRedemption(c *gin.Context) {
 		keys = append(keys, key)
 	}
 	recordManageAudit(c, "redemption.create", map[string]interface{}{
-		"name":  redemption.Name,
-		"count": redemption.Count,
-		"quota": logger.LogQuota(redemption.Quota),
-		"type":  model.RedemptionTypeQuota,
+		"name":                   redemption.Name,
+		"count":                  redemption.Count,
+		"quota":                  logger.LogQuota(redemption.Quota),
+		"type":                   redemption.Type,
+		"group_name":             redemption.GroupName,
+		"group_duration_minutes": redemption.GroupDurationMinutes,
 	})
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -160,20 +164,23 @@ func UpdateRedemption(c *gin.Context) {
 		return
 	}
 	if statusOnly == "" {
+		if utf8.RuneCountInString(redemption.Name) == 0 || utf8.RuneCountInString(redemption.Name) > 20 {
+			common.ApiErrorI18n(c, i18n.MsgRedemptionNameLength)
+			return
+		}
 		if valid, msg := validateExpiredTime(c, redemption.ExpiredTime); !valid {
 			c.JSON(http.StatusOK, gin.H{"success": false, "message": msg})
 			return
 		}
 		// If you add more fields, please also update redemption.Update()
-		cleanRedemption.Name = redemption.Name
-		cleanRedemption.Quota = redemption.Quota
-		if redemption.Type != "" && redemption.Type != model.RedemptionTypeQuota {
-			common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		if !normalizeRedemptionBenefit(c, &redemption) {
 			return
 		}
-		cleanRedemption.Type = model.RedemptionTypeQuota
-		cleanRedemption.GroupName = ""
-		cleanRedemption.GroupDurationMinutes = 0
+		cleanRedemption.Name = redemption.Name
+		cleanRedemption.Quota = redemption.Quota
+		cleanRedemption.Type = redemption.Type
+		cleanRedemption.GroupName = redemption.GroupName
+		cleanRedemption.GroupDurationMinutes = redemption.GroupDurationMinutes
 		cleanRedemption.ExpiredTime = redemption.ExpiredTime
 	}
 	if statusOnly != "" {
@@ -211,4 +218,42 @@ func validateExpiredTime(c *gin.Context, expired int64) (bool, string) {
 		return false, i18n.T(c, i18n.MsgRedemptionExpireTimeInvalid)
 	}
 	return true, ""
+}
+
+func normalizeRedemptionBenefit(c *gin.Context, redemption *model.Redemption) bool {
+	if redemption == nil {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return false
+	}
+	if redemption.Type == "" {
+		redemption.Type = model.RedemptionTypeQuota
+	}
+	switch redemption.Type {
+	case model.RedemptionTypeQuota:
+		if redemption.Quota <= 0 {
+			common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+			return false
+		}
+		redemption.GroupName = ""
+		redemption.GroupDurationMinutes = 0
+	case model.RedemptionTypeGroup:
+		redemption.GroupName = strings.TrimSpace(redemption.GroupName)
+		if redemption.GroupName == "" || utf8.RuneCountInString(redemption.GroupName) > 64 {
+			common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+			return false
+		}
+		if _, ok := ratio_setting.GetGroupRatioCopy()[redemption.GroupName]; !ok {
+			common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+			return false
+		}
+		if redemption.GroupDurationMinutes < 0 || redemption.GroupDurationMinutes > model.MaxRedemptionGroupDurationMinutes {
+			common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+			return false
+		}
+		redemption.Quota = 0
+	default:
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return false
+	}
+	return true
 }

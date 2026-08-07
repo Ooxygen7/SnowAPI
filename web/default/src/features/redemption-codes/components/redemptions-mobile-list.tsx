@@ -162,9 +162,11 @@ export function RedemptionsMobileList(props: RedemptionsMobileListProps) {
             </div>
 
             <div className='flex items-center justify-between gap-2 text-xs'>
-              <span className='text-muted-foreground'>{t('Quota')}</span>
+              <span className='text-muted-foreground'>{t('Benefit')}</span>
               <span className='font-medium tabular-nums'>
-                {formatQuota(redemption.quota)}
+                {redemption.type === 'group'
+                  ? redemption.group_name
+                  : formatQuota(redemption.quota)}
               </span>
             </div>
           </div>

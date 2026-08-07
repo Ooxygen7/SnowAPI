@@ -49,6 +49,12 @@ export function useRedemption() {
               quota: formatQuota(response.data),
             })
           )
+        } else if (response.data.type === 'group') {
+          toast.success(
+            i18next.t('Group entitlement activated: {{group}}', {
+              group: response.data.group_name,
+            })
+          )
         } else {
           toast.success(
             i18next.t('Redemption successful! Added: {{quota}}', {

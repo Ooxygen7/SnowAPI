@@ -89,6 +89,7 @@
     "+{{count}} more": "还有 {{count}} 项",
     "| Based on": "| 基于",
     "0 means data is kept permanently": "0 表示永久保留数据",
+    "0 means permanent entitlement": "填写 0 表示永久权益",
     "0 means unlimited": "0 表示不限",
     "1 Day": "1 天",
     "1 day ago": "1 天前",
@@ -1230,6 +1231,7 @@
     "Create": "新建",
     "Create a copy of:": "创建副本：",
     "Create a key for your app or service": "为你的应用或服务创建密钥",
+    "Create a new API key after upgrading your subscription.": "升级套餐后请创建新密钥使用。",
     "Create a new user group to configure ratio overrides for.": "创建一个新的用户分组来配置比例覆盖。",
     "Create account": "创建账户",
     "Create an account": "创建一个账户",
@@ -1593,6 +1595,7 @@
     "Duration": "耗时",
     "Duration (days)": "持续时间（天）",
     "Duration (hours)": "时长 (小时)",
+    "Duration cannot exceed 3650 days": "持续时间不能超过 3650 天",
     "Duration must be at least one day": "持续时间至少为一天",
     "Duration Settings": "有效期设置",
     "Duration Unit": "有效期单位",
@@ -2331,7 +2334,7 @@
     "Group entitlement": "分组权益",
     "Group entitlement activated: {{group}}": "已激活分组权益：{{group}}",
     "Group identifier": "分组标识符",
-    "Group is required": "组是必需的",
+    "Group is required": "请选择分组",
     "Group name": "分组名称",
     "Group Name": "分组名称",
     "Group name cannot be changed when editing.": "编辑时无法更改组名称。",
@@ -3122,6 +3125,7 @@
     "Next reset": "下一次重置",
     "No": "否",
     "No About Content Set": "未设置关于内容",
+    "No access": "无权限",
     "No Active": "无生效",
     "No active system tasks.": "暂无进行中的系统任务。",
     "No additional type-specific settings for this channel type.": "此渠道类型没有额外的特定类型设置。",
@@ -5668,8 +5672,6 @@
     "Zero retention": "零数据保留",
     "Zhipu": "智谱",
     "Zhipu V4": "智谱 V4",
-    "Zoom": "缩放",
-    "No access": "无权限",
-    "Create a new API key after upgrading your subscription.": "升级套餐后请创建新密钥使用。"
+    "Zoom": "缩放"
   }
 }

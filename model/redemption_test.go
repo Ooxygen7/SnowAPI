@@ -104,8 +104,12 @@ func setupRedeemFixture(t *testing.T, quota int) (userId int, key string) {
 	t.Helper()
 	require.NoError(t, DB.AutoMigrate(&Redemption{}))
 	require.NoError(t, DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Unscoped().Delete(&Redemption{}).Error)
+	require.NoError(t, DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&UserSubscription{}).Error)
+	require.NoError(t, DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&SubscriptionPlan{}).Error)
 	t.Cleanup(func() {
 		require.NoError(t, DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Unscoped().Delete(&Redemption{}).Error)
+		require.NoError(t, DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&UserSubscription{}).Error)
+		require.NoError(t, DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&SubscriptionPlan{}).Error)
 		DB.Exec("DELETE FROM users")
 		DB.Exec("DELETE FROM logs")
 	})
@@ -149,26 +153,122 @@ func TestRedeemCreditsQuotaExactlyOnce(t *testing.T) {
 	assert.Equal(t, 500, user.Quota)
 }
 
-func TestRedeemRejectsLegacyGroupEntitlement(t *testing.T) {
+func TestRedeemGrantsTemporaryGroupEntitlement(t *testing.T) {
 	userID, key := setupRedeemFixture(t, 0)
+	plan := &SubscriptionPlan{
+		Title:            "Moderate",
+		Enabled:          true,
+		DurationUnit:     SubscriptionDurationMonth,
+		DurationValue:    1,
+		UpgradeGroup:     "Moderate",
+		DowngradeGroup:   "Free",
+		TotalAmount:      5000,
+		FiveHourQuota:    1000,
+		QuotaResetPeriod: SubscriptionResetWeekly,
+	}
+	plan.NormalizeDefaults()
+	require.NoError(t, DB.Create(plan).Error)
 	require.NoError(t, DB.Model(&Redemption{}).Where(commonKeyCol+" = ?", key).Updates(map[string]interface{}{
-		"type":                   "group",
-		"group_name":             "pro",
+		"type":                   RedemptionTypeGroup,
+		"group_name":             "Moderate",
 		"group_duration_minutes": 60,
 	}).Error)
 
-	_, err := Redeem(key, userID)
-	require.Error(t, err)
+	before := common.GetTimestamp()
+	result, err := Redeem(key, userID)
+	require.NoError(t, err)
+	assert.Equal(t, RedemptionTypeGroup, result.Type)
+	assert.Equal(t, "Moderate", result.GroupName)
+	assert.GreaterOrEqual(t, result.GroupExpiresAt, before+60*60)
+	assert.LessOrEqual(t, result.GroupExpiresAt, common.GetTimestamp()+60*60)
 
 	var user User
 	require.NoError(t, DB.First(&user, "id = ?", userID).Error)
-	assert.Equal(t, "Free", user.Group)
+	assert.Equal(t, "Moderate", user.Group)
+	assert.Equal(t, "Free", user.GroupRestore)
+	assert.Equal(t, result.GroupExpiresAt, user.GroupExpiresAt)
 	assert.Zero(t, user.Quota)
+
+	var subscription UserSubscription
+	require.NoError(t, DB.First(&subscription, "user_id = ?", userID).Error)
+	assert.Equal(t, plan.Id, subscription.PlanId)
+	assert.Equal(t, int64(5000), subscription.AmountTotal)
+	assert.Equal(t, int64(1000), subscription.FiveHourQuota)
+	assert.Equal(t, result.GroupExpiresAt, subscription.EndTime)
+	assert.Equal(t, "redemption", subscription.Source)
+	assert.Empty(t, subscription.UpgradeGroup)
+	assert.Empty(t, subscription.DowngradeGroup)
 
 	var redemption Redemption
 	require.NoError(t, DB.First(&redemption, commonKeyCol+" = ?", key).Error)
-	assert.Equal(t, common.RedemptionCodeStatusEnabled, redemption.Status)
-	assert.Zero(t, redemption.UsedUserId)
+	assert.Equal(t, common.RedemptionCodeStatusUsed, redemption.Status)
+	assert.Equal(t, userID, redemption.UsedUserId)
+
+	_, err = Redeem(key, userID)
+	require.Error(t, err)
+}
+
+func TestRedeemGrantsPermanentGroupEntitlement(t *testing.T) {
+	userID, key := setupRedeemFixture(t, 0)
+	require.NoError(t, DB.Model(&User{}).Where("id = ?", userID).Updates(map[string]interface{}{
+		"group":            "Light",
+		"group_restore":    "Free",
+		"group_expires_at": common.GetTimestamp() + 300,
+	}).Error)
+	require.NoError(t, DB.Model(&Redemption{}).Where(commonKeyCol+" = ?", key).Updates(map[string]interface{}{
+		"type":                   RedemptionTypeGroup,
+		"group_name":             "Heavy",
+		"group_duration_minutes": 0,
+	}).Error)
+
+	result, err := Redeem(key, userID)
+	require.NoError(t, err)
+	assert.Equal(t, RedemptionTypeGroup, result.Type)
+	assert.Equal(t, "Heavy", result.GroupName)
+	assert.Zero(t, result.GroupExpiresAt)
+
+	var user User
+	require.NoError(t, DB.First(&user, "id = ?", userID).Error)
+	assert.Equal(t, "Heavy", user.Group)
+	assert.Empty(t, user.GroupRestore)
+	assert.Zero(t, user.GroupExpiresAt)
+}
+
+func TestRedeemExtendsMatchingTemporaryGroupEntitlement(t *testing.T) {
+	userID, key := setupRedeemFixture(t, 0)
+	plan := &SubscriptionPlan{
+		Title:            "Moderate",
+		Enabled:          true,
+		DurationUnit:     SubscriptionDurationMonth,
+		DurationValue:    1,
+		UpgradeGroup:     "Moderate",
+		DowngradeGroup:   "Free",
+		TotalAmount:      5000,
+		FiveHourQuota:    1000,
+		QuotaResetPeriod: SubscriptionResetWeekly,
+	}
+	plan.NormalizeDefaults()
+	require.NoError(t, DB.Create(plan).Error)
+	initialExpiry := common.GetTimestamp() + 120
+	require.NoError(t, DB.Model(&User{}).Where("id = ?", userID).Updates(map[string]interface{}{
+		"group":            "Moderate",
+		"group_restore":    "Free",
+		"group_expires_at": initialExpiry,
+	}).Error)
+	require.NoError(t, DB.Model(&Redemption{}).Where(commonKeyCol+" = ?", key).Updates(map[string]interface{}{
+		"type":                   RedemptionTypeGroup,
+		"group_name":             "Moderate",
+		"group_duration_minutes": 10,
+	}).Error)
+
+	result, err := Redeem(key, userID)
+	require.NoError(t, err)
+	assert.Equal(t, initialExpiry+600, result.GroupExpiresAt)
+
+	var user User
+	require.NoError(t, DB.First(&user, "id = ?", userID).Error)
+	assert.Equal(t, "Free", user.GroupRestore)
+	assert.Equal(t, initialExpiry+600, user.GroupExpiresAt)
 }
 
 // Exactly one of several concurrent redeems of the same code may win, and
