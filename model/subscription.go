@@ -590,9 +590,17 @@ func downgradeUserGroupForSubscriptionTx(tx *gorm.DB, sub *UserSubscription, now
 	if downgradeGroup == "" && upgradeGroup == "" {
 		return "", nil
 	}
-	currentGroup, err := getUserGroupByIdTx(tx, sub.UserId)
+	user, err := loadUserGroupStateForUpdateTx(tx, sub.UserId, now)
 	if err != nil {
 		return "", err
+	}
+	currentGroup := strings.TrimSpace(user.Group)
+	temporaryEntitlementActive := user.GroupExpiresAt > now
+	if temporaryEntitlementActive {
+		currentGroup = strings.TrimSpace(user.GroupRestore)
+		if currentGroup == "" {
+			currentGroup = "Free"
+		}
 	}
 	// If another active upgraded subscription exists, keep the current group.
 	var activeSub UserSubscription
@@ -617,6 +625,13 @@ func downgradeUserGroupForSubscriptionTx(tx *gorm.DB, sub *UserSubscription, now
 	if target == "" || target == currentGroup {
 		return "", nil
 	}
+	if temporaryEntitlementActive {
+		if err := tx.Model(&User{}).Where("id = ?", sub.UserId).
+			Update("group_restore", target).Error; err != nil {
+			return "", err
+		}
+		return "", nil
+	}
 	if err := tx.Model(&User{}).Where("id = ?", sub.UserId).
 		Update("group", target).Error; err != nil {
 		return "", err
@@ -624,7 +639,7 @@ func downgradeUserGroupForSubscriptionTx(tx *gorm.DB, sub *UserSubscription, now
 	return target, nil
 }
 
-func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *SubscriptionPlan, source string) (*UserSubscription, error) {
+func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *SubscriptionPlan, source string, endTimeOverride ...int64) (*UserSubscription, error) {
 	if tx == nil {
 		return nil, errors.New("tx is nil")
 	}
@@ -633,6 +648,9 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 	}
 	if userId <= 0 {
 		return nil, errors.New("invalid user id")
+	}
+	if len(endTimeOverride) > 1 {
+		return nil, errors.New("multiple subscription end time overrides")
 	}
 	if err := validateSubscriptionQuotaValue("five hour quota", plan.FiveHourQuota, true); err != nil {
 		return nil, err
@@ -756,6 +774,15 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 			return nil, err
 		}
 	}
+	if len(endTimeOverride) == 1 {
+		override := endTimeOverride[0]
+		if override <= nowUnix {
+			return nil, errors.New("subscription end time override must be in the future")
+		}
+		if selection.Current == nil || (source == "redemption" && selection.Current.Source == "redemption" && override > endUnix) {
+			endUnix = override
+		}
+	}
 	lastReset := int64(0)
 	nextReset := int64(0)
 	if selection.Current != nil {
@@ -770,14 +797,26 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 	upgradeGroup := strings.TrimSpace(plan.UpgradeGroup)
 	prevGroup := ""
 	if upgradeGroup != "" {
-		currentGroup, err := getUserGroupByIdTx(tx, userId)
+		user, err := loadUserGroupStateForUpdateTx(tx, userId, nowUnix)
 		if err != nil {
 			return nil, err
 		}
+		currentGroup := strings.TrimSpace(user.Group)
+		temporaryEntitlementActive := user.GroupExpiresAt > nowUnix
+		if temporaryEntitlementActive {
+			currentGroup = strings.TrimSpace(user.GroupRestore)
+			if currentGroup == "" {
+				currentGroup = "Free"
+			}
+		}
 		if currentGroup != upgradeGroup {
 			prevGroup = currentGroup
+			column := "group"
+			if temporaryEntitlementActive {
+				column = "group_restore"
+			}
 			if err := tx.Model(&User{}).Where("id = ?", userId).
-				Update("group", upgradeGroup).Error; err != nil {
+				Update(column, upgradeGroup).Error; err != nil {
 				return nil, err
 			}
 		}
@@ -928,7 +967,7 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 		return err
 	}
 	if upgradeGroup != "" && logUserId > 0 {
-		_ = UpdateUserGroupCache(logUserId, upgradeGroup)
+		_ = invalidateUserCache(logUserId)
 	}
 	if logUserId > 0 {
 		msg := fmt.Sprintf("订阅购买成功，套餐: %s，支付金额: %.2f，支付方式: %s", logPlanTitle, logMoney, logPaymentMethod)
@@ -1015,7 +1054,7 @@ func AdminBindSubscription(userId int, planId int, sourceNote string) (string, e
 		return "", err
 	}
 	if strings.TrimSpace(plan.UpgradeGroup) != "" {
-		_ = UpdateUserGroupCache(userId, plan.UpgradeGroup)
+		_ = invalidateUserCache(userId)
 		return fmt.Sprintf("用户分组将升级到 %s", plan.UpgradeGroup), nil
 	}
 	return "", nil
@@ -1145,7 +1184,7 @@ func PurchaseSubscriptionWithBalance(userId int, planId int) (*SubscriptionBalan
 		}
 	}
 	if upgradeGroup != "" {
-		_ = UpdateUserGroupCache(userId, upgradeGroup)
+		_ = invalidateUserCache(userId)
 	}
 	msg := fmt.Sprintf("使用余额购买订阅成功，套餐: %s，支付金额: %.2f，扣除额度: %d", logPlanTitle, logMoney, chargedQuota)
 	RecordLog(userId, LogTypeTopup, msg)
@@ -1588,9 +1627,17 @@ func ExpireDueSubscriptions(limit int) (int, error) {
 			if expiredQuery.Error != nil || expiredQuery.RowsAffected == 0 {
 				return nil
 			}
-			currentGroup, err := getUserGroupByIdTx(tx, userId)
+			user, err := loadUserGroupStateForUpdateTx(tx, userId, now)
 			if err != nil {
 				return err
+			}
+			currentGroup := strings.TrimSpace(user.Group)
+			temporaryEntitlementActive := user.GroupExpiresAt > now
+			if temporaryEntitlementActive {
+				currentGroup = strings.TrimSpace(user.GroupRestore)
+				if currentGroup == "" {
+					currentGroup = "Free"
+				}
 			}
 			// An explicit downgrade group takes precedence; otherwise revert to the
 			// group held before purchase (legacy behavior, only when the subscription
@@ -1609,6 +1656,10 @@ func ExpireDueSubscriptions(limit int) (int, error) {
 			}
 			if target == "" || target == currentGroup {
 				return nil
+			}
+			if temporaryEntitlementActive {
+				return tx.Model(&User{}).Where("id = ?", userId).
+					Update("group_restore", target).Error
 			}
 			if err := tx.Model(&User{}).Where("id = ?", userId).
 				Update("group", target).Error; err != nil {

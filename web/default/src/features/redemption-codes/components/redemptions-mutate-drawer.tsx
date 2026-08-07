@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useQuery } from '@tanstack/react-query'
 import { type FormEvent, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -23,6 +24,15 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { getGroups } from '@/features/users/api'
 import { getCurrencyDisplay, getCurrencyLabel } from '@/lib/currency'
 import { formatQuota, parseQuotaFromDollars } from '@/lib/format'
 
@@ -53,6 +63,14 @@ export function RedemptionsMutateDrawer({
   const isUpdate = Boolean(currentRow)
   const { triggerRefresh } = useRedemptions()
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const { data: groupsData } = useQuery({
+    queryKey: ['groups'],
+    queryFn: getGroups,
+    enabled: open,
+    staleTime: 5 * 60 * 1000,
+  })
+  const groups = groupsData?.data ?? []
 
   const form = useForm<RedemptionFormValues>({
     resolver: zodResolver(getRedemptionFormSchema(t)),
@@ -95,9 +113,10 @@ export function RedemptionsMutateDrawer({
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     if (!isUpdate && !form.getValues('name')?.trim()) {
-      const name = formatQuota(
-        parseQuotaFromDollars(form.getValues('quota_dollars'))
-      )
+      const name =
+        form.getValues('type') === 'group'
+          ? form.getValues('group_name').slice(0, 20)
+          : formatQuota(parseQuotaFromDollars(form.getValues('quota_dollars')))
       form.setValue('name', name, { shouldValidate: true })
     }
     void form.handleSubmit(onSubmit)(event)
@@ -106,6 +125,7 @@ export function RedemptionsMutateDrawer({
   const { meta: currencyMeta } = getCurrencyDisplay()
   const currencyLabel = getCurrencyLabel()
   const tokensOnly = currencyMeta.kind === 'tokens'
+  const benefitType = form.watch('type')
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -124,20 +144,65 @@ export function RedemptionsMutateDrawer({
             onSubmit={handleSubmit}
             className='space-y-4'
           >
-            <div className='grid gap-3 sm:grid-cols-2'>
-              <FormField
-                control={form.control}
-                name='name'
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('Name')}</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder={t('Enter a name')} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name='name'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Name')}</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder={t('Enter a name')} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='type'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Benefit type')}</FormLabel>
+                  <FormControl>
+                    <div
+                      className='bg-muted grid grid-cols-2 gap-1 rounded-lg p-1'
+                      role='radiogroup'
+                      aria-label={t('Benefit type')}
+                    >
+                      <Button
+                        type='button'
+                        variant={field.value === 'quota' ? 'default' : 'ghost'}
+                        className='h-9'
+                        role='radio'
+                        aria-checked={field.value === 'quota'}
+                        onClick={() => field.onChange('quota')}
+                      >
+                        {t('Quota')}
+                      </Button>
+                      <Button
+                        type='button'
+                        variant={field.value === 'group' ? 'default' : 'ghost'}
+                        className='h-9'
+                        role='radio'
+                        aria-checked={field.value === 'group'}
+                        onClick={() => field.onChange('group')}
+                      >
+                        {t('Group entitlement')}
+                      </Button>
+                    </div>
+                  </FormControl>
+                  <FormDescription>
+                    {t(
+                      'Choose whether the code grants quota or a group entitlement.'
+                    )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {benefitType === 'quota' ? (
               <FormField
                 control={form.control}
                 name='quota_dollars'
@@ -161,7 +226,70 @@ export function RedemptionsMutateDrawer({
                   </FormItem>
                 )}
               />
-            </div>
+            ) : (
+              <div className='grid gap-3 sm:grid-cols-2'>
+                <FormField
+                  control={form.control}
+                  name='group_name'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Target group')}</FormLabel>
+                      <Select
+                        items={groups.map((group) => ({
+                          value: group,
+                          label: group,
+                        }))}
+                        value={field.value}
+                        onValueChange={(value) =>
+                          field.onChange(value === null ? '' : value)
+                        }
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t('Select a group')} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent alignItemWithTrigger={false}>
+                          <SelectGroup>
+                            {groups.map((group) => (
+                              <SelectItem key={group} value={group}>
+                                {group}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name='group_duration_days'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Duration (days)')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type='number'
+                          min='0'
+                          max='3650'
+                          step='1'
+                          onChange={(event) =>
+                            field.onChange(Number(event.target.value) || 0)
+                          }
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {t('0 means permanent entitlement')}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
 
             <FormField
               control={form.control}

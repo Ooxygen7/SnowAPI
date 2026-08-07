@@ -77,7 +77,9 @@ export interface RedemptionFormData {
   id?: number
   name: string
   quota: number
-  type: 'quota'
+  type: 'quota' | 'group'
+  group_name?: string
+  group_duration_minutes?: number
   expired_time: number
   count?: number // Only for create
   status?: number // Only for status update

@@ -89,6 +89,7 @@
     "+{{count}} more": "+{{count}} more",
     "| Based on": "| Based on",
     "0 means data is kept permanently": "0 means data is kept permanently",
+    "0 means permanent entitlement": "0 means permanent entitlement",
     "0 means unlimited": "0 means unlimited",
     "1 Day": "1 Day",
     "1 day ago": "1 day ago",
@@ -1230,6 +1231,7 @@
     "Create": "Create",
     "Create a copy of:": "Create a copy of:",
     "Create a key for your app or service": "Create a key for your app or service",
+    "Create a new API key after upgrading your subscription.": "Create a new API key after upgrading your subscription.",
     "Create a new user group to configure ratio overrides for.": "Create a new user group to configure ratio overrides for.",
     "Create account": "Create account",
     "Create an account": "Create an account",
@@ -1593,6 +1595,7 @@
     "Duration": "Duration",
     "Duration (days)": "Duration (days)",
     "Duration (hours)": "Duration (hours)",
+    "Duration cannot exceed 3650 days": "Duration cannot exceed 3650 days",
     "Duration must be at least one day": "Duration must be at least one day",
     "Duration Settings": "Duration Settings",
     "Duration Unit": "Duration Unit",
@@ -3122,6 +3125,7 @@
     "Next reset": "Next reset",
     "No": "No",
     "No About Content Set": "No About Content Set",
+    "No access": "No access",
     "No Active": "No Active",
     "No active system tasks.": "No active system tasks.",
     "No additional type-specific settings for this channel type.": "No additional type-specific settings for this channel type.",
@@ -5668,8 +5672,6 @@
     "Zero retention": "Zero retention",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V4",
-    "Zoom": "Zoom",
-    "No access": "No access",
-    "Create a new API key after upgrading your subscription.": "Create a new API key after upgrading your subscription."
+    "Zoom": "Zoom"
   }
 }

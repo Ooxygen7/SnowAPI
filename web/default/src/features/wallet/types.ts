@@ -34,8 +34,10 @@ export interface ApiResponse<T = unknown> {
  */
 export type TopupInfoResponse = ApiResponse<TopupInfo>
 export interface RedemptionResult {
-  type: 'quota'
+  type: 'quota' | 'group'
   quota: number
+  group_name?: string
+  group_expires_at?: number
 }
 
 export type RedemptionResponse = ApiResponse<RedemptionResult | number>
