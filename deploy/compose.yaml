@@ -1,0 +1,31 @@
+name: snowapi
+
+services:
+  snowapi:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: snowapi:local
+    container_name: snowapi
+    restart: unless-stopped
+    ports:
+      - "${SNOWAPI_BIND_ADDRESS:-127.0.0.1}:${SNOWAPI_PORT:-3000}:3000"
+    environment:
+      TZ: "${TZ:-Asia/Singapore}"
+      SESSION_SECRET: "${SESSION_SECRET:?Set SESSION_SECRET in deploy/.env}"
+      CRYPTO_SECRET: "${CRYPTO_SECRET:?Set CRYPTO_SECRET in deploy/.env}"
+      ERROR_LOG_ENABLED: "${ERROR_LOG_ENABLED:-true}"
+      CHANNEL_UPSTREAM_MODEL_UPDATE_TASK_ENABLED: "${CHANNEL_UPSTREAM_MODEL_UPDATE_TASK_ENABLED:-false}"
+    volumes:
+      - snowapi_data:/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -q -O - http://127.0.0.1:3000/api/status | grep -q '"success":true'
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  snowapi_data:

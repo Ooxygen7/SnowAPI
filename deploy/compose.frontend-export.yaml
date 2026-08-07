@@ -1,0 +1,16 @@
+name: snowapi-frontend-export
+
+services:
+  default:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: frontend-default
+    image: snowapi-frontend-default:local
+
+  classic:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: frontend-classic
+    image: snowapi-frontend-classic:local

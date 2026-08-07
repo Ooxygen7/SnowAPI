@@ -1,0 +1,300 @@
+/*
+Copyright (C) 2023-2026 QuantumNous
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+For commercial licensing, please contact support@quantumnous.com
+*/
+.snowapi-legal-page {
+  background: var(--background);
+}
+
+.snowapi-legal-line-sidebar {
+  --legal-line-effect: 0;
+  width: 100%;
+}
+
+.snowapi-legal-line-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.snowapi-legal-line-item {
+  --legal-line-effect: 0;
+  min-width: 0;
+}
+
+.snowapi-legal-line-item button {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: auto 1.75rem minmax(0, 1fr);
+  align-items: center;
+  border: 0;
+  padding: 0.42rem 0;
+  background: transparent;
+  color: color-mix(
+    in oklab,
+    var(--foreground) calc(48% + var(--legal-line-effect) * 52%),
+    transparent
+  );
+  text-align: left;
+  cursor: pointer;
+}
+
+.snowapi-legal-line-marker {
+  width: calc(0.8rem + var(--legal-line-effect) * 2.25rem);
+  height: max(1px, calc(1px + var(--legal-line-effect) * 1px));
+  margin-right: 0.65rem;
+  background: currentColor;
+  transform-origin: left center;
+}
+
+.snowapi-legal-line-index {
+  color: color-mix(in oklab, currentColor 65%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.63rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.snowapi-legal-line-label {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.76rem;
+  font-weight: calc(450 + var(--legal-line-effect) * 150);
+  line-height: 1.15rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transform: translateX(calc(var(--legal-line-effect) * 0.45rem));
+}
+
+.snowapi-legal-line-item button:focus-visible {
+  border-radius: 0.45rem;
+  outline: 2px solid var(--ring);
+  outline-offset: 0.2rem;
+}
+
+.snowapi-legal-section {
+  scroll-margin-top: 7rem;
+  background: var(--snowapi-public-surface);
+}
+
+.snowapi-legal-chapter-layout {
+  display: grid;
+  grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
+  align-items: stretch;
+  gap: clamp(2rem, 5vw, 5rem);
+  min-height: 28rem;
+}
+
+.snowapi-legal-wheel-panel {
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: var(--snowapi-public-surface);
+}
+
+.snowapi-legal-wheel {
+  --legal-wheel-row-height: 58px;
+  position: relative;
+  height: 100%;
+  min-height: 28rem;
+  overflow: hidden;
+  color: var(--foreground);
+  cursor: grab;
+  outline: none;
+  touch-action: pan-x;
+  user-select: none;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 2%,
+    black 20%,
+    black 80%,
+    transparent 98%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 2%,
+    black 20%,
+    black 80%,
+    transparent 98%
+  );
+}
+
+.snowapi-legal-wheel[data-dragging='true'] {
+  cursor: grabbing;
+}
+
+.snowapi-legal-wheel:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -0.35rem;
+}
+
+.snowapi-legal-wheel-item {
+  --legal-wheel-focus: 0;
+  position: absolute;
+  top: 50%;
+  left: 2rem;
+  display: flex;
+  width: calc(100% - 3rem);
+  min-width: 0;
+  align-items: baseline;
+  gap: 0.85rem;
+  border: 0;
+  padding: 0.45rem 0;
+  background: transparent;
+  color: color-mix(
+    in oklab,
+    var(--foreground) calc(56% + var(--legal-wheel-focus) * 44%),
+    transparent
+  );
+  text-align: left;
+  transform-origin: left center;
+  cursor: inherit;
+  will-change: transform, opacity, filter;
+}
+
+.snowapi-legal-wheel-index {
+  flex: 0 0 auto;
+  color: color-mix(in oklab, currentColor 62%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+}
+
+.snowapi-legal-wheel-label {
+  min-width: 0;
+  overflow: hidden;
+  font-size: calc(0.9rem + var(--legal-wheel-focus) * 0.8rem);
+  font-weight: calc(450 + var(--legal-wheel-focus) * 190);
+  line-height: 1.15;
+  letter-spacing: calc(var(--legal-wheel-focus) * -0.025em);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.snowapi-legal-chapter-stage {
+  display: flex;
+  min-width: 0;
+}
+
+.snowapi-legal-mobile-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.snowapi-legal-mobile-section {
+  min-height: 0;
+}
+
+.snowapi-legal-chapter-card {
+  width: 100%;
+  min-height: 28rem;
+  animation: snowapi-legal-chapter-enter 320ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+@keyframes snowapi-legal-chapter-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1023px) {
+  .snowapi-legal-chapter-layout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    min-height: 0;
+  }
+
+  .snowapi-legal-wheel-panel {
+    min-height: 13rem;
+  }
+
+  .snowapi-legal-wheel {
+    --legal-wheel-row-height: 48px;
+    min-height: 13rem;
+  }
+
+  .snowapi-legal-wheel-item {
+    left: clamp(1.25rem, 7vw, 3rem);
+    width: calc(100% - 2.5rem);
+  }
+
+  .snowapi-legal-chapter-card {
+    min-height: 18rem;
+  }
+
+  .snowapi-legal-line-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.15rem 0.75rem;
+  }
+
+  .snowapi-legal-line-item button {
+    grid-template-columns: 1rem 1.55rem minmax(0, 1fr);
+  }
+
+  .snowapi-legal-line-marker {
+    width: calc(0.5rem + var(--legal-line-effect) * 0.5rem);
+    margin-right: 0.5rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .snowapi-legal-wheel-panel {
+    min-height: 11.5rem;
+  }
+
+  .snowapi-legal-wheel {
+    --legal-wheel-row-height: 44px;
+    min-height: 11.5rem;
+  }
+
+  .snowapi-legal-wheel-label {
+    font-size: calc(0.82rem + var(--legal-wheel-focus) * 0.55rem);
+  }
+
+  .snowapi-legal-chapter-card {
+    min-height: 0;
+  }
+
+  .snowapi-legal-line-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snowapi-legal-chapter-card {
+    animation: none;
+  }
+
+  .snowapi-legal-line-label {
+    transform: none;
+  }
+}

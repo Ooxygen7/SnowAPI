@@ -1,0 +1,142 @@
+/*
+Copyright (C) 2023-2026 QuantumNous
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+For commercial licensing, please contact support@quantumnous.com
+*/
+.snowapi-minimal-public-shell {
+  --snowapi-public-surface: color-mix(
+    in oklab,
+    var(--foreground) 4%,
+    var(--background)
+  );
+  --snowapi-public-surface-strong: color-mix(
+    in oklab,
+    var(--foreground) 8%,
+    var(--background)
+  );
+  min-height: 100svh;
+  overflow-x: clip;
+  background: var(--background);
+  color: var(--foreground);
+  animation: snowapi-minimal-public-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.snowapi-minimal-public-shell-dark {
+  --background: #000;
+  --foreground: #fff;
+  --card: #0d0d0d;
+  --card-foreground: #fff;
+  --popover: #0d0d0d;
+  --popover-foreground: #fff;
+  --primary: #fff;
+  --primary-foreground: #000;
+  --secondary: #151515;
+  --secondary-foreground: #fff;
+  --muted: #151515;
+  --muted-foreground: rgb(255 255 255 / 62%);
+  --accent: #202020;
+  --accent-foreground: #fff;
+  --border: rgb(255 255 255 / 13%);
+  --input: rgb(255 255 255 / 18%);
+  --ring: #fff;
+  color-scheme: dark;
+}
+
+html:has(.snowapi-minimal-public-shell-dark),
+body:has(.snowapi-minimal-public-shell-dark) {
+  background: #000;
+}
+
+.snowapi-minimal-public-header {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  height: 4.5rem;
+  align-items: center;
+  padding-inline: clamp(1.25rem, 3vw, 2.5rem);
+}
+
+.snowapi-minimal-public-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  color: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  transition: opacity 160ms ease;
+}
+
+.snowapi-minimal-public-brand:hover {
+  opacity: 0.68;
+}
+
+.snowapi-minimal-public-brand:focus-visible {
+  border-radius: 0.5rem;
+  outline: 2px solid var(--ring);
+  outline-offset: 0.3rem;
+}
+
+.snowapi-minimal-public-shell-dark .snowapi-minimal-public-brand img {
+  filter: invert(1);
+}
+
+.snowapi-minimal-public-content {
+  position: relative;
+  min-height: 100svh;
+  padding: 5.5rem clamp(1.25rem, 4vw, 3rem) 3rem;
+}
+
+.snowapi-minimal-public-shell [data-slot='button'] {
+  box-shadow: none;
+  transform: none;
+}
+
+.snowapi-minimal-public-shell [data-slot='button']:active {
+  transform: none;
+}
+
+@keyframes snowapi-minimal-public-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 639px) {
+  .snowapi-minimal-public-header {
+    height: 4rem;
+  }
+
+  .snowapi-minimal-public-content {
+    padding-top: 4.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snowapi-minimal-public-shell {
+    animation: none;
+  }
+
+  .snowapi-minimal-public-brand {
+    transition: none;
+  }
+}

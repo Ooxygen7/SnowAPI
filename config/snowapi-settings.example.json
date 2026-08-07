@@ -1,0 +1,53 @@
+{
+  "_meta": {
+    "name": "SnowAPI sanitized settings reference",
+    "source_build": "r33",
+    "contains_secrets": false,
+    "automatic_import": false,
+    "excluded": [
+      "users and administrators",
+      "tokens and credentials",
+      "channels and channel keys",
+      "models, prices and ratios",
+      "OAuth client identifiers and secrets",
+      "payment configuration",
+      "IP addresses",
+      "logs, usage and health history"
+    ]
+  },
+  "options": {
+    "Chats": "[]",
+    "DemoSiteEnabled": "false",
+    "DrawingEnabled": "false",
+    "Footer": "© 2026 UNSNOW. ALL RIGHTS RESERVED",
+    "HeaderNavModules": "{\"home\":true,\"console\":true,\"pricing\":{\"enabled\":true,\"requireAuth\":false},\"rankings\":{\"enabled\":false,\"requireAuth\":false},\"docs\":false,\"about\":false}",
+    "LinuxDOMinimumTrustLevel": "0",
+    "LinuxDOOAuthEnabled": "true",
+    "LinuxDOOAuthInvitationRequired": "true",
+    "Logo": "/snowapi-theme/unsnow-favicon.png?v=20260717-1",
+    "ModelRequestRateLimitCount": "30",
+    "ModelRequestRateLimitEnabled": "true",
+    "ModelRequestRateLimitSuccessCount": "15",
+    "Notice": "vip分组首字速度更快 稳定性更高 倍率1.5x\ndefault分组首字相对慢一点 成功率95-99% 倍率1x\n需要注意的是，两个分组都会被路由到高速池，只是vip分组路由权重更高。所以除非default分组速度太慢，否则不建议选择vip分组。",
+    "PasswordLoginEnabled": "false",
+    "PasswordRegisterEnabled": "false",
+    "PreConsumedQuota": "5",
+    "QuotaForNewUser": "250000000",
+    "RegisterEnabled": "true",
+    "SelfUseModeEnabled": "true",
+    "ServerAddress": "https://api.unsnow.org",
+    "SidebarModulesAdmin": "{\"chat\":{\"enabled\":false,\"playground\":false,\"chat\":false},\"console\":{\"enabled\":true,\"detail\":false,\"token\":true,\"log\":true,\"midjourney\":false,\"task\":true},\"personal\":{\"enabled\":true,\"topup\":true,\"personal\":true},\"admin\":{\"enabled\":true,\"channel\":true,\"models\":true,\"redemption\":true,\"user\":true,\"setting\":true,\"subscription\":true}}",
+    "SystemName": "SnowAPI",
+    "USDExchangeRate": "7",
+    "checkin_setting.enabled": "true",
+    "checkin_setting.max_quota": "50000000",
+    "checkin_setting.min_quota": "50000000",
+    "console_setting.announcements_enabled": "false",
+    "general_setting.docs_link": "/__snowapi_docs_disabled__",
+    "monitor_setting.auto_test_channel_enabled": "false",
+    "performance_setting.disk_cache_enabled": "true",
+    "performance_setting.disk_cache_max_size_mb": "10240",
+    "theme.frontend": "default",
+    "token_setting.max_user_tokens": "5"
+  }
+}

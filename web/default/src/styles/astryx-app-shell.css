@@ -1,0 +1,1153 @@
+/*
+Copyright (C) 2023-2026 QuantumNous
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+For commercial licensing, please contact support@quantumnous.com
+*/
+:root {
+  --color-background-surface: var(--card);
+  --color-background-body: var(--background);
+  --color-background-card: var(--card);
+  --color-background-popover: var(--popover);
+  --color-background-muted: var(--muted);
+  --color-accent: var(--primary);
+  --color-accent-muted: var(--accent);
+  --color-neutral: color-mix(in oklab, var(--foreground) 7%, transparent);
+  --color-overlay: color-mix(in oklab, var(--foreground) 48%, transparent);
+  --color-overlay-hover: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --color-overlay-pressed: color-mix(
+    in oklab,
+    var(--foreground) 10%,
+    transparent
+  );
+  --color-text-primary: var(--foreground);
+  --color-text-secondary: var(--muted-foreground);
+  --color-text-disabled: color-mix(
+    in oklab,
+    var(--muted-foreground) 65%,
+    transparent
+  );
+  --color-text-accent: var(--primary);
+  --color-on-accent: var(--primary-foreground);
+  --color-icon-accent: var(--primary);
+  --color-icon-primary: var(--foreground);
+  --color-icon-secondary: var(--muted-foreground);
+  --color-icon-disabled: color-mix(
+    in oklab,
+    var(--muted-foreground) 65%,
+    transparent
+  );
+  --color-border: var(--border);
+  --color-border-emphasized: var(--input);
+  --color-skeleton: var(--muted);
+  --color-shadow: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --font-family-body: var(--font-body);
+  --font-family-heading: var(--font-body);
+  --font-family-code: var(--font-mono);
+  --radius-inner: 6px;
+  --radius-element: 8px;
+  --radius-container: 10px;
+  --radius-page: 10px;
+  --duration-fast-min: 140ms;
+  --duration-fast: 180ms;
+  --duration-fast-max: 220ms;
+  --duration-medium-min: 200ms;
+  --duration-medium: 240ms;
+  --duration-medium-max: 280ms;
+  --duration-slow-min: 260ms;
+  --duration-slow: 320ms;
+  --duration-slow-max: 360ms;
+  --snowapi-event-background: oklch(0.12 0 0);
+  --snowapi-event-foreground: oklch(0.985 0 0);
+  --snowapi-event-muted: oklch(0.78 0 0);
+  --snowapi-event-star: oklch(0.98 0 0 / 62%);
+  --snowapi-event-shadow: oklch(0.08 0 0 / 28%);
+}
+
+.dark {
+  --snowapi-event-background: oklch(0.985 0 0);
+  --snowapi-event-foreground: oklch(0.12 0 0);
+  --snowapi-event-muted: oklch(0.36 0 0);
+  --snowapi-event-star: oklch(0.18 0 0 / 54%);
+  --snowapi-event-shadow: oklch(0 0 0 / 34%);
+}
+
+.snowapi-astryx-shell {
+  width: 100%;
+  min-width: 0;
+  height: 100dvh;
+  background: var(--background);
+  color: var(--foreground);
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'PingFang SC',
+    'Hiragino Sans GB',
+    'Microsoft YaHei',
+    sans-serif;
+}
+
+.snowapi-astryx-side-nav {
+  width: var(--snowapi-side-nav-width, 15rem) !important;
+  min-width: var(--snowapi-side-nav-width, 15rem);
+  border-inline-end: 0;
+  background: color-mix(in oklab, var(--foreground) 0.6%, var(--background));
+  transition: width 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.snowapi-astryx-shell .astryx-app-shell-sidenav {
+  border-inline-end: 1px solid var(--snowapi-rainflow-divider, var(--border)) !important;
+}
+
+.snowapi-astryx-brand-row {
+  display: flex;
+  height: 3.5rem;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: 1.125rem 0.75rem;
+}
+
+.snowapi-astryx-logo-link {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+}
+
+.snowapi-astryx-logo-link:hover {
+  background: var(--accent);
+}
+
+.snowapi-astryx-logo-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.snowapi-astryx-logo-link img {
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+  filter: brightness(0);
+}
+
+.dark .snowapi-astryx-logo-link img {
+  filter: brightness(0) invert(1);
+}
+
+.snowapi-astryx-collapse-button {
+  width: 1.75rem !important;
+  height: 1.75rem !important;
+  min-height: 1.75rem !important;
+  border-radius: 0.5rem !important;
+  color: var(--muted-foreground) !important;
+}
+
+.snowapi-astryx-side-nav-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 1.5rem 0.5rem;
+}
+
+.snowapi-astryx-side-nav-content > .astryx-side-nav-section {
+  gap: 0.125rem !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.snowapi-astryx-side-nav-content
+  > .astryx-side-nav-section
+  + .astryx-side-nav-section {
+  margin-top: 0.125rem !important;
+}
+
+.snowapi-astryx-side-nav .astryx-side-nav-item {
+  min-height: 2rem !important;
+  height: 2rem !important;
+  gap: 0.625rem !important;
+  border-radius: 0.5rem !important;
+  padding: 0 0.625rem !important;
+  color: color-mix(in oklab, var(--foreground) 58%, transparent) !important;
+  font-size: 0.75rem !important;
+  line-height: 1rem !important;
+  font-weight: 400 !important;
+}
+
+.snowapi-astryx-side-nav .astryx-side-nav-item:hover {
+  background: color-mix(
+    in oklab,
+    var(--foreground) 3.5%,
+    transparent
+  ) !important;
+  color: var(--foreground) !important;
+}
+
+.snowapi-astryx-side-nav .astryx-side-nav-item[data-selected='selected'],
+.snowapi-astryx-side-nav .astryx-side-nav-item.selected {
+  background: color-mix(
+    in oklab,
+    var(--foreground) 5.5%,
+    transparent
+  ) !important;
+  color: var(--foreground) !important;
+  font-weight: 500 !important;
+}
+
+.snowapi-astryx-side-nav .astryx-side-nav-item svg {
+  width: 1rem !important;
+  height: 1rem !important;
+}
+
+.snowapi-astryx-nav-badge {
+  display: inline-flex;
+  min-width: 1.25rem;
+  height: 1.125rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding-inline: 0.375rem;
+  background: var(--accent);
+  color: var(--muted-foreground);
+  font-size: 0.625rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.snowapi-astryx-footer {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  width: 100%;
+  padding: 0.5rem;
+}
+
+.snowapi-sidebar-sign-out {
+  width: 100%;
+  min-width: 0;
+  height: 2rem;
+  justify-content: flex-start;
+  gap: 0.625rem;
+  border-radius: 0.5rem;
+  padding-inline: 0.625rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.snowapi-astryx-side-nav[data-snowapi-collapsed='true'] .snowapi-astryx-footer {
+  justify-content: center;
+  padding-inline: 0.5rem;
+}
+
+.snowapi-astryx-side-nav[data-snowapi-collapsed='true']
+  .snowapi-sidebar-sign-out {
+  width: 2rem;
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.snowapi-astryx-side-nav[data-snowapi-collapsed='true']
+  .snowapi-sidebar-sign-out
+  span {
+  display: none;
+}
+
+.snowapi-astryx-side-nav[data-snowapi-collapsed='true']
+  .snowapi-astryx-brand-row {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.snowapi-astryx-side-nav[data-snowapi-collapsed='true']
+  .snowapi-astryx-logo-link {
+  display: none;
+}
+
+.snowapi-astryx-content {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--background);
+}
+
+@media (max-width: 767px) {
+  .snowapi-astryx-shell .astryx-app-shell-header,
+  .snowapi-astryx-shell
+    [role='navigation']:has(> .snowapi-astryx-side-nav[data-mode='topbar']),
+  .snowapi-astryx-side-nav[data-mode='topbar'] {
+    background: var(--background) !important;
+  }
+
+  .snowapi-astryx-shell
+    [role='navigation']:has(> .snowapi-astryx-side-nav[data-mode='topbar']) {
+    height: 3.5rem;
+    border-bottom: 0 !important;
+    padding-inline: 0.5rem;
+  }
+
+  .snowapi-astryx-side-nav[data-mode='topbar'] {
+    height: 3.5rem;
+  }
+
+  .snowapi-astryx-side-nav[data-mode='topbar'] .snowapi-astryx-brand-row {
+    height: 3.5rem;
+    padding-inline: 0.625rem;
+  }
+
+  .snowapi-astryx-shell button[data-testid='mobile-nav-toggle'] {
+    border-radius: 0.5rem !important;
+    background: transparent !important;
+  }
+
+  .snowapi-astryx-shell button[data-testid='mobile-nav-toggle']:hover {
+    background: color-mix(
+      in oklab,
+      var(--foreground) 3%,
+      transparent
+    ) !important;
+  }
+
+  .snowapi-astryx-shell .astryx-app-shell-sidenav {
+    border-inline-end: 0 !important;
+  }
+
+  .snowapi-astryx-side-nav {
+    width: 100% !important;
+    min-width: 0;
+    border-inline-end: 0;
+  }
+}
+
+.snowapi-event-card {
+  display: none;
+}
+
+.snowapi-mobile-nav-footer {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.snowapi-mobile-sheet {
+  transform: translate3d(0, 0, 0) !important;
+  opacity: 1;
+  backface-visibility: hidden;
+  contain: layout paint;
+  transition-property: transform;
+  will-change: transform;
+}
+
+.snowapi-mobile-sheet[data-starting-style],
+.snowapi-mobile-sheet[data-ending-style] {
+  transform: translate3d(100%, 0, 0) !important;
+  opacity: 1;
+}
+
+.snowapi-mobile-sheet-overlay {
+  opacity: 1;
+  backdrop-filter: none !important;
+  transition: opacity 180ms ease;
+  will-change: opacity;
+}
+
+.snowapi-mobile-sheet-overlay[data-starting-style],
+.snowapi-mobile-sheet-overlay[data-ending-style] {
+  opacity: 0;
+}
+
+.snowapi-mobile-event-card {
+  position: relative;
+  display: flex;
+  width: calc(100% - 1rem);
+  min-width: 0;
+  min-height: 3.75rem;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.5rem 0.5rem 0.125rem;
+  overflow: hidden;
+  border: 1px solid oklch(0.3 0 0);
+  border-radius: 1.15rem;
+  padding: 0.55rem 0.55rem 0.55rem 0.875rem;
+  background: oklch(0.1 0 0);
+  color: oklch(0.985 0 0);
+  box-shadow: 0 0.6rem 1.5rem oklch(0 0 0 / 18%);
+  text-align: start;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.snowapi-mobile-event-card:hover {
+  border-color: oklch(0.46 0 0);
+  background: oklch(0.14 0 0);
+}
+
+.snowapi-mobile-event-card .snowapi-event-copy {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.snowapi-mobile-event-card .snowapi-event-description {
+  color: oklch(0.74 0 0);
+  white-space: normal;
+}
+
+.snowapi-mobile-event-upgrade {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  width: max-content;
+  min-width: 0;
+  height: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding-inline: 0.9rem;
+  background: oklch(0.985 0 0);
+  color: oklch(0.12 0 0);
+  font-size: 0.72rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+@media (min-width: 1024px) {
+  .snowapi-event-card {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    z-index: 30;
+    display: flex;
+    width: max-content;
+    min-width: 13.75rem;
+    max-width: min(30rem, calc(100vw - 2.5rem));
+    min-height: 4.75rem;
+    align-items: center;
+    gap: 0.75rem;
+    border: 1px solid
+      color-mix(in oklab, var(--snowapi-event-foreground) 14%, transparent);
+    border-radius: 1.55rem;
+    padding: 0.75rem 0.75rem 0.75rem 1rem;
+    background-color: var(--snowapi-event-background);
+    box-shadow: 0 0.75rem 2rem var(--snowapi-event-shadow);
+    color: var(--snowapi-event-foreground);
+    animation: snowapi-event-card-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+.snowapi-event-copy {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.snowapi-event-name {
+  font-size: 0.95rem;
+  line-height: 1.15rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.snowapi-event-description {
+  margin-top: 0.2rem;
+  color: var(--snowapi-event-muted);
+  font-size: 0.7rem;
+  line-height: 0.9rem;
+  white-space: nowrap;
+}
+
+.snowapi-event-card .snowapi-event-upgrade {
+  position: relative;
+  z-index: 1;
+  width: max-content;
+  min-width: 0;
+  height: 2.5rem;
+  flex-shrink: 0;
+  margin-inline-start: auto;
+  border-radius: 999px;
+  padding-inline: 1rem;
+  background: oklch(0.985 0 0);
+  color: oklch(0.12 0 0);
+  box-shadow: none;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.snowapi-event-card .snowapi-event-upgrade:hover {
+  background: oklch(0.92 0 0);
+  color: oklch(0.12 0 0);
+}
+
+.dark .snowapi-event-card .snowapi-event-upgrade {
+  background: oklch(0.12 0 0);
+  color: oklch(0.985 0 0);
+}
+
+.dark .snowapi-event-card .snowapi-event-upgrade:hover {
+  background: oklch(0.2 0 0);
+  color: oklch(0.985 0 0);
+}
+
+.snowapi-event-dismiss {
+  position: absolute;
+  top: -0.55rem;
+  right: -0.35rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid
+    color-mix(in oklab, var(--snowapi-event-background) 14%, transparent);
+  border-radius: 999px;
+  background: var(--snowapi-event-foreground);
+  color: var(--snowapi-event-background);
+  box-shadow: 0 0.25rem 0.75rem
+    color-mix(in oklab, var(--snowapi-event-background) 22%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(0.2rem) scale(0.9);
+  transition:
+    opacity 180ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.snowapi-event-snow {
+  position: absolute;
+  inset: 1px;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.snowapi-event-snow span {
+  position: absolute;
+  top: -0.25rem;
+  left: 12%;
+  width: 0.14rem;
+  height: 0.14rem;
+  border-radius: 999px;
+  background: var(--snowapi-event-star);
+  opacity: 0;
+  animation: snowapi-event-snowfall 4.8s linear infinite;
+}
+
+.snowapi-event-snow span:nth-child(2) {
+  left: 24%;
+  width: 0.1rem;
+  height: 0.1rem;
+  animation-delay: -3.7s;
+  animation-duration: 5.6s;
+}
+
+.snowapi-event-snow span:nth-child(3) {
+  left: 37%;
+  animation-delay: -1.4s;
+  animation-duration: 6.2s;
+}
+
+.snowapi-event-snow span:nth-child(4) {
+  left: 49%;
+  width: 0.11rem;
+  height: 0.11rem;
+  animation-delay: -4.9s;
+  animation-duration: 5.2s;
+}
+
+.snowapi-event-snow span:nth-child(5) {
+  left: 61%;
+  animation-delay: -2.2s;
+  animation-duration: 6.8s;
+}
+
+.snowapi-event-snow span:nth-child(6) {
+  left: 72%;
+  width: 0.09rem;
+  height: 0.09rem;
+  animation-delay: -0.8s;
+  animation-duration: 5.9s;
+}
+
+.snowapi-event-snow span:nth-child(7) {
+  left: 82%;
+  animation-delay: -4.1s;
+  animation-duration: 6.5s;
+}
+
+.snowapi-event-snow span:nth-child(8) {
+  left: 90%;
+  width: 0.11rem;
+  height: 0.11rem;
+  animation-delay: -2.9s;
+  animation-duration: 5.4s;
+}
+
+.snowapi-event-snow span:nth-child(9) {
+  left: 96%;
+  animation-delay: -5.3s;
+  animation-duration: 7.1s;
+}
+
+.snowapi-event-dismiss:hover {
+  background: var(--snowapi-event-foreground);
+  color: var(--snowapi-event-background);
+}
+
+.snowapi-event-card:hover .snowapi-event-dismiss,
+.snowapi-event-card:focus-within .snowapi-event-dismiss {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.snowapi-upgrade-dialog {
+  inset: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+  height: auto !important;
+  max-height: none !important;
+  box-sizing: border-box;
+  margin: 0 !important;
+  transform: none !important;
+  border-radius: 0 !important;
+  border: 0 !important;
+  background: oklch(0.085 0 0) !important;
+  color: oklch(0.97 0 0) !important;
+  color-scheme: dark;
+  scrollbar-gutter: auto;
+  --background: oklch(0.15 0 0);
+  --foreground: oklch(0.97 0 0);
+  --card: oklch(0.15 0 0);
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.15 0 0);
+  --popover-foreground: oklch(0.97 0 0);
+  --primary: oklch(0.97 0 0);
+  --primary-foreground: oklch(0.1 0 0);
+  --secondary: oklch(0.22 0 0);
+  --secondary-foreground: oklch(0.97 0 0);
+  --muted: oklch(0.2 0 0);
+  --muted-foreground: oklch(0.7 0 0);
+  --accent: oklch(0.22 0 0);
+  --accent-foreground: oklch(0.97 0 0);
+  --border: oklch(0.28 0 0);
+  --input: oklch(0.28 0 0);
+  --ring: oklch(0.72 0 0);
+}
+
+.snowapi-upgrade-dialog[data-open] {
+  animation: snowapi-upgrade-dialog-in 260ms ease-out both;
+}
+
+.snowapi-upgrade-dialog[data-closed] {
+  animation: snowapi-upgrade-dialog-out 220ms ease-in both;
+}
+
+.snowapi-upgrade-aurora {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.snowapi-upgrade-aurora canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.snowapi-upgrade-close {
+  border: 1px solid oklch(0.78 0 0 / 48%);
+  background: oklch(0.96 0 0 / 12%);
+  color: oklch(0.98 0 0);
+  box-shadow: 0 0.5rem 1.5rem oklch(0 0 0 / 35%);
+  backdrop-filter: blur(12px);
+}
+
+.snowapi-upgrade-close:hover {
+  border-color: oklch(0.92 0 0 / 72%);
+  background: oklch(0.96 0 0 / 22%);
+  color: oklch(1 0 0);
+}
+
+.snowapi-upgrade-logo {
+  display: block;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+}
+
+.snowapi-upgrade-plan-card {
+  border: 1px solid oklch(0.28 0 0);
+  background: oklch(0.145 0 0);
+  box-shadow: 0 1.1rem 3rem oklch(0 0 0 / 22%);
+  transition:
+    border-color 200ms ease,
+    background-color 200ms ease,
+    transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.snowapi-upgrade-plan-card[data-snow-active='true'] {
+  border-color: oklch(0.44 0 0);
+  background: oklch(0.175 0 0);
+}
+
+.snowapi-upgrade-plan-card:hover {
+  border-color: oklch(0.4 0 0);
+  background: oklch(0.17 0 0);
+  transform: translateY(-0.2rem);
+}
+
+.snowapi-upgrade-plan-grid {
+  scrollbar-width: none;
+}
+
+.snowapi-upgrade-plan-clip {
+  min-width: 0;
+}
+
+.snowapi-upgrade-plan-slide {
+  display: flex;
+  min-width: 0;
+  align-items: stretch;
+}
+
+.snowapi-upgrade-plan-slide > .snowapi-upgrade-plan-card {
+  height: 100%;
+}
+
+@media (max-width: 767px) {
+  .snowapi-upgrade-plan-grid {
+    display: flex !important;
+    align-items: stretch;
+    gap: 0 !important;
+    transform: translate3d(var(--snowapi-mobile-plan-offset, 0%), 0, 0);
+    transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+
+  .snowapi-upgrade-plan-slide {
+    flex: 0 0 100%;
+    justify-content: center;
+    padding-inline: 1rem;
+  }
+
+  .snowapi-upgrade-plan-card:hover {
+    transform: none;
+  }
+}
+
+.snowapi-upgrade-plan-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.snowapi-upgrade-mobile-pager {
+  position: sticky;
+  bottom: 1rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  border: 1px solid oklch(0.3 0 0 / 86%);
+  border-radius: 999px;
+  padding: 0.35rem 0.5rem;
+  background: oklch(0.12 0 0 / 86%);
+  box-shadow: 0 0.8rem 2rem oklch(0 0 0 / 28%);
+  backdrop-filter: blur(14px);
+}
+
+.snowapi-upgrade-page-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-width: 4.5rem;
+}
+
+.snowapi-upgrade-page-dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  background: oklch(0.52 0 0);
+  transition:
+    width 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 180ms ease;
+}
+
+.snowapi-upgrade-page-dot[data-active='true'] {
+  width: 1.15rem;
+  background: oklch(0.96 0 0);
+}
+
+.snowapi-upgrade-page-dot:focus-visible {
+  outline: 2px solid oklch(0.96 0 0);
+  outline-offset: 0.2rem;
+}
+
+.snowapi-my-subscription {
+  overflow: hidden;
+  border: 1px solid oklch(0.3 0 0);
+  border-radius: 1.35rem;
+  padding: 1.25rem;
+  background: oklch(0.1 0 0);
+  color: oklch(0.97 0 0);
+  box-shadow: 0 1rem 2.5rem oklch(0 0 0 / 14%);
+}
+
+.snowapi-my-subscription-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.snowapi-my-subscription-eyebrow {
+  color: oklch(0.7 0 0);
+  font-size: 0.72rem;
+  line-height: 1rem;
+}
+
+.snowapi-my-subscription-title {
+  margin-top: 0.2rem;
+  font-size: 1.2rem;
+  line-height: 1.5rem;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+
+.snowapi-my-subscription-upgrade {
+  width: max-content;
+  min-width: 0;
+  flex-shrink: 0;
+  background: oklch(0.97 0 0);
+  color: oklch(0.1 0 0);
+}
+
+.snowapi-my-subscription-upgrade:hover {
+  background: oklch(0.88 0 0);
+  color: oklch(0.1 0 0);
+}
+
+.snowapi-my-subscription-usage {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 1.25rem;
+}
+
+.snowapi-my-subscription-meter {
+  border-radius: 0.9rem;
+  padding: 0.9rem;
+  background: oklch(0.17 0 0);
+  color: oklch(0.78 0 0);
+  font-size: 0.75rem;
+}
+
+.snowapi-my-subscription-meter strong {
+  color: oklch(0.98 0 0);
+  font-variant-numeric: tabular-nums;
+}
+
+.snowapi-subscription-progress {
+  margin-top: 0.65rem;
+}
+
+.snowapi-subscription-progress [data-slot='progress-track'] {
+  height: 0.34rem;
+  background: oklch(0.3 0 0);
+}
+
+.snowapi-subscription-progress [data-slot='progress-indicator'] {
+  background: oklch(0.96 0 0);
+}
+
+.snowapi-my-subscription-times {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 0.8rem;
+}
+
+.snowapi-my-subscription-times > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.55rem;
+  border-radius: 0.9rem;
+  padding: 0.9rem;
+  background: oklch(0.145 0 0);
+}
+
+.snowapi-my-subscription-times svg {
+  grid-row: 1 / span 2;
+  margin-top: 0.1rem;
+  color: oklch(0.66 0 0);
+}
+
+.snowapi-my-subscription-times dt {
+  color: oklch(0.66 0 0);
+  font-size: 0.7rem;
+  line-height: 1rem;
+}
+
+.snowapi-my-subscription-times dd {
+  margin-top: 0.15rem;
+  color: oklch(0.93 0 0);
+  font-size: 0.75rem;
+  line-height: 1.1rem;
+}
+
+@media (max-width: 639px) {
+  .snowapi-my-subscription {
+    padding: 1rem;
+  }
+
+  .snowapi-my-subscription-header {
+    align-items: center;
+  }
+
+  .snowapi-my-subscription-usage,
+  .snowapi-my-subscription-times {
+    grid-template-columns: 1fr;
+  }
+}
+
+@keyframes snowapi-upgrade-dialog-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes snowapi-upgrade-dialog-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes snowapi-event-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes snowapi-event-snowfall {
+  0% {
+    opacity: 0;
+    transform: translate3d(-0.12rem, -0.2rem, 0);
+  }
+  16% {
+    opacity: 0.72;
+  }
+  82% {
+    opacity: 0.48;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0.2rem, 5rem, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snowapi-astryx-side-nav {
+    transition: none;
+  }
+
+  .snowapi-event-card,
+  .snowapi-mobile-event-card,
+  .snowapi-mobile-sheet,
+  .snowapi-mobile-sheet-overlay,
+  .snowapi-upgrade-plan-card,
+  .snowapi-upgrade-plan-grid,
+  .snowapi-event-dismiss,
+  .snowapi-event-snow span {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .snowapi-event-snow {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .snowapi-usage-log-mobile-row {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 8.5rem;
+  }
+}
+
+.snowapi-dialog-overlay {
+  opacity: 0;
+}
+
+.snowapi-dialog-overlay[data-open] {
+  animation: snowapi-dialog-overlay-in 220ms ease-out both;
+}
+
+.snowapi-dialog-overlay[data-closed] {
+  animation: snowapi-dialog-overlay-out 220ms ease-in both;
+}
+
+.snowapi-dialog-content {
+  opacity: 0;
+}
+
+.snowapi-dialog-content[data-open] {
+  animation: snowapi-dialog-content-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.snowapi-dialog-content[data-closed] {
+  animation: snowapi-dialog-content-out 220ms ease-in both;
+}
+
+@keyframes snowapi-dialog-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes snowapi-dialog-overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes snowapi-dialog-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes snowapi-dialog-content-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+}
+
+.snowapi-sheet-overlay {
+  opacity: 0;
+}
+
+.snowapi-sheet-overlay[data-open] {
+  animation: snowapi-dialog-overlay-in 220ms ease-out both;
+}
+
+.snowapi-sheet-overlay[data-closed] {
+  animation: snowapi-dialog-overlay-out 220ms ease-in both;
+}
+
+[data-slot='sheet-content'].snowapi-centered-sheet {
+  top: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: 50% !important;
+  width: calc(100vw - 2rem) !important;
+  height: auto !important;
+  max-height: 88dvh !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0.75rem !important;
+  opacity: 0;
+  translate: none !important;
+  transform: translate(-50%, -50%);
+}
+
+[data-slot='sheet-content'].snowapi-centered-sheet[data-open] {
+  animation: snowapi-centered-sheet-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+[data-slot='sheet-content'].snowapi-centered-sheet[data-closed] {
+  animation: snowapi-centered-sheet-out 220ms ease-in both;
+}
+
+@keyframes snowapi-centered-sheet-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 10px));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes snowapi-centered-sheet-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 8px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snowapi-dialog-overlay[data-open],
+  .snowapi-dialog-overlay[data-closed],
+  .snowapi-dialog-content[data-open],
+  .snowapi-dialog-content[data-closed],
+  .snowapi-sheet-overlay[data-open],
+  .snowapi-sheet-overlay[data-closed],
+  [data-slot='sheet-content'].snowapi-centered-sheet[data-open],
+  [data-slot='sheet-content'].snowapi-centered-sheet[data-closed] {
+    animation-duration: 0.01ms;
+  }
+}

@@ -1,0 +1,128 @@
+/*
+Copyright (C) 2023-2026 QuantumNous
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+For commercial licensing, please contact support@quantumnous.com
+*/
+export type HeaderNavModules = {
+  home: boolean
+  console: boolean
+  docs: boolean
+  [key: string]: boolean
+}
+
+const DEFAULT_HEADER_NAV_MODULES: HeaderNavModules = {
+  home: true,
+  console: true,
+  docs: true,
+}
+
+function cloneHeaderNavDefaults(): HeaderNavModules {
+  return { ...DEFAULT_HEADER_NAV_MODULES }
+}
+
+export function parseHeaderNavBoolean(
+  raw: unknown,
+  fallback: boolean
+): boolean {
+  if (typeof raw === 'boolean') return raw
+  if (typeof raw === 'number') {
+    if (raw === 1) return true
+    if (raw === 0) return false
+    return fallback
+  }
+  if (typeof raw === 'string') {
+    const normalized = raw.trim().toLowerCase()
+    if (normalized === 'true' || normalized === '1') return true
+    if (normalized === 'false' || normalized === '0') return false
+  }
+  return fallback
+}
+
+function parseHeaderNavRecord(raw: unknown): Record<string, unknown> | null {
+  if (!raw || String(raw).trim() === '') return null
+  if (raw && typeof raw === 'object') return raw as Record<string, unknown>
+
+  try {
+    return JSON.parse(String(raw)) as Record<string, unknown>
+  } catch {
+    return null
+  }
+}
+
+export function parseHeaderNavModules(raw: unknown): HeaderNavModules {
+  const result = cloneHeaderNavDefaults()
+  const parsed = parseHeaderNavRecord(raw)
+  if (!parsed) return result
+
+  Object.entries(parsed).forEach(([key, value]) => {
+    if (!(key in DEFAULT_HEADER_NAV_MODULES)) return
+    const fallback = result[key]
+    if (
+      typeof fallback === 'boolean' ||
+      typeof value === 'boolean' ||
+      typeof value === 'number' ||
+      typeof value === 'string'
+    ) {
+      result[key] = parseHeaderNavBoolean(
+        value,
+        typeof fallback === 'boolean' ? fallback : true
+      )
+    }
+  })
+
+  return result
+}
+
+export function parseHeaderNavModulesFromStatus(
+  status: Record<string, unknown> | null
+): HeaderNavModules {
+  return parseHeaderNavModules(status?.HeaderNavModules)
+}
+
+function getCachedStatus(): Record<string, unknown> | null {
+  try {
+    if (typeof window === 'undefined') return null
+    const raw = window.localStorage.getItem('status')
+    return raw ? (JSON.parse(raw) as Record<string, unknown>) : null
+  } catch {
+    return null
+  }
+}
+
+export function isSidebarModuleEnabled(
+  section: string,
+  module: string
+): boolean {
+  const status = getCachedStatus()
+  if (!status) return true
+
+  const raw = status.SidebarModulesAdmin
+  if (!raw || String(raw).trim() === '') return true
+
+  try {
+    const parsed = JSON.parse(String(raw)) as Record<
+      string,
+      Record<string, boolean>
+    >
+    const sectionConfig = parsed[section]
+    if (!sectionConfig) return true
+    if (sectionConfig.enabled === false) return false
+    if (sectionConfig[module] === false) return false
+    return true
+  } catch {
+    return true
+  }
+}

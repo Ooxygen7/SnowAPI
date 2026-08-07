@@ -1,0 +1,139 @@
+/*
+Copyright (C) 2023-2026 QuantumNous
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+For commercial licensing, please contact support@quantumnous.com
+*/
+.snowapi-auth-shell {
+  --background: oklch(0 0 0);
+  --foreground: oklch(1 0 0);
+  --card: oklch(0.08 0 0);
+  --card-foreground: oklch(1 0 0);
+  --popover: oklch(0.08 0 0);
+  --popover-foreground: oklch(1 0 0);
+  --primary: oklch(0.24 0 0);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.12 0 0);
+  --secondary-foreground: oklch(1 0 0);
+  --muted: oklch(0.12 0 0);
+  --muted-foreground: oklch(0.92 0 0);
+  --accent: oklch(0.18 0 0);
+  --accent-foreground: oklch(1 0 0);
+  --border: oklch(1 0 0 / 22%);
+  --input: oklch(1 0 0 / 26%);
+  --ring: oklch(1 0 0);
+  --skeleton-base: oklch(0.12 0 0);
+  --skeleton-highlight: oklch(0.24 0 0);
+
+  background: #000;
+  color: #fff;
+  animation: snowapi-auth-content-in 220ms ease-out both;
+  color-scheme: dark;
+}
+
+.snowapi-auth-route {
+  min-height: 100svh;
+  background: #000;
+  color: #fff;
+  color-scheme: dark;
+}
+
+html:has(.snowapi-auth-route),
+body:has(.snowapi-auth-route),
+html:has(.snowapi-auth-shell),
+body:has(.snowapi-auth-shell) {
+  background: #000;
+}
+
+.snowapi-auth-shell a {
+  color: #fff;
+}
+
+.snowapi-auth-shell [data-slot='input'] {
+  border-color: rgb(255 255 255 / 0.28);
+  background: rgb(255 255 255 / 0.035);
+  color: #fff;
+  caret-color: #fff;
+}
+
+.snowapi-auth-shell [data-slot='input']::placeholder {
+  color: rgb(255 255 255 / 0.58);
+}
+
+.snowapi-auth-shell [data-slot='input']:focus-visible {
+  border-color: rgb(255 255 255 / 0.82);
+}
+
+.snowapi-auth-shell [data-slot='button'] {
+  color: #fff;
+}
+
+.snowapi-auth-shell .snowapi-auth-brand-logo {
+  filter: invert(1);
+}
+
+body:has(.snowapi-auth-shell) [data-sonner-toaster] {
+  --normal-bg: #080808 !important;
+  --normal-border: rgb(255 255 255 / 20%) !important;
+  --normal-text: #fff !important;
+  --success-bg: #080808 !important;
+  --success-border: rgb(255 255 255 / 20%) !important;
+  --success-text: #fff !important;
+  --info-bg: #080808 !important;
+  --info-border: rgb(255 255 255 / 20%) !important;
+  --info-text: #fff !important;
+  --warning-bg: #080808 !important;
+  --warning-border: rgb(255 255 255 / 20%) !important;
+  --warning-text: #fff !important;
+  --error-bg: #080808 !important;
+  --error-border: rgb(255 255 255 / 20%) !important;
+  --error-text: #fff !important;
+}
+
+body:has(.snowapi-auth-shell) [data-sonner-toast] {
+  border-color: rgb(255 255 255 / 20%) !important;
+  background: #080808 !important;
+  color: #fff !important;
+}
+
+body:has(.snowapi-auth-shell) [data-sonner-toast] [data-description] {
+  color: rgb(255 255 255 / 68%) !important;
+}
+
+body:has(.snowapi-auth-shell) [data-sonner-toast] [data-icon] {
+  color: #fff !important;
+}
+
+body:has(.snowapi-auth-shell) [data-sonner-toast] [data-close-button] {
+  border-color: rgb(255 255 255 / 24%) !important;
+  background: #fff !important;
+  color: #000 !important;
+}
+
+@keyframes snowapi-auth-content-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snowapi-auth-shell {
+    animation: none;
+  }
+}

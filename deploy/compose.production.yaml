@@ -1,0 +1,33 @@
+services:
+  snowapi:
+    stop_grace_period: 130s
+    pull_policy: never
+    ports: !override
+      - "127.0.0.1:3030:3000"
+    environment:
+      SESSION_COOKIE_SECURE: "true"
+      SESSION_COOKIE_TRUSTED_URL: "https://api.unsnow.org"
+      EXTERNAL_FRONTEND_ROOT: "/srv/snowapi-frontend"
+      IP_AUDIT_COUNTRY_MMDB: "/srv/snowapi-geoip/dbip-country-lite.mmdb"
+      IP_AUDIT_ASN_MMDB: "/srv/snowapi-geoip/dbip-asn-lite.mmdb"
+      IP_AUDIT_TRUSTED_PROXIES: "172.18.0.1/32"
+      # Set true only after validating ClientIP through the deployed proxy chain.
+      IP_AUDIT_PROXY_CHAIN_VERIFIED: "${IP_AUDIT_PROXY_CHAIN_VERIFIED:-false}"
+    volumes:
+      - type: bind
+        source: /var/www/snowapi-frontend
+        target: /srv/snowapi-frontend
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /var/lib/snowapi/geoip
+        target: /srv/snowapi-geoip
+        read_only: true
+        bind:
+          create_host_path: false
+
+volumes:
+  snowapi_data:
+    external: true
+    name: snowapi_snowapi_data
