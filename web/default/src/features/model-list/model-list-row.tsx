@@ -20,6 +20,8 @@ import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useTranslation } from 'react-i18next'
 
+import { cn } from '@/lib/utils'
+
 import { ModelHealthBar } from './model-health-bar'
 import { ModelProvider } from './model-provider'
 import type { CatalogModel } from './types'
@@ -69,10 +71,22 @@ export function ModelListRow(props: {
           className='from-accent/5 via-accent/45 to-primary/10 pointer-events-none absolute inset-0 bg-gradient-to-r opacity-0 transition-opacity duration-240 ease-out group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none'
         />
 
-        <div className='relative min-w-0'>
-          <code className='block truncate text-sm font-semibold tracking-[-0.01em]'>
-            {props.model.name}
-          </code>
+        <div className='relative min-w-0 pr-7 lg:pr-0'>
+          <div className='flex min-w-0 items-center gap-2'>
+            <code className='min-w-0 truncate text-sm font-semibold tracking-[-0.01em]'>
+              {props.model.name}
+            </code>
+            <span
+              className={cn(
+                'inline-flex h-5 shrink-0 items-center rounded-full px-2 text-[10px] font-medium leading-none',
+                props.model.hasAccess
+                  ? 'bg-foreground text-background'
+                  : 'bg-muted text-muted-foreground'
+              )}
+            >
+              {props.model.hasAccess ? t('Available') : t('No access')}
+            </span>
+          </div>
           {props.model.description ? (
             <p className='text-muted-foreground mt-0.5 line-clamp-1 text-xs'>
               {props.model.description}
@@ -115,7 +129,7 @@ export function ModelListRow(props: {
           icon={ArrowRight01Icon}
           size={16}
           strokeWidth={2}
-          className='text-muted-foreground group-hover:text-foreground group-focus-visible:text-foreground relative transition-colors duration-300'
+          className='text-muted-foreground group-hover:text-foreground group-focus-visible:text-foreground absolute top-3 right-3 transition-colors duration-300 lg:static'
           aria-hidden='true'
         />
       </button>

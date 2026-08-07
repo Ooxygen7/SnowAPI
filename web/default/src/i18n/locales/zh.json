@@ -5668,6 +5668,8 @@
     "Zero retention": "零数据保留",
     "Zhipu": "智谱",
     "Zhipu V4": "智谱 V4",
-    "Zoom": "缩放"
+    "Zoom": "缩放",
+    "No access": "无权限",
+    "Create a new API key after upgrading your subscription.": "升级套餐后请创建新密钥使用。"
   }
 }

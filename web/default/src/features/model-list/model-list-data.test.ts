@@ -23,6 +23,7 @@ import type { PricingModel } from '../pricing/types'
 import {
   aggregateModelHealth,
   buildCatalogEndpoints,
+  canUsePricingModel,
   mergePricingModels,
 } from './model-list-data.ts'
 import type { ModelHealthModel } from './types'
@@ -128,4 +129,20 @@ test('formats endpoint metadata as renderable method and model-specific path str
       'unknown',
     ]
   )
+})
+
+test('reports access only for the current group or universally enabled models', () => {
+  const currentGroupModel = {
+    ...pricingModel(1, 'model-a', ['chat']),
+    enable_groups: ['Moderate'],
+  }
+  const universalModel = {
+    ...pricingModel(2, 'model-b', ['chat']),
+    enable_groups: ['all'],
+  }
+
+  assert.equal(canUsePricingModel(currentGroupModel, 'Moderate'), true)
+  assert.equal(canUsePricingModel(currentGroupModel, 'Light'), false)
+  assert.equal(canUsePricingModel(currentGroupModel, ''), false)
+  assert.equal(canUsePricingModel(universalModel, 'Free'), true)
 })

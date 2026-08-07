@@ -5668,6 +5668,8 @@
     "Zero retention": "Không lưu dữ liệu",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V4",
-    "Zoom": "Zoom"
+    "Zoom": "Zoom",
+    "No access": "Không có quyền",
+    "Create a new API key after upgrading your subscription.": "Sau khi nâng cấp gói đăng ký, hãy tạo khóa API mới."
   }
 }

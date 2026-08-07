@@ -38,6 +38,12 @@ export function ApiKeys() {
           <ApiKeysPrimaryButtons />
         </SectionPageLayout.Actions>
         <SectionPageLayout.Content>
+          <div
+            role='note'
+            className='bg-muted text-muted-foreground mb-3 rounded-lg px-3 py-2 text-xs'
+          >
+            {t('Create a new API key after upgrading your subscription.')}
+          </div>
           <ApiKeysTable />
         </SectionPageLayout.Content>
       </SectionPageLayout>

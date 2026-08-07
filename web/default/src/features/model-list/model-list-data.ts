@@ -31,6 +31,14 @@ export function normalizeModelName(modelName: string) {
   return modelName.trim().toLocaleLowerCase('en-US')
 }
 
+export function canUsePricingModel(model: PricingModel, currentGroup: string) {
+  const enabledGroups = model.enable_groups ?? []
+  return (
+    enabledGroups.includes('all') ||
+    (currentGroup.length > 0 && enabledGroups.includes(currentGroup))
+  )
+}
+
 export function buildCatalogEndpoints(
   model: PricingModel,
   endpointMap: Record<string, PricingEndpointInfo>

@@ -56,6 +56,7 @@ export type ModelHealthResponse = {
 export type CatalogModel = {
   id: string
   name: string
+  hasAccess: boolean
   provider: string
   providerIcon?: string
   description?: string

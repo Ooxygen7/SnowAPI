@@ -39,6 +39,7 @@ import { getLobeIconName } from '@/lib/lobe-icon'
 import { ModelDetailsDialog } from './model-details-dialog'
 import {
   buildCatalogEndpoints,
+  canUsePricingModel,
   mergePricingModels,
   normalizeModelName,
 } from './model-list-data'
@@ -82,6 +83,7 @@ function isUnauthorizedError(error: unknown) {
 function toCatalogModel(
   model: PricingModel,
   endpointMap: Record<string, PricingEndpointInfo>,
+  currentGroup: string,
   fallbackProvider: string
 ): CatalogModel {
   const endpoints = buildCatalogEndpoints(model, endpointMap)
@@ -94,6 +96,7 @@ function toCatalogModel(
   return {
     id: normalizeModelName(model.model_name),
     name: model.model_name,
+    hasAccess: canUsePricingModel(model, currentGroup),
     provider:
       getLobeIconName(model.icon || model.vendor_icon) || fallbackProvider,
     providerIcon: model.icon || model.vendor_icon,
@@ -138,6 +141,7 @@ export function ModelList() {
   const {
     models,
     endpointMap,
+    currentGroup,
     error,
     isLoading,
     refetch: refetchCatalog,
@@ -145,9 +149,9 @@ export function ModelList() {
   const catalogModels = useMemo(
     () =>
       mergePricingModels(models).map((model) =>
-        toCatalogModel(model, endpointMap, t('Unknown'))
+        toCatalogModel(model, endpointMap, currentGroup, t('Unknown'))
       ),
-    [endpointMap, models, t]
+    [currentGroup, endpointMap, models, t]
   )
 
   const filteredModels = useMemo(() => {
