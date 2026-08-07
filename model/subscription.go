@@ -551,15 +551,15 @@ func calculateSubscriptionBalanceQuoteTx(tx *gorm.DB, userId int, targetPlan *Su
 		}
 		duration := selection.Current.EndTime - selection.Current.StartTime
 		remaining := selection.Current.EndTime - now
-		if duration > 0 && remaining > 0 && currentPrice > 0 {
-			if remaining > duration {
-				remaining = duration
-			}
-			credit = decimal.NewFromFloat(currentPrice).
-				Mul(decimal.NewFromInt(remaining)).
-				Div(decimal.NewFromInt(duration))
-			amountDue = amountDue.Sub(credit)
+		if duration <= 0 || remaining <= 0 {
+			return nil, nil, errors.New("current subscription billing cycle is invalid")
 		}
+		if remaining > duration {
+			remaining = duration
+		}
+		remainingRatio := decimal.NewFromInt(remaining).Div(decimal.NewFromInt(duration))
+		credit = decimal.NewFromFloat(currentPrice).Mul(remainingRatio)
+		amountDue = decimal.NewFromFloat(targetPlan.PriceAmount - currentPrice).Mul(remainingRatio)
 		quote.IsUpgrade = true
 		quote.CurrentSubscriptionId = selection.Current.Id
 		quote.CurrentPlanId = selection.Current.PlanId
@@ -741,15 +741,31 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 		}
 	}
 
-	endUnix, err := calcPlanEndTime(now, plan)
-	if err != nil {
-		return nil, err
+	startUnix := nowUnix
+	endUnix := int64(0)
+	if selection.Current != nil {
+		startUnix = selection.Current.StartTime
+		endUnix = selection.Current.EndTime
 	}
-	resetBase := now
-	nextReset := calcNextResetTime(resetBase, plan, endUnix)
+	if startUnix <= 0 {
+		startUnix = nowUnix
+	}
+	if endUnix <= nowUnix {
+		endUnix, err = calcPlanEndTime(now, plan)
+		if err != nil {
+			return nil, err
+		}
+	}
 	lastReset := int64(0)
-	if nextReset > 0 {
-		lastReset = now.Unix()
+	nextReset := int64(0)
+	if selection.Current != nil {
+		lastReset = selection.Current.LastResetTime
+		nextReset = selection.Current.NextResetTime
+	} else {
+		nextReset = calcNextResetTime(now, plan, endUnix)
+		if nextReset > 0 {
+			lastReset = now.Unix()
+		}
 	}
 	upgradeGroup := strings.TrimSpace(plan.UpgradeGroup)
 	prevGroup := ""
@@ -776,7 +792,7 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 		AmountTotal:         plan.TotalAmount,
 		AmountUsed:          carriedAmountUsed,
 		FiveHourQuota:       plan.FiveHourQuota,
-		StartTime:           now.Unix(),
+		StartTime:           startUnix,
 		EndTime:             endUnix,
 		Status:              "active",
 		Source:              source,

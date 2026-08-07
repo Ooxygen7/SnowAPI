@@ -206,7 +206,7 @@ func TestSubscriptionUpgradeChargesProratedDifferenceAndReplacesActivePlan(t *te
 	require.NoError(t, err)
 	require.NotNil(t, quote)
 	assert.True(t, quote.IsUpgrade)
-	assert.InDelta(t, 25, quote.AmountDue, 0.1)
+	assert.InDelta(t, 10, quote.AmountDue, 0.1)
 	assert.InDelta(t, 5, quote.UpgradeCredit, 0.1)
 
 	var activeSubscriptions []UserSubscription
@@ -214,10 +214,19 @@ func TestSubscriptionUpgradeChargesProratedDifferenceAndReplacesActivePlan(t *te
 	require.Len(t, activeSubscriptions, 1)
 	upgraded := activeSubscriptions[0]
 	assert.Equal(t, heavyPlan.Id, upgraded.PlanId)
+	assert.Equal(t, oldSubscription.StartTime, upgraded.StartTime)
+	assert.Equal(t, oldSubscription.EndTime, upgraded.EndTime)
 	assert.Equal(t, int64(200), upgraded.AmountUsed)
 	assert.Equal(t, "Free", upgraded.PrevUserGroup)
 	assert.NotZero(t, upgraded.CurrentPeriodWindowId)
 	assert.NotZero(t, upgraded.CurrentFiveHourWindowId)
+
+	var carriedPeriodWindow SubscriptionQuotaWindow
+	require.NoError(t, DB.First(&carriedPeriodWindow, upgraded.CurrentPeriodWindowId).Error)
+	assert.Equal(t, periodWindow.StartTime, carriedPeriodWindow.StartTime)
+	assert.Equal(t, periodWindow.EndTime, carriedPeriodWindow.EndTime)
+	assert.Equal(t, int64(200), carriedPeriodWindow.AmountUsed)
+	assert.Equal(t, heavyPlan.TotalAmount, carriedPeriodWindow.AmountTotal)
 
 	var carriedFiveHourWindow SubscriptionQuotaWindow
 	require.NoError(t, DB.First(&carriedFiveHourWindow, upgraded.CurrentFiveHourWindowId).Error)
