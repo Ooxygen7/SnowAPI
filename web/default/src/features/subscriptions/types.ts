@@ -112,6 +112,18 @@ export interface SubscriptionPayResponse {
   url?: string
 }
 
+export interface SubscriptionBalanceQuote {
+  plan_id: number
+  original_price: number
+  upgrade_credit: number
+  amount_due: number
+  required_quota: number
+  is_upgrade: boolean
+  current_subscription_id?: number
+  current_plan_id?: number
+  current_plan_title?: string
+}
+
 export interface CreateUserSubscriptionRequest {
   plan_id: number
 }

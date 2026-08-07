@@ -16,6 +16,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+
+import { useQuery } from '@tanstack/react-query'
 import { CalendarClock, Crown, Package } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -35,11 +37,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { useSystemConfig } from '@/hooks/use-system-config'
 import { formatQuota } from '@/lib/format'
-import { DEFAULT_CURRENCY_CONFIG } from '@/stores/system-config-store'
 
-import { paySubscriptionEpay, paySubscriptionBalance } from '../../api'
+import {
+  getSubscriptionBalanceQuote,
+  paySubscriptionEpay,
+  paySubscriptionBalance,
+} from '../../api'
 import { formatDuration, formatResetPeriod } from '../../lib'
 import type { PlanRecord } from '../../types'
 
@@ -63,7 +67,6 @@ interface Props {
 
 export function SubscriptionPurchaseDialog(props: Props) {
   const { t } = useTranslation()
-  const { currency } = useSystemConfig()
   const [paying, setPaying] = useState(false)
   const [selectedEpayMethod, setSelectedEpayMethod] = useState('')
 
@@ -74,6 +77,20 @@ export function SubscriptionPurchaseDialog(props: Props) {
       setSelectedEpayMethod('')
     }
   }, [props.open, props.epayMethods])
+
+  const planId = props.plan?.plan.id ?? 0
+  const quoteQuery = useQuery({
+    queryKey: ['subscription-balance-quote', planId],
+    enabled: props.open && planId > 0,
+    staleTime: 0,
+    queryFn: async () => {
+      const response = await getSubscriptionBalanceQuote(planId)
+      if (!response.success || !response.data) {
+        throw new Error(response.message)
+      }
+      return response.data
+    },
+  })
 
   const plan = props.plan?.plan
   if (!plan) return null
@@ -87,18 +104,14 @@ export function SubscriptionPurchaseDialog(props: Props) {
       ?.name ||
     selectedEpayMethod ||
     t('Select payment method')
-  const price = Number(plan.price_amount || 0).toFixed(2)
-  const quotaPerUnit =
-    currency?.quotaPerUnit && currency.quotaPerUnit > 0
-      ? currency.quotaPerUnit
-      : DEFAULT_CURRENCY_CONFIG.quotaPerUnit
-  const balanceCost = Math.max(
-    0,
-    Math.ceil(Number(plan.price_amount || 0) * quotaPerUnit)
-  )
+  const price = quoteQuery.data
+    ? Number(quoteQuery.data.amount_due || 0).toFixed(2)
+    : '—'
+  const balanceCost = Math.max(0, Number(quoteQuery.data?.required_quota || 0))
   const userQuota = Math.max(0, Number(props.userQuota || 0))
   const allowBalancePay = plan.allow_balance_pay !== false
-  const insufficientBalance = userQuota < balanceCost
+  const quoteUnavailable = !quoteQuery.isSuccess || !quoteQuery.data
+  const insufficientBalance = !quoteUnavailable && userQuota < balanceCost
   const limitReached =
     (props.purchaseLimit || 0) > 0 &&
     (props.purchaseCount || 0) >= (props.purchaseLimit || 0)
@@ -265,7 +278,7 @@ export function SubscriptionPurchaseDialog(props: Props) {
         <div className='flex flex-col gap-2 rounded-md border p-3'>
           <div className='flex items-center justify-between gap-2 text-xs'>
             <span className='text-muted-foreground'>{t('Required')}</span>
-            <span>{formatQuota(balanceCost)}</span>
+            <span>{quoteUnavailable ? '—' : formatQuota(balanceCost)}</span>
           </div>
           <div className='flex items-center justify-between gap-2 text-xs'>
             <span className='text-muted-foreground'>{t('Available')}</span>
@@ -288,7 +301,11 @@ export function SubscriptionPurchaseDialog(props: Props) {
             variant='outline'
             onClick={handlePayBalance}
             disabled={
-              paying || limitReached || !allowBalancePay || insufficientBalance
+              paying ||
+              limitReached ||
+              !allowBalancePay ||
+              quoteUnavailable ||
+              insufficientBalance
             }
           >
             {t('Pay with Balance')}

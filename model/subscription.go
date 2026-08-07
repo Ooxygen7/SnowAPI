@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -316,6 +317,18 @@ type SubscriptionSummary struct {
 	FiveHourWindow *SubscriptionQuotaWindowSummary `json:"five_hour_window"`
 }
 
+type SubscriptionBalanceQuote struct {
+	PlanId                int     `json:"plan_id"`
+	OriginalPrice         float64 `json:"original_price"`
+	UpgradeCredit         float64 `json:"upgrade_credit"`
+	AmountDue             float64 `json:"amount_due"`
+	RequiredQuota         int     `json:"required_quota"`
+	IsUpgrade             bool    `json:"is_upgrade"`
+	CurrentSubscriptionId int     `json:"current_subscription_id,omitempty"`
+	CurrentPlanId         int     `json:"current_plan_id,omitempty"`
+	CurrentPlanTitle      string  `json:"current_plan_title,omitempty"`
+}
+
 type SubscriptionResetResult struct {
 	PlanId           int    `json:"plan_id"`
 	MatchedCount     int    `json:"matched_count"`
@@ -459,6 +472,114 @@ func getUserGroupByIdTx(tx *gorm.DB, userId int) (string, error) {
 	return group, nil
 }
 
+type activeSubscriptionSelection struct {
+	Subscriptions []UserSubscription
+	Current       *UserSubscription
+	CurrentPlan   *SubscriptionPlan
+}
+
+func loadActiveSubscriptionSelectionTx(tx *gorm.DB, userId int, now int64, forUpdate bool) (*activeSubscriptionSelection, error) {
+	if tx == nil || userId <= 0 {
+		return nil, errors.New("invalid active subscription selection")
+	}
+	query := tx.Where("user_id = ? AND status = ? AND end_time > ?", userId, "active", now).
+		Order("end_time asc, id asc")
+	if forUpdate {
+		query = lockForUpdate(query)
+	}
+	var subscriptions []UserSubscription
+	if err := query.Find(&subscriptions).Error; err != nil {
+		return nil, err
+	}
+	selection := &activeSubscriptionSelection{Subscriptions: subscriptions}
+	if len(subscriptions) == 0 {
+		return selection, nil
+	}
+
+	userGroup, err := getUserGroupByIdTx(tx, userId)
+	if err != nil {
+		return nil, err
+	}
+	userGroup = strings.TrimSpace(userGroup)
+	for index := range selection.Subscriptions {
+		candidate := &selection.Subscriptions[index]
+		plan, err := getSubscriptionPlanByIdTx(tx, candidate.PlanId)
+		if err != nil {
+			return nil, err
+		}
+		if selection.Current == nil {
+			selection.Current = candidate
+			selection.CurrentPlan = plan
+			continue
+		}
+
+		candidateMatchesGroup := userGroup != "" && strings.TrimSpace(candidate.UpgradeGroup) == userGroup
+		currentMatchesGroup := userGroup != "" && strings.TrimSpace(selection.Current.UpgradeGroup) == userGroup
+		if candidateMatchesGroup && !currentMatchesGroup {
+			selection.Current = candidate
+			selection.CurrentPlan = plan
+		}
+	}
+	return selection, nil
+}
+
+func calculateSubscriptionBalanceQuoteTx(tx *gorm.DB, userId int, targetPlan *SubscriptionPlan, now int64, forUpdate bool) (*SubscriptionBalanceQuote, *activeSubscriptionSelection, error) {
+	if tx == nil || targetPlan == nil || targetPlan.Id <= 0 {
+		return nil, nil, errors.New("invalid subscription quote")
+	}
+	if math.IsNaN(targetPlan.PriceAmount) || math.IsInf(targetPlan.PriceAmount, 0) || targetPlan.PriceAmount < 0 {
+		return nil, nil, errors.New("subscription price must be a finite non-negative number")
+	}
+	selection, err := loadActiveSubscriptionSelectionTx(tx, userId, now, forUpdate)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	amountDue := decimal.NewFromFloat(targetPlan.PriceAmount)
+	credit := decimal.Zero
+	quote := &SubscriptionBalanceQuote{
+		PlanId:        targetPlan.Id,
+		OriginalPrice: targetPlan.PriceAmount,
+	}
+	if selection.Current != nil && selection.CurrentPlan != nil {
+		if selection.Current.PlanId == targetPlan.Id || targetPlan.PriceAmount <= selection.CurrentPlan.PriceAmount {
+			return nil, nil, errors.New("only upgrades to a higher-priced subscription are allowed")
+		}
+		currentPrice := selection.CurrentPlan.PriceAmount
+		if math.IsNaN(currentPrice) || math.IsInf(currentPrice, 0) || currentPrice < 0 {
+			return nil, nil, errors.New("current subscription price must be a finite non-negative number")
+		}
+		duration := selection.Current.EndTime - selection.Current.StartTime
+		remaining := selection.Current.EndTime - now
+		if duration > 0 && remaining > 0 && currentPrice > 0 {
+			if remaining > duration {
+				remaining = duration
+			}
+			credit = decimal.NewFromFloat(currentPrice).
+				Mul(decimal.NewFromInt(remaining)).
+				Div(decimal.NewFromInt(duration))
+			amountDue = amountDue.Sub(credit)
+		}
+		quote.IsUpgrade = true
+		quote.CurrentSubscriptionId = selection.Current.Id
+		quote.CurrentPlanId = selection.Current.PlanId
+		quote.CurrentPlanTitle = selection.CurrentPlan.Title
+	}
+	if amountDue.IsNegative() {
+		amountDue = decimal.Zero
+	}
+	amountDue = amountDue.Round(6)
+	credit = credit.Round(6)
+	requiredQuota, err := calcSubscriptionBalanceQuota(amountDue.InexactFloat64())
+	if err != nil {
+		return nil, nil, err
+	}
+	quote.UpgradeCredit = credit.InexactFloat64()
+	quote.AmountDue = amountDue.InexactFloat64()
+	quote.RequiredQuota = requiredQuota
+	return quote, selection, nil
+}
+
 func downgradeUserGroupForSubscriptionTx(tx *gorm.DB, sub *UserSubscription, now int64) (string, error) {
 	if tx == nil || sub == nil {
 		return "", errors.New("invalid downgrade args")
@@ -527,8 +648,99 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 			return nil, errors.New("已达到该套餐购买上限")
 		}
 	}
-	nowUnix := GetDBTimestamp()
+	nowUnix := getSubscriptionDBTimestampTx(tx)
 	now := time.Unix(nowUnix, 0)
+	selection, err := loadActiveSubscriptionSelectionTx(tx, userId, nowUnix, true)
+	if err != nil {
+		return nil, err
+	}
+	for index := range selection.Subscriptions {
+		candidatePlan, err := getSubscriptionPlanByIdTx(tx, selection.Subscriptions[index].PlanId)
+		if err != nil {
+			return nil, err
+		}
+		if err := maybeResetUserSubscriptionWithPlanTx(tx, &selection.Subscriptions[index], candidatePlan, nowUnix); err != nil {
+			return nil, err
+		}
+	}
+
+	carriedAmountUsed := int64(0)
+	carriedFiveHourUsed := int64(0)
+	carriedFiveHourStart := int64(0)
+	carriedFiveHourEnd := int64(0)
+	var carriedPeriodWindow *SubscriptionQuotaWindow
+	replacementPrevGroup := ""
+	if selection.Current != nil {
+		replacementPrevGroup = strings.TrimSpace(selection.Current.PrevUserGroup)
+		for step := 0; step < len(selection.Subscriptions) && replacementPrevGroup != ""; step++ {
+			advanced := false
+			for index := range selection.Subscriptions {
+				candidate := &selection.Subscriptions[index]
+				if strings.TrimSpace(candidate.UpgradeGroup) != replacementPrevGroup {
+					continue
+				}
+				previous := strings.TrimSpace(candidate.PrevUserGroup)
+				if previous == "" || previous == replacementPrevGroup {
+					continue
+				}
+				replacementPrevGroup = previous
+				advanced = true
+				break
+			}
+			if !advanced {
+				break
+			}
+		}
+	}
+	for index := range selection.Subscriptions {
+		candidate := &selection.Subscriptions[index]
+		carriedAmountUsed, err = checkedSubscriptionQuotaAdd(carriedAmountUsed, candidate.AmountUsed)
+		if err != nil {
+			return nil, err
+		}
+		if candidate.CurrentPeriodWindowId > 0 {
+			window, err := loadSubscriptionQuotaWindowTx(tx, candidate.CurrentPeriodWindowId, candidate.Id, SubscriptionQuotaWindowPeriod)
+			if err != nil {
+				return nil, err
+			}
+			if window.EndTime > nowUnix && (carriedPeriodWindow == nil || candidate.Id == selection.Current.Id) {
+				windowCopy := *window
+				carriedPeriodWindow = &windowCopy
+			}
+			if err := closeSubscriptionQuotaWindowTx(tx, window, nowUnix); err != nil {
+				return nil, err
+			}
+		}
+		if candidate.CurrentFiveHourWindowId > 0 {
+			window, err := loadSubscriptionQuotaWindowTx(tx, candidate.CurrentFiveHourWindowId, candidate.Id, SubscriptionQuotaWindowFiveHour)
+			if err != nil {
+				return nil, err
+			}
+			if window.EndTime > nowUnix {
+				carriedFiveHourUsed, err = checkedSubscriptionQuotaAdd(carriedFiveHourUsed, window.AmountUsed)
+				if err != nil {
+					return nil, err
+				}
+				if carriedFiveHourStart == 0 || window.StartTime < carriedFiveHourStart {
+					carriedFiveHourStart = window.StartTime
+				}
+				if carriedFiveHourEnd == 0 || window.EndTime < carriedFiveHourEnd {
+					carriedFiveHourEnd = window.EndTime
+				}
+			}
+			if err := closeSubscriptionQuotaWindowTx(tx, window, nowUnix); err != nil {
+				return nil, err
+			}
+		}
+		if err := tx.Model(&UserSubscription{}).Where("id = ?", candidate.Id).Updates(map[string]interface{}{
+			"status":     "cancelled",
+			"end_time":   nowUnix,
+			"updated_at": nowUnix,
+		}).Error; err != nil {
+			return nil, err
+		}
+	}
+
 	endUnix, err := calcPlanEndTime(now, plan)
 	if err != nil {
 		return nil, err
@@ -562,7 +774,7 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 		UserId:              userId,
 		PlanId:              plan.Id,
 		AmountTotal:         plan.TotalAmount,
-		AmountUsed:          0,
+		AmountUsed:          carriedAmountUsed,
 		FiveHourQuota:       plan.FiveHourQuota,
 		StartTime:           now.Unix(),
 		EndTime:             endUnix,
@@ -578,8 +790,58 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 		CreatedAt:           common.GetTimestamp(),
 		UpdatedAt:           common.GetTimestamp(),
 	}
+	if sub.AmountTotal > 0 && sub.AmountUsed > sub.AmountTotal {
+		sub.AmountUsed = sub.AmountTotal
+	}
+	if replacementPrevGroup != "" {
+		sub.PrevUserGroup = replacementPrevGroup
+	}
+	if carriedPeriodWindow != nil {
+		sub.LastResetTime = carriedPeriodWindow.StartTime
+		sub.NextResetTime = carriedPeriodWindow.EndTime
+		if sub.NextResetTime > sub.EndTime {
+			sub.NextResetTime = sub.EndTime
+		}
+	} else if selection.Current != nil && selection.Current.NextResetTime > nowUnix {
+		sub.LastResetTime = selection.Current.LastResetTime
+		sub.NextResetTime = selection.Current.NextResetTime
+		if sub.NextResetTime > sub.EndTime {
+			sub.NextResetTime = sub.EndTime
+		}
+	}
 	if err := tx.Create(sub).Error; err != nil {
 		return nil, err
+	}
+
+	if sub.AmountUsed > 0 || carriedPeriodWindow != nil {
+		periodStart := sub.LastResetTime
+		if periodStart <= 0 {
+			periodStart = sub.StartTime
+		}
+		periodEnd := sub.NextResetTime
+		if periodEnd <= periodStart {
+			periodEnd = sub.EndTime
+		}
+		periodWindow, err := createSubscriptionQuotaWindowTx(tx, sub, SubscriptionQuotaWindowPeriod, sub.AmountTotal, sub.AmountUsed, periodStart, periodEnd, nowUnix)
+		if err != nil {
+			return nil, err
+		}
+		sub.CurrentPeriodWindowId = periodWindow.Id
+	}
+	if plan.FiveHourQuota > 0 && carriedFiveHourEnd > nowUnix {
+		if carriedFiveHourUsed > plan.FiveHourQuota {
+			carriedFiveHourUsed = plan.FiveHourQuota
+		}
+		fiveHourWindow, err := createSubscriptionQuotaWindowTx(tx, sub, SubscriptionQuotaWindowFiveHour, plan.FiveHourQuota, carriedFiveHourUsed, carriedFiveHourStart, carriedFiveHourEnd, nowUnix)
+		if err != nil {
+			return nil, err
+		}
+		sub.CurrentFiveHourWindowId = fiveHourWindow.Id
+	}
+	if sub.CurrentPeriodWindowId > 0 || sub.CurrentFiveHourWindowId > 0 {
+		if err := saveSubscriptionWindowStateTx(tx, sub, nowUnix); err != nil {
+			return nil, err
+		}
 	}
 	return sub, nil
 }
@@ -747,26 +1009,53 @@ func calcSubscriptionBalanceQuota(priceAmount float64) (int, error) {
 	if priceAmount <= 0 {
 		return 0, nil
 	}
+	if math.IsNaN(priceAmount) || math.IsInf(priceAmount, 0) {
+		return 0, errors.New("subscription price must be finite")
+	}
 	if common.QuotaPerUnit <= 0 {
 		return 0, errors.New("额度单位配置错误")
 	}
-	quota := decimal.NewFromFloat(priceAmount).
+	quota, clamp := common.QuotaFromDecimalChecked(decimal.NewFromFloat(priceAmount).
 		Mul(decimal.NewFromFloat(common.QuotaPerUnit)).
-		Ceil().
-		IntPart()
-	return int(quota), nil
+		Ceil())
+	if clamp != nil {
+		return 0, clamp
+	}
+	return quota, nil
+}
+
+func GetSubscriptionBalanceQuote(userId int, planId int) (*SubscriptionBalanceQuote, error) {
+	if userId <= 0 || planId <= 0 {
+		return nil, errors.New("invalid userId or planId")
+	}
+	plan, err := GetSubscriptionPlanById(planId)
+	if err != nil {
+		return nil, err
+	}
+	if !plan.Enabled {
+		return nil, errors.New("subscription plan is disabled")
+	}
+	if plan.PriceAmount < 0 {
+		return nil, errors.New("subscription price cannot be negative")
+	}
+	if plan.AllowBalancePay != nil && !*plan.AllowBalancePay {
+		return nil, errors.New("this plan does not allow balance payment")
+	}
+	quote, _, err := calculateSubscriptionBalanceQuoteTx(DB, userId, plan, GetDBTimestamp(), false)
+	return quote, err
 }
 
 // PurchaseSubscriptionWithBalance creates a subscription by deducting the user's wallet quota.
-func PurchaseSubscriptionWithBalance(userId int, planId int) error {
+func PurchaseSubscriptionWithBalance(userId int, planId int) (*SubscriptionBalanceQuote, error) {
 	if userId <= 0 || planId <= 0 {
-		return errors.New("invalid userId or planId")
+		return nil, errors.New("invalid userId or planId")
 	}
 
 	var logPlanTitle string
 	var logMoney float64
 	var chargedQuota int
 	var upgradeGroup string
+	var purchaseQuote *SubscriptionBalanceQuote
 	err := DB.Transaction(func(tx *gorm.DB) error {
 		plan, err := getSubscriptionPlanByIdTx(tx, planId)
 		if err != nil {
@@ -782,15 +1071,15 @@ func PurchaseSubscriptionWithBalance(userId int, planId int) error {
 			return errors.New("该套餐不允许使用余额兑换")
 		}
 
-		requiredQuota, err := calcSubscriptionBalanceQuota(plan.PriceAmount)
-		if err != nil {
-			return err
-		}
-
 		var user User
 		if err := lockForUpdate(tx).Where("id = ?", userId).First(&user).Error; err != nil {
 			return err
 		}
+		quote, _, err := calculateSubscriptionBalanceQuoteTx(tx, userId, plan, getSubscriptionDBTimestampTx(tx), true)
+		if err != nil {
+			return err
+		}
+		requiredQuota := quote.RequiredQuota
 		if requiredQuota > 0 && user.Quota < requiredQuota {
 			return errors.New("余额不足")
 		}
@@ -810,27 +1099,28 @@ func PurchaseSubscriptionWithBalance(userId int, planId int) error {
 		order := &SubscriptionOrder{
 			UserId:          userId,
 			PlanId:          plan.Id,
-			Money:           plan.PriceAmount,
+			Money:           quote.AmountDue,
 			TradeNo:         tradeNo,
 			PaymentMethod:   PaymentMethodBalance,
 			PaymentProvider: PaymentProviderBalance,
 			Status:          common.TopUpStatusSuccess,
 			CreateTime:      now,
 			CompleteTime:    now,
-			ProviderPayload: fmt.Sprintf("charged_quota=%d", requiredQuota),
+			ProviderPayload: fmt.Sprintf("original_price=%.6f;upgrade_credit=%.6f;amount_due=%.6f;charged_quota=%d;replaced_subscription_id=%d", quote.OriginalPrice, quote.UpgradeCredit, quote.AmountDue, requiredQuota, quote.CurrentSubscriptionId),
 		}
 		if err := tx.Create(order).Error; err != nil {
 			return err
 		}
 
 		logPlanTitle = plan.Title
-		logMoney = plan.PriceAmount
+		logMoney = quote.AmountDue
 		chargedQuota = requiredQuota
 		upgradeGroup = strings.TrimSpace(plan.UpgradeGroup)
+		purchaseQuote = quote
 		return nil
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if chargedQuota > 0 {
@@ -843,7 +1133,7 @@ func PurchaseSubscriptionWithBalance(userId int, planId int) error {
 	}
 	msg := fmt.Sprintf("使用余额购买订阅成功，套餐: %s，支付金额: %.2f，扣除额度: %d", logPlanTitle, logMoney, chargedQuota)
 	RecordLog(userId, LogTypeTopup, msg)
-	return nil
+	return purchaseQuote, nil
 }
 
 // GetAllActiveUserSubscriptions returns all active subscriptions for a user.
@@ -1465,15 +1755,23 @@ func PreConsumeUserSubscription(requestId string, userId int, modelName string, 
 			return nil
 		}
 
-		var subs []UserSubscription
-		if err := lockForUpdate(tx).
-			Where("user_id = ? AND status = ? AND end_time > ?", userId, "active", now).
-			Order("end_time asc, id asc").
-			Find(&subs).Error; err != nil {
+		selection, err := loadActiveSubscriptionSelectionTx(tx, userId, now, true)
+		if err != nil {
 			return err
 		}
+		subs := selection.Subscriptions
 		if len(subs) == 0 {
 			return ErrNoActiveSubscription
+		}
+		if selection.Current != nil && subs[0].Id != selection.Current.Id {
+			ordered := make([]UserSubscription, 0, len(subs))
+			ordered = append(ordered, *selection.Current)
+			for _, candidate := range subs {
+				if candidate.Id != selection.Current.Id {
+					ordered = append(ordered, candidate)
+				}
+			}
+			subs = ordered
 		}
 		for _, candidate := range subs {
 			sub := candidate

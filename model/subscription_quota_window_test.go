@@ -6,6 +6,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/QuantumNous/new-api/common"
 	mysqldriver "github.com/go-sql-driver/mysql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -81,6 +82,158 @@ func TestPreConsumeCreatesBothWindowsAtomicallyAndIsIdempotent(t *testing.T) {
 	require.NoError(t, DB.First(&fiveHourWindow, result.UsageRef.FiveHourWindowId).Error)
 	assert.Equal(t, int64(120), periodWindow.AmountUsed)
 	assert.Equal(t, int64(120), fiveHourWindow.AmountUsed)
+}
+
+func TestPreConsumePrefersSubscriptionMatchingCurrentUserGroup(t *testing.T) {
+	truncateTables(t)
+	const userId = 7108
+	require.NoError(t, DB.Create(&User{
+		Id:       userId,
+		Username: "window-group-user",
+		Password: "test-password",
+		Group:    "Moderate",
+		Status:   1,
+	}).Error)
+	now := GetDBTimestamp()
+	lightPlan, light := seedQuotaWindowSubscription(t, userId, 1000, 0)
+	moderatePlan, moderate := seedQuotaWindowSubscription(t, userId, 2000, 500)
+	InvalidateSubscriptionPlanCache(lightPlan.Id)
+	InvalidateSubscriptionPlanCache(moderatePlan.Id)
+	require.NoError(t, DB.Model(light).Updates(map[string]interface{}{
+		"upgrade_group": "Light",
+		"end_time":      now + 10*24*3600,
+	}).Error)
+	require.NoError(t, DB.Model(moderate).Updates(map[string]interface{}{
+		"upgrade_group": "Moderate",
+		"end_time":      now + 20*24*3600,
+	}).Error)
+
+	result, err := PreConsumeUserSubscription("window-group-match", userId, "test-model", 0, 50)
+	require.NoError(t, err)
+	assert.Equal(t, moderate.Id, result.UserSubscriptionId)
+	assert.NotZero(t, result.UsageRef.FiveHourWindowId)
+
+	var storedLight UserSubscription
+	require.NoError(t, DB.First(&storedLight, light.Id).Error)
+	assert.Zero(t, storedLight.AmountUsed)
+}
+
+func TestSubscriptionUpgradeChargesProratedDifferenceAndReplacesActivePlan(t *testing.T) {
+	truncateTables(t)
+	const userId = 7109
+	initialQuota := int(common.QuotaPerUnit * 100)
+	require.NoError(t, DB.Create(&User{
+		Id:       userId,
+		Username: "subscription-upgrade-user",
+		Password: "test-password",
+		Group:    "Light",
+		Status:   1,
+		Quota:    initialQuota,
+	}).Error)
+	now := GetDBTimestamp()
+	lightPlan := &SubscriptionPlan{
+		Title:            "Light",
+		PriceAmount:      10,
+		DurationUnit:     SubscriptionDurationMonth,
+		DurationValue:    1,
+		TotalAmount:      1000,
+		FiveHourQuota:    300,
+		QuotaResetPeriod: SubscriptionResetNever,
+		UpgradeGroup:     "Light",
+		Enabled:          true,
+		SortOrder:        1,
+	}
+	heavyPlan := &SubscriptionPlan{
+		Title:            "Heavy",
+		PriceAmount:      30,
+		DurationUnit:     SubscriptionDurationMonth,
+		DurationValue:    1,
+		TotalAmount:      3000,
+		FiveHourQuota:    900,
+		QuotaResetPeriod: SubscriptionResetNever,
+		UpgradeGroup:     "Heavy",
+		Enabled:          true,
+		SortOrder:        2,
+	}
+	require.NoError(t, DB.Create(lightPlan).Error)
+	require.NoError(t, DB.Create(heavyPlan).Error)
+	InvalidateSubscriptionPlanCache(lightPlan.Id)
+	InvalidateSubscriptionPlanCache(heavyPlan.Id)
+	oldSubscription := &UserSubscription{
+		UserId:             userId,
+		PlanId:             lightPlan.Id,
+		AmountTotal:        lightPlan.TotalAmount,
+		AmountUsed:         200,
+		FiveHourQuota:      lightPlan.FiveHourQuota,
+		StartTime:          now - 100,
+		EndTime:            now + 100,
+		Status:             "active",
+		UpgradeGroup:       "Light",
+		PrevUserGroup:      "Free",
+		QuotaWindowVersion: 0,
+	}
+	require.NoError(t, DB.Create(oldSubscription).Error)
+	periodWindow := &SubscriptionQuotaWindow{
+		UserSubscriptionId: oldSubscription.Id,
+		WindowType:         SubscriptionQuotaWindowPeriod,
+		Sequence:           1,
+		AmountTotal:        lightPlan.TotalAmount,
+		AmountUsed:         200,
+		StartTime:          now - 100,
+		EndTime:            now + 100,
+		Version:            1,
+	}
+	fiveHourWindow := &SubscriptionQuotaWindow{
+		UserSubscriptionId: oldSubscription.Id,
+		WindowType:         SubscriptionQuotaWindowFiveHour,
+		Sequence:           1,
+		AmountTotal:        lightPlan.FiveHourQuota,
+		AmountUsed:         100,
+		StartTime:          now - 60,
+		EndTime:            now + 5*3600 - 60,
+		Version:            1,
+	}
+	require.NoError(t, DB.Create(periodWindow).Error)
+	require.NoError(t, DB.Create(fiveHourWindow).Error)
+	require.NoError(t, DB.Model(oldSubscription).Updates(map[string]interface{}{
+		"current_period_window_id":    periodWindow.Id,
+		"current_five_hour_window_id": fiveHourWindow.Id,
+		"period_window_sequence":      1,
+		"five_hour_window_sequence":   1,
+	}).Error)
+
+	quote, err := PurchaseSubscriptionWithBalance(userId, heavyPlan.Id)
+	require.NoError(t, err)
+	require.NotNil(t, quote)
+	assert.True(t, quote.IsUpgrade)
+	assert.InDelta(t, 25, quote.AmountDue, 0.1)
+	assert.InDelta(t, 5, quote.UpgradeCredit, 0.1)
+
+	var activeSubscriptions []UserSubscription
+	require.NoError(t, DB.Where("user_id = ? AND status = ?", userId, "active").Find(&activeSubscriptions).Error)
+	require.Len(t, activeSubscriptions, 1)
+	upgraded := activeSubscriptions[0]
+	assert.Equal(t, heavyPlan.Id, upgraded.PlanId)
+	assert.Equal(t, int64(200), upgraded.AmountUsed)
+	assert.Equal(t, "Free", upgraded.PrevUserGroup)
+	assert.NotZero(t, upgraded.CurrentPeriodWindowId)
+	assert.NotZero(t, upgraded.CurrentFiveHourWindowId)
+
+	var carriedFiveHourWindow SubscriptionQuotaWindow
+	require.NoError(t, DB.First(&carriedFiveHourWindow, upgraded.CurrentFiveHourWindowId).Error)
+	assert.Equal(t, int64(100), carriedFiveHourWindow.AmountUsed)
+	assert.Equal(t, heavyPlan.FiveHourQuota, carriedFiveHourWindow.AmountTotal)
+	assert.Equal(t, fiveHourWindow.EndTime, carriedFiveHourWindow.EndTime)
+
+	var cancelled UserSubscription
+	require.NoError(t, DB.First(&cancelled, oldSubscription.Id).Error)
+	assert.Equal(t, "cancelled", cancelled.Status)
+	assert.Equal(t, now, cancelled.EndTime)
+
+	var user User
+	require.NoError(t, DB.First(&user, userId).Error)
+	assert.Equal(t, "Heavy", user.Group)
+	assert.Equal(t, initialQuota-quote.RequiredQuota, user.Quota)
 }
 
 func TestConcurrentFirstPreConsumesShareOneWindowSequence(t *testing.T) {

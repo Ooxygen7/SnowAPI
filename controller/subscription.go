@@ -109,11 +109,29 @@ func SubscriptionRequestBalancePay(c *gin.Context) {
 		return
 	}
 
-	if err := model.PurchaseSubscriptionWithBalance(userId, req.PlanId); err != nil {
+	quote, err := model.PurchaseSubscriptionWithBalance(userId, req.PlanId)
+	if err != nil {
 		common.ApiError(c, err)
 		return
 	}
-	common.ApiSuccess(c, nil)
+	common.ApiSuccess(c, quote)
+}
+
+func GetSubscriptionBalanceQuote(c *gin.Context) {
+	if !requirePaymentCompliance(c) {
+		return
+	}
+	planId, err := strconv.Atoi(c.Query("plan_id"))
+	if err != nil || planId <= 0 {
+		common.ApiErrorMsg(c, "参数错误")
+		return
+	}
+	quote, err := model.GetSubscriptionBalanceQuote(c.GetInt("id"), planId)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	common.ApiSuccess(c, quote)
 }
 
 // ---- Admin APIs ----
