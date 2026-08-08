@@ -5,11 +5,13 @@ import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { CopyButton } from '@/components/copy-button'
 import { DateTimePicker } from '@/components/datetime-picker'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -32,9 +34,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { getGroups } from '@/features/users/api'
 import { getCurrencyDisplay, getCurrencyLabel } from '@/lib/currency'
 import { formatQuota, parseQuotaFromDollars } from '@/lib/format'
+import { cn } from '@/lib/utils'
 
 import { createRedemption, getRedemption, updateRedemption } from '../api'
 import { SUCCESS_MESSAGES } from '../constants'
@@ -63,6 +67,7 @@ export function RedemptionsMutateDrawer({
   const isUpdate = Boolean(currentRow)
   const { triggerRefresh } = useRedemptions()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [createdCodes, setCreatedCodes] = useState<string[]>([])
 
   const { data: groupsData } = useQuery({
     queryKey: ['groups'],
@@ -85,8 +90,16 @@ export function RedemptionsMutateDrawer({
       })
     } else if (open) {
       form.reset(REDEMPTION_FORM_DEFAULT_VALUES)
+      setCreatedCodes([])
     }
   }, [currentRow, form, open])
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    onOpenChange(nextOpen)
+    if (!nextOpen) {
+      setCreatedCodes([])
+    }
+  }
 
   const onSubmit = async (data: RedemptionFormValues) => {
     setIsSubmitting(true)
@@ -99,13 +112,22 @@ export function RedemptionsMutateDrawer({
         toast.error(result.message || t('Failed to save redemption code'))
         return
       }
+      const generatedCodes = Array.isArray(result.data) ? result.data : []
+      if (!currentRow && !generatedCodes.length) {
+        toast.error(t('Failed to save redemption code'))
+        return
+      }
       toast.success(
         currentRow
           ? t(SUCCESS_MESSAGES.REDEMPTION_UPDATED)
           : t(SUCCESS_MESSAGES.REDEMPTION_CREATED)
       )
-      onOpenChange(false)
       triggerRefresh()
+      if (currentRow) {
+        handleOpenChange(false)
+        return
+      }
+      setCreatedCodes(generatedCodes)
     } finally {
       setIsSubmitting(false)
     }
@@ -126,23 +148,54 @@ export function RedemptionsMutateDrawer({
   const currencyLabel = getCurrencyLabel()
   const tokensOnly = currencyMeta.kind === 'tokens'
   const benefitType = form.watch('type')
+  const allCodes = createdCodes.join('\n')
+  let dialogTitle = t('Create Redemption Code')
+  if (isUpdate) {
+    dialogTitle = t('Update Redemption Code')
+  }
+  if (createdCodes.length) {
+    dialogTitle = t('Save redemption codes now')
+  }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className='max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-xl'>
         <DialogHeader>
-          <DialogTitle>
-            {isUpdate
-              ? t('Update Redemption Code')
-              : t('Create Redemption Code')}
-          </DialogTitle>
+          <DialogTitle>{dialogTitle}</DialogTitle>
+          {createdCodes.length ? (
+            <DialogDescription>
+              {t(
+                'Complete redemption codes are shown only this once. Save them before closing.'
+              )}
+            </DialogDescription>
+          ) : null}
         </DialogHeader>
+
+        {createdCodes.length ? (
+          <div className='space-y-3'>
+            <div className='bg-muted/40 rounded-xl border p-3'>
+              <Textarea
+                value={allCodes}
+                readOnly
+                className='min-h-64 resize-none border-0 bg-transparent font-mono text-xs shadow-none focus-visible:ring-0'
+              />
+            </div>
+            <CopyButton
+              value={allCodes}
+              variant='outline'
+              size='default'
+              className='w-full gap-2'
+            >
+              {t('Copy all redemption codes')}
+            </CopyButton>
+          </div>
+        ) : null}
 
         <Form {...form}>
           <form
             id='redemption-form'
             onSubmit={handleSubmit}
-            className='space-y-4'
+            className={cn('space-y-4', createdCodes.length && 'hidden')}
           >
             <FormField
               control={form.control}
@@ -341,12 +394,24 @@ export function RedemptionsMutateDrawer({
         </Form>
 
         <DialogFooter className='border-0'>
-          <Button variant='outline' onClick={() => onOpenChange(false)}>
-            {t('Cancel')}
-          </Button>
-          <Button form='redemption-form' type='submit' disabled={isSubmitting}>
-            {isSubmitting ? t('Saving...') : t('Save changes')}
-          </Button>
+          {createdCodes.length ? (
+            <Button onClick={() => handleOpenChange(false)}>
+              {t('I have saved them')}
+            </Button>
+          ) : (
+            <>
+              <Button variant='outline' onClick={() => handleOpenChange(false)}>
+                {t('Cancel')}
+              </Button>
+              <Button
+                form='redemption-form'
+                type='submit'
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? t('Saving...') : t('Save changes')}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
