@@ -116,6 +116,21 @@ func Redeem(key string, userID int) (result RedemptionResult, err error) {
 		if redemptionType != RedemptionTypeQuota && redemptionType != RedemptionTypeGroup {
 			return errors.New("unsupported redemption type")
 		}
+		if redemptionType == RedemptionTypeGroup {
+			var activeSubscription UserSubscription
+			err := lockForUpdate(tx).
+				Select("id").
+				Where("user_id = ? AND status = ? AND end_time > ?", userID, "active", common.GetTimestamp()).
+				Order("id asc").
+				First(&activeSubscription).Error
+			switch {
+			case err == nil:
+				return ErrActiveSubscriptionRedemptionDenied
+			case errors.Is(err, gorm.ErrRecordNotFound):
+			default:
+				return err
+			}
+		}
 		update := tx.Model(&Redemption{}).
 			Where("id = ? AND status = ?", redemption.Id, common.RedemptionCodeStatusEnabled).
 			Updates(map[string]interface{}{

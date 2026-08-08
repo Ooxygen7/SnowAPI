@@ -208,6 +208,86 @@ func TestRedeemGrantsTemporaryGroupEntitlement(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestRedeemGroupEntitlementDeniedWithActiveSubscription(t *testing.T) {
+	for _, source := range []string{"redemption", PaymentMethodBalance} {
+		t.Run(source, func(t *testing.T) {
+			userID, key := setupRedeemFixture(t, 0)
+			plan := &SubscriptionPlan{
+				Title:         "Light",
+				Enabled:       true,
+				DurationUnit:  SubscriptionDurationMonth,
+				DurationValue: 1,
+				UpgradeGroup:  "Light",
+				TotalAmount:   5000,
+				FiveHourQuota: 1000,
+			}
+			plan.NormalizeDefaults()
+			require.NoError(t, DB.Create(plan).Error)
+			require.NoError(t, DB.Create(&UserSubscription{
+				UserId:      userID,
+				PlanId:      plan.Id,
+				AmountTotal: 5000,
+				StartTime:   common.GetTimestamp() - 60,
+				EndTime:     common.GetTimestamp() + 3600,
+				Status:      "active",
+				Source:      source,
+			}).Error)
+			require.NoError(t, DB.Model(&Redemption{}).Where(commonKeyCol+" = ?", key).Updates(map[string]interface{}{
+				"type":                   RedemptionTypeGroup,
+				"group_name":             "Moderate",
+				"group_duration_minutes": 60,
+			}).Error)
+
+			_, err := Redeem(key, userID)
+			require.ErrorIs(t, err, ErrRedeemFailed)
+
+			var redemption Redemption
+			require.NoError(t, DB.First(&redemption, commonKeyCol+" = ?", key).Error)
+			assert.Equal(t, common.RedemptionCodeStatusEnabled, redemption.Status)
+			assert.Zero(t, redemption.UsedUserId)
+
+			var activeCount int64
+			require.NoError(t, DB.Model(&UserSubscription{}).
+				Where("user_id = ? AND status = ? AND end_time > ?", userID, "active", common.GetTimestamp()).
+				Count(&activeCount).Error)
+			assert.Equal(t, int64(1), activeCount)
+		})
+	}
+}
+
+func TestRedeemQuotaStillAllowedWithActiveSubscription(t *testing.T) {
+	userID, key := setupRedeemFixture(t, 500)
+	plan := &SubscriptionPlan{
+		Title:         "Light",
+		Enabled:       true,
+		DurationUnit:  SubscriptionDurationMonth,
+		DurationValue: 1,
+		UpgradeGroup:  "Light",
+		TotalAmount:   5000,
+		FiveHourQuota: 1000,
+	}
+	plan.NormalizeDefaults()
+	require.NoError(t, DB.Create(plan).Error)
+	require.NoError(t, DB.Create(&UserSubscription{
+		UserId:      userID,
+		PlanId:      plan.Id,
+		AmountTotal: 5000,
+		StartTime:   common.GetTimestamp() - 60,
+		EndTime:     common.GetTimestamp() + 3600,
+		Status:      "active",
+		Source:      PaymentMethodBalance,
+	}).Error)
+
+	result, err := Redeem(key, userID)
+	require.NoError(t, err)
+	assert.Equal(t, RedemptionTypeQuota, result.Type)
+	assert.Equal(t, 500, result.Quota)
+
+	var user User
+	require.NoError(t, DB.First(&user, "id = ?", userID).Error)
+	assert.Equal(t, 500, user.Quota)
+}
+
 func TestRedeemGrantsPermanentGroupEntitlement(t *testing.T) {
 	userID, key := setupRedeemFixture(t, 0)
 	require.NoError(t, DB.Model(&User{}).Where("id = ?", userID).Updates(map[string]interface{}{

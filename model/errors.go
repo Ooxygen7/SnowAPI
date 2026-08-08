@@ -23,4 +23,7 @@ var (
 )
 
 // Redemption errors
-var ErrRedeemFailed = errors.New("redeem.failed")
+var (
+	ErrRedeemFailed                       = errors.New("redeem.failed")
+	ErrActiveSubscriptionRedemptionDenied = errors.New("an active subscription cannot be replaced by a redemption code")
+)
