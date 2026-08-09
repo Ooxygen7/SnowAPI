@@ -115,7 +115,7 @@ test('merges duplicate catalog rows deterministically without changing display s
   ])
 })
 
-test('formats endpoint metadata as renderable method and model-specific path strings', () => {
+test('formats configured endpoint metadata and omits unresolved internal endpoint types', () => {
   const model = pricingModel(1, 'model-a', ['chat', 'responses', 'unknown'])
 
   assert.deepEqual(
@@ -123,11 +123,7 @@ test('formats endpoint metadata as renderable method and model-specific path str
       chat: { method: 'post', path: '/v1/chat/completions' },
       responses: { method: 'POST', path: '/v1/models/{model}/responses' },
     }),
-    [
-      'POST /v1/chat/completions',
-      'POST /v1/models/model-a/responses',
-      'unknown',
-    ]
+    ['POST /v1/chat/completions', 'POST /v1/models/model-a/responses']
   )
 })
 

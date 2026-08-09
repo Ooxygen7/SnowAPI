@@ -45,18 +45,20 @@ export function buildCatalogEndpoints(
 ) {
   return [
     ...new Set(
-      (model.supported_endpoint_types ?? []).map((type) => {
-        const endpoint = endpointMap[type]
-        if (!endpoint) return type
+      (model.supported_endpoint_types ?? [])
+        .map((type) => {
+          const endpoint = endpointMap[type]
+          if (!endpoint) return null
 
-        const path = endpoint.path
-          ?.replaceAll('{model}', model.model_name)
-          .trim()
-        if (!path) return type
+          const path = endpoint.path
+            ?.replaceAll('{model}', model.model_name)
+            .trim()
+          if (!path) return null
 
-        const method = endpoint.method?.trim().toUpperCase() || 'POST'
-        return `${method} ${path}`
-      })
+          const method = endpoint.method?.trim().toUpperCase() || 'POST'
+          return `${method} ${path}`
+        })
+        .filter((endpoint): endpoint is string => endpoint !== null)
     ),
   ]
 }
