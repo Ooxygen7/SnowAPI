@@ -52,11 +52,31 @@ function PriceCard(props: {
   )
 }
 
-function DetailItem(props: { label: string; children: ReactNode }) {
+function EndpointList(props: { endpoints: string[]; emptyLabel: string }) {
+  if (props.endpoints.length === 0) {
+    return <span className='text-muted-foreground'>{props.emptyLabel}</span>
+  }
+
   return (
-    <div className='grid grid-cols-[4.25rem_minmax(0,1fr)] items-center gap-2 py-2.5 sm:grid-cols-[6rem_minmax(0,1fr)] sm:gap-3'>
-      <dt className='text-muted-foreground text-xs'>{props.label}</dt>
-      <dd className='min-w-0 text-sm'>{props.children}</dd>
+    <div className='flex min-w-0 flex-col gap-1.5'>
+      {props.endpoints.map((endpoint) => {
+        const separatorIndex = endpoint.indexOf(' ')
+        const method =
+          separatorIndex > 0 ? endpoint.slice(0, separatorIndex) : 'POST'
+        const path =
+          separatorIndex > 0 ? endpoint.slice(separatorIndex + 1) : endpoint
+
+        return (
+          <div key={endpoint} className='flex min-w-0 items-baseline gap-3'>
+            <span className='text-muted-foreground w-8 shrink-0 font-mono text-[10px] font-semibold tracking-wide'>
+              {method}
+            </span>
+            <code className='text-foreground min-w-0 text-xs break-all'>
+              {path}
+            </code>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -86,7 +106,7 @@ export function ModelDetailsDialog(props: {
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent
         data-visual-region='model-details-dialog'
-        className='h-[min(520px,calc(100dvh-2rem))] w-[672px] max-w-[calc(100%-2rem)] grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 sm:max-w-2xl'
+        className='h-[min(580px,calc(100dvh-2rem))] w-[672px] max-w-[calc(100%-2rem)] grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 sm:max-w-2xl'
       >
         <CopyButton
           value={model.name}
@@ -112,7 +132,7 @@ export function ModelDetailsDialog(props: {
           )}
         </DialogHeader>
 
-        <div className='grid min-h-0 grid-rows-[auto_auto_1fr] gap-4 overflow-hidden px-5 py-4 sm:px-6'>
+        <div className='grid min-h-0 grid-rows-[auto_auto_1fr] gap-3 overflow-hidden px-5 py-3 sm:px-6'>
           <DialogSection title={t('Price')}>
             {model.priceUnitKey === 'request' ? (
               <PriceCard
@@ -148,13 +168,36 @@ export function ModelDetailsDialog(props: {
           </DialogSection>
 
           <DialogSection title={t('Model details')}>
-            <dl className='grid min-h-0 flex-1 grid-rows-2 divide-y'>
-              <DetailItem label={t('Model')}>
-                <code className='font-medium break-all'>{model.name}</code>
-              </DetailItem>
-              <DetailItem label={t('Provider')}>
-                <ModelProvider model={model} />
-              </DetailItem>
+            <dl className='bg-muted/20 min-h-0 flex-1 rounded-[10px] px-4 py-3'>
+              <div className='grid grid-cols-2 gap-4 pb-3 sm:gap-8'>
+                <div className='min-w-0'>
+                  <dt className='text-muted-foreground text-xs'>
+                    {t('Model')}
+                  </dt>
+                  <dd className='mt-1.5 min-w-0 text-sm'>
+                    <code className='font-medium break-all'>{model.name}</code>
+                  </dd>
+                </div>
+                <div className='min-w-0'>
+                  <dt className='text-muted-foreground text-xs'>
+                    {t('Provider')}
+                  </dt>
+                  <dd className='mt-1.5 min-w-0 text-sm'>
+                    <ModelProvider model={model} />
+                  </dd>
+                </div>
+              </div>
+              <div className='border-border/60 border-t pt-3'>
+                <dt className='text-muted-foreground text-xs'>
+                  {t('API Endpoints')}
+                </dt>
+                <dd className='mt-2 min-w-0 text-sm'>
+                  <EndpointList
+                    endpoints={model.endpoints}
+                    emptyLabel={t('No data')}
+                  />
+                </dd>
+              </div>
             </dl>
           </DialogSection>
         </div>
