@@ -49,6 +49,8 @@ func TestMinimalModeRelayClientChecksEveryResolvedAddressBeforeDial(t *testing.T
 
 func TestMinimalModeRelayClientPinsDNSAndReadsCurrentAllowlistOnEveryDial(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+		// Each assertion exercises a new dial, not connection-pool timing.
+		response.Header().Set("Connection", "close")
 		response.WriteHeader(http.StatusOK)
 		_, _ = io.WriteString(response, "ok")
 	}))

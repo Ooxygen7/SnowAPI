@@ -216,16 +216,20 @@ export function PaymentSettingsSection({
     const add = (key: string, value: string | number) =>
       updates.push({ key, value })
 
-    if (sanitized.PayAddress !== initial.PayAddress)
+    if (sanitized.PayAddress !== initial.PayAddress) {
       add('PayAddress', sanitized.PayAddress)
+    }
     if (sanitized.EpayId !== initial.EpayId) add('EpayId', sanitized.EpayId)
-    if (sanitized.EpayKey && sanitized.EpayKey !== initial.EpayKey)
+    if (sanitized.EpayKey && sanitized.EpayKey !== initial.EpayKey) {
       add('EpayKey', sanitized.EpayKey)
+    }
     if (sanitized.Price !== initial.Price) add('Price', sanitized.Price)
-    if (sanitized.MinTopUp !== initial.MinTopUp)
+    if (sanitized.MinTopUp !== initial.MinTopUp) {
       add('MinTopUp', sanitized.MinTopUp)
-    if (sanitized.CustomCallbackAddress !== initial.CustomCallbackAddress)
+    }
+    if (sanitized.CustomCallbackAddress !== initial.CustomCallbackAddress) {
       add('CustomCallbackAddress', sanitized.CustomCallbackAddress)
+    }
 
     const jsonUpdates = [
       ['PayMethods', 'PayMethods'],

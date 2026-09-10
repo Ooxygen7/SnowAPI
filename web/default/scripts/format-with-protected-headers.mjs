@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { spawnSync } from 'node:child_process'
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { join, relative, resolve, isAbsolute } from 'node:path'
 
 const mode = process.argv[2]
 
@@ -87,9 +87,7 @@ function restoreSnapshot(snapshot) {
   }
 }
 
-function stripProtectedHeaders(files) {
-  const headers = new Map()
-
+function stripProtectedHeaders(files, headers) {
   for (const file of files) {
     if (!headerExtensions.has(extensionOf(file))) {
       continue
@@ -131,7 +129,22 @@ function listChangedFiles(before, files) {
   return changed
 }
 
-const files = walk(root).filter(
+const targets = process.argv.slice(3)
+const selectedFiles = targets.length
+  ? targets.map((target) => {
+      const file = resolve(root, target)
+      const relativePath = relative(root, file)
+      if (
+        relativePath.startsWith('..') ||
+        isAbsolute(relativePath) ||
+        !statSync(file).isFile()
+      ) {
+        throw new Error(`Expected a file inside the frontend: ${target}`)
+      }
+      return file
+    })
+  : walk(root)
+const files = selectedFiles.filter(
   (file) => statSync(file).size < 10 * 1024 * 1024
 )
 const before = mode === '--check' ? snapshotFiles(files) : null
@@ -139,10 +152,17 @@ let headers = new Map()
 let exitCode = 0
 
 try {
-  headers = stripProtectedHeaders(files)
+  stripProtectedHeaders(files, headers)
   const result = spawnSync(
     'oxfmt',
-    ['-c', '.oxfmtrc.json', '--ignore-path', '.gitignore', '--write', '.'],
+    [
+      '-c',
+      '.oxfmtrc.json',
+      '--ignore-path',
+      '.gitignore',
+      '--write',
+      ...(targets.length ? targets : ['.']),
+    ],
     {
       cwd: root,
       stdio: 'inherit',

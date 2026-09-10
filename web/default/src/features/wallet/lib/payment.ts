@@ -42,7 +42,11 @@ export interface PaymentWindowTarget {
   targetName: string
 }
 
-export type PaymentMonitorResult = 'success' | 'failed' | 'cancelled'
+export type PaymentMonitorResult =
+  | 'success'
+  | 'failed'
+  | 'cancelled'
+  | 'pending'
 
 interface PaymentMonitorOptions {
   popup: PaymentPopup
@@ -158,7 +162,7 @@ export async function monitorPaymentWindow(
       if (remainingClosureChecks === null) {
         remainingClosureChecks = closureGraceChecks
       } else if (remainingClosureChecks <= 0) {
-        return 'failed'
+        return 'pending'
       } else {
         remainingClosureChecks -= 1
       }
@@ -167,7 +171,7 @@ export async function monitorPaymentWindow(
     await wait(pollIntervalMs)
   }
 
-  return options.signal?.aborted ? 'cancelled' : 'failed'
+  return options.signal?.aborted ? 'cancelled' : 'pending'
 }
 
 /**

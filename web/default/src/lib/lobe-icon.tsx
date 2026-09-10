@@ -25,7 +25,16 @@ For commercial licensing, please contact support@quantumnous.com
  * - Chained properties: "OpenAI.Avatar.type={'platform'}"
  * - Size parameter: getLobeIcon("OpenAI", 20)
  */
-import * as LobeIcons from '@lobehub/icons'
+import { lazy, Suspense, type ComponentType } from 'react'
+
+import { ProviderIconFallback } from '@/components/provider-icon-fallback'
+
+import { lobeIconLoaders } from './lobe-icon-loaders'
+
+const lazyIcons = new Map<
+  string,
+  ReturnType<typeof lazy<ComponentType<Record<string, unknown>>>>
+>()
 
 /** Return the human-readable provider name represented by a Lobe icon key. */
 export function getLobeIconName(
@@ -110,23 +119,20 @@ export function getLobeIcon(
   // Parse component path and chained properties
   const segments = trimmedName.split('.')
   const baseKey = segments[0]
-  const BaseIcon = (LobeIcons as Record<string, unknown>)[baseKey] as
-    | Record<string, unknown>
-    | undefined
-
-  let IconComponent: React.ComponentType<Record<string, unknown>> | undefined
-  let propStartIndex: number
-
-  if (BaseIcon && segments.length > 1 && BaseIcon[segments[1]]) {
-    IconComponent = BaseIcon[segments[1]] as React.ComponentType<
-      Record<string, unknown>
-    >
-    propStartIndex = 2
-  } else {
-    IconComponent = (LobeIcons as Record<string, unknown>)[baseKey] as
-      | React.ComponentType<Record<string, unknown>>
-      | undefined
-    propStartIndex = segments.length > 1 && /^[A-Z]/.test(segments[1]) ? 2 : 1
+  const variant =
+    segments.length > 1 && /^[A-Z]/.test(segments[1]) ? segments[1] : 'Mono'
+  const propStartIndex = variant === 'Mono' && segments[1] !== 'Mono' ? 1 : 2
+  const iconKey = `${baseKey}.${variant}`
+  const loader = lobeIconLoaders[iconKey as keyof typeof lobeIconLoaders]
+  let IconComponent = lazyIcons.get(iconKey)
+  if (!IconComponent && loader) {
+    const loadIcon = loader as () => Promise<{
+      default: ComponentType<Record<string, unknown>>
+    }>
+    IconComponent = lazy(() =>
+      loadIcon().catch(() => ({ default: ProviderIconFallback }))
+    )
+    lazyIcons.set(iconKey, IconComponent)
   }
 
   // Fallback if icon not found
@@ -168,5 +174,17 @@ export function getLobeIcon(
     props.size = size
   }
 
-  return <IconComponent {...props} />
+  return (
+    <Suspense
+      fallback={
+        <span
+          aria-hidden='true'
+          className='inline-block shrink-0'
+          style={{ width: size, height: size }}
+        />
+      }
+    >
+      <IconComponent {...props} />
+    </Suspense>
+  )
 }

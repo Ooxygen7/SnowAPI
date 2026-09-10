@@ -298,11 +298,17 @@ export function AccountBindingsTab({
               onClick={binding.onBind}
               disabled={binding.isBound && binding.id !== 'email'}
             >
-              {binding.isBound
-                ? binding.id === 'email'
-                  ? t('Change')
-                  : t('Bound')
-                : t('Bind')}
+              {
+                <>
+                  {binding.isBound && binding.id === 'email'
+                    ? t('Change')
+                    : null}
+                  {binding.isBound && !(binding.id === 'email')
+                    ? t('Bound')
+                    : null}
+                  {!binding.isBound ? t('Bind') : null}
+                </>
+              }
             </Button>
           </div>
         ))}

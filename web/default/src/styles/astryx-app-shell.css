@@ -786,6 +786,46 @@ For commercial licensing, please contact support@quantumnous.com
   backdrop-filter: blur(14px);
 }
 
+/* Keep controls reachable on short phones without clipping plan benefits. */
+@media (max-width: 767px) and (max-height: 700px) {
+  .snowapi-upgrade-dialog .snowapi-upgrade-main {
+    height: 100dvh;
+    min-height: 0;
+    padding-block: 1rem;
+  }
+  .snowapi-upgrade-layout {
+    min-height: 0;
+    height: 100%;
+  }
+  .snowapi-upgrade-dialog .snowapi-upgrade-plans {
+    flex: 1;
+    min-height: 0;
+    margin-top: 1rem;
+  }
+  .snowapi-upgrade-plans > div:has(.snowapi-upgrade-plan-viewport) {
+    min-height: 0;
+    height: 100%;
+  }
+  .snowapi-upgrade-plan-viewport {
+    flex: 1;
+    min-height: 0;
+  }
+  .snowapi-upgrade-plan-clip,
+  .snowapi-upgrade-plan-grid,
+  .snowapi-upgrade-plan-slide {
+    height: 100%;
+    min-height: 0;
+  }
+  .snowapi-upgrade-dialog .snowapi-upgrade-plan-card {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .snowapi-upgrade-mobile-pager {
+    flex-shrink: 0;
+  }
+}
+
 .snowapi-upgrade-page-dots {
   display: flex;
   align-items: center;

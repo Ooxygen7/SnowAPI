@@ -21,6 +21,7 @@ func SetVideoRouter(router *gin.Engine) {
 	videoV1Router.Use(middleware.RouteTag("relay"))
 	videoV1Router.Use(middleware.TokenAuth())
 	videoV1Router.Use(middleware.RelayIPAuditAndBan())
+	videoV1Router.Use(middleware.TaskSubmissionRateLimit())
 	videoV1Router.Use(middleware.Distribute())
 	{
 		videoV1Router.POST("/video/generations", controller.RelayTask)
@@ -39,6 +40,7 @@ func SetVideoRouter(router *gin.Engine) {
 	klingV1Router.Use(middleware.KlingRequestConvert())
 	klingV1Router.Use(middleware.TokenAuth())
 	klingV1Router.Use(middleware.RelayIPAuditAndBan())
+	klingV1Router.Use(middleware.TaskSubmissionRateLimit())
 	klingV1Router.Use(middleware.Distribute())
 	{
 		klingV1Router.POST("/videos/text2video", controller.RelayTask)
@@ -53,6 +55,7 @@ func SetVideoRouter(router *gin.Engine) {
 	jimengOfficialGroup.Use(middleware.JimengRequestConvert())
 	jimengOfficialGroup.Use(middleware.TokenAuth())
 	jimengOfficialGroup.Use(middleware.RelayIPAuditAndBan())
+	jimengOfficialGroup.Use(middleware.TaskSubmissionRateLimit())
 	jimengOfficialGroup.Use(middleware.Distribute())
 	{
 		// Maps to: /?Action=CVSync2AsyncSubmitTask&Version=2022-08-31 and /?Action=CVSync2AsyncGetResult&Version=2022-08-31

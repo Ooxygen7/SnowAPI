@@ -149,7 +149,7 @@ export default function CardSwap({
   const childArray = useMemo(() => Children.toArray(children), [children])
   const refs = useMemo(
     () => childArray.map(() => React.createRef<HTMLDivElement>()),
-    [childArray.length]
+    [childArray]
   )
   const order = useRef(
     Array.from({ length: childArray.length }, (_, index) => index)
@@ -330,6 +330,7 @@ export default function CardSwap({
     pauseOnHover,
     refs,
     skewAmount,
+    verticalDistance,
   ])
 
   const rendered = childArray.map((child, index) => {
@@ -339,7 +340,7 @@ export default function CardSwap({
     return cloneElement(card, {
       key: index,
       ref: refs[index],
-      style: { width, height, ...(card.props.style ?? {}) },
+      style: { width, height, ...card.props.style },
       onClick: (event: React.MouseEvent<HTMLDivElement>) => {
         card.props.onClick?.(event)
         onCardClick?.(index)

@@ -557,8 +557,9 @@ For commercial licensing, please contact support@quantumnous.com
     transform: scale(0.98);
   }
 
-  [data-slot='table'] tr {
-    transition: background-color 180ms ease;
+  [data-slot='table'] tr,
+  [data-slot='table'] td {
+    transition: none;
   }
 
   /* Table row stagger-in animation */

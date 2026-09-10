@@ -136,7 +136,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 	}
 
 	needSensitiveCheck := setting.ShouldCheckPromptSensitive()
-	needCountToken := constant.CountToken
+	needCountToken := constant.CountToken || c.GetInt(middleware.GroupRateTPMLimitKey) > 0
 	// Avoid building huge CombineText (strings.Join) when token counting and sensitive check are both disabled.
 	var meta *types.TokenCountMeta
 	if needSensitiveCheck || needCountToken {
@@ -161,6 +161,20 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 	}
 
 	relayInfo.SetEstimatePromptTokens(tokens)
+	if leaseID := c.GetInt(middleware.GroupRateLeaseIDKey); leaseID > 0 && c.GetInt(middleware.GroupRateTPMLimitKey) > 0 {
+		budget := int64(tokens)
+		if meta != nil && meta.MaxTokens > 0 {
+			budget += int64(meta.MaxTokens)
+		}
+		if err := model.ReserveGroupRateTokens(leaseID, relayInfo.UserId, budget, int64(c.GetInt(middleware.GroupRateTPMLimitKey))); err != nil {
+			status := http.StatusInternalServerError
+			if errors.Is(err, model.ErrGroupRateLimited) {
+				status = http.StatusTooManyRequests
+			}
+			newAPIError = types.NewErrorWithStatusCode(err, types.ErrorCodeInvalidRequest, status, types.ErrOptionWithSkipRetry())
+			return
+		}
+	}
 
 	priceData, err := helper.ModelPriceHelper(c, relayInfo, tokens, meta)
 	if err != nil {

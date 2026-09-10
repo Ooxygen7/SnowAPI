@@ -34,6 +34,15 @@ interface UserInfoDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+function InfoItem({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className='space-y-1.5'>
+      <Label className='text-muted-foreground text-xs'>{label}</Label>
+      <div className='text-sm font-semibold'>{value}</div>
+    </div>
+  )
+}
+
 export function UserInfoDialog({
   userId,
   open,
@@ -70,19 +79,6 @@ export function UserInfoDialog({
     }
   }, [open, userId, fetchUserInfo])
 
-  const InfoItem = ({
-    label,
-    value,
-  }: {
-    label: string
-    value: string | number
-  }) => (
-    <div className='space-y-1.5'>
-      <Label className='text-muted-foreground text-xs'>{label}</Label>
-      <div className='text-sm font-semibold'>{value}</div>
-    </div>
-  )
-
   return (
     <Dialog
       open={open}
@@ -95,63 +91,69 @@ export function UserInfoDialog({
       contentHeight='auto'
       bodyClassName='space-y-4'
     >
-      {isLoading ? (
-        <div className='flex items-center justify-center py-8'>
-          <Loader2 className='text-muted-foreground size-6 animate-spin' />
-        </div>
-      ) : userInfo ? (
-        <div className='space-y-4 py-4'>
-          {/* Basic Info */}
-          <div className='grid grid-cols-2 gap-4'>
-            <InfoItem label={t('Username')} value={userInfo.username} />
-            {userInfo.display_name && (
-              <InfoItem
-                label={t('Display Name')}
-                value={userInfo.display_name}
-              />
-            )}
-          </div>
-
-          {/* Balance Info */}
-          <div className='grid grid-cols-2 gap-4'>
-            <InfoItem
-              label={t('Balance')}
-              value={formatQuota(userInfo.quota)}
-            />
-            <InfoItem
-              label={t('Used Quota')}
-              value={formatQuota(userInfo.used_quota)}
-            />
-          </div>
-
-          {/* Statistics */}
-          <div className='grid grid-cols-2 gap-4'>
-            <InfoItem
-              label={t('Request Count')}
-              value={formatCompactNumber(userInfo.request_count)}
-            />
-            {userInfo.group && (
-              <InfoItem label={t('User Group')} value={userInfo.group} />
-            )}
-          </div>
-
-          {/* Remark */}
-          {userInfo.remark && (
-            <div className='space-y-1.5'>
-              <Label className='text-muted-foreground text-xs'>
-                {t('Remark')}
-              </Label>
-              <div className='text-sm leading-relaxed font-semibold break-words'>
-                {userInfo.remark}
-              </div>
+      {
+        <>
+          {isLoading ? (
+            <div className='flex items-center justify-center py-8'>
+              <Loader2 className='text-muted-foreground size-6 animate-spin' />
             </div>
-          )}
-        </div>
-      ) : (
-        <div className='text-muted-foreground py-8 text-center text-sm'>
-          {t('No user information available')}
-        </div>
-      )}
+          ) : null}
+          {!isLoading && userInfo ? (
+            <div className='space-y-4 py-4'>
+              {/* Basic Info */}
+              <div className='grid grid-cols-2 gap-4'>
+                <InfoItem label={t('Username')} value={userInfo.username} />
+                {userInfo.display_name && (
+                  <InfoItem
+                    label={t('Display Name')}
+                    value={userInfo.display_name}
+                  />
+                )}
+              </div>
+
+              {/* Balance Info */}
+              <div className='grid grid-cols-2 gap-4'>
+                <InfoItem
+                  label={t('Balance')}
+                  value={formatQuota(userInfo.quota)}
+                />
+                <InfoItem
+                  label={t('Used Quota')}
+                  value={formatQuota(userInfo.used_quota)}
+                />
+              </div>
+
+              {/* Statistics */}
+              <div className='grid grid-cols-2 gap-4'>
+                <InfoItem
+                  label={t('Request Count')}
+                  value={formatCompactNumber(userInfo.request_count)}
+                />
+                {userInfo.group && (
+                  <InfoItem label={t('User Group')} value={userInfo.group} />
+                )}
+              </div>
+
+              {/* Remark */}
+              {userInfo.remark && (
+                <div className='space-y-1.5'>
+                  <Label className='text-muted-foreground text-xs'>
+                    {t('Remark')}
+                  </Label>
+                  <div className='text-sm leading-relaxed font-semibold break-words'>
+                    {userInfo.remark}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
+          {!isLoading && !userInfo ? (
+            <div className='text-muted-foreground py-8 text-center text-sm'>
+              {t('No user information available')}
+            </div>
+          ) : null}
+        </>
+      }
     </Dialog>
   )
 }

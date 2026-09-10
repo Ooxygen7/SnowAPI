@@ -230,6 +230,7 @@ export type PingStatusMap = Record<string, PingStatus>
 
 export interface AnnouncementItem {
   id?: number
+  revision?: number
   content: string
   publishDate?: string
   type?: 'default' | 'ongoing' | 'success' | 'warning' | 'error'

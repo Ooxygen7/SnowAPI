@@ -115,7 +115,8 @@ export function AnnouncementsPanel() {
         .filter((announcement) => announcement.content?.trim())
         .sort(
           (left, right) =>
-            getPublishTimestamp(right) - getPublishTimestamp(left)
+            (right.revision ?? getPublishTimestamp(right)) -
+            (left.revision ?? getPublishTimestamp(left))
         ),
     [items]
   )

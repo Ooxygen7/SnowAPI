@@ -92,13 +92,16 @@ function NavigationItem(props: {
     ? item.items.filter((subItem) => !isMinimalModeHiddenItem(subItem))
     : item.items
   if (visibleItems.length === 0) return null
+  const hasSelectedChild = visibleItems.some((child) =>
+    checkIsActive(props.currentHref, child)
+  )
 
   return (
     <SideNavItem
       key={`${item.title}-${isSelected}`}
       label={item.title}
       icon={icon}
-      isSelected={isSelected}
+      isSelected={isSelected && !hasSelectedChild}
       endContent={endContent}
       collapsible={{ defaultIsCollapsed: !isSelected }}
     >

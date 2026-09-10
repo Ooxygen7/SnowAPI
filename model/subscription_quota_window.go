@@ -220,11 +220,8 @@ func loadSubscriptionQuotaWindowTx(tx *gorm.DB, id int, subId int, windowType st
 	if err := validateSubscriptionQuotaCounter("window usage", window.AmountUsed); err != nil {
 		return nil, err
 	}
-	if window.AmountTotal > 0 && window.AmountUsed > window.AmountTotal {
-		err := fmt.Errorf("%w: quota window %d usage %d exceeds total %d", ErrSubscriptionQuotaInvalid, window.Id, window.AmountUsed, window.AmountTotal)
-		common.SysError(err.Error())
-		return nil, err
-	}
+	// Settled usage may legitimately exceed an estimate. Keep such windows
+	// readable for refunds, reporting and subsequent admission rejection.
 	return &window, nil
 }
 
@@ -238,11 +235,6 @@ func createSubscriptionQuotaWindowTx(tx *gorm.DB, sub *UserSubscription, windowT
 		}
 	}
 	if err := validateSubscriptionQuotaCounter("window usage", used); err != nil {
-		return nil, err
-	}
-	if total > 0 && used > total {
-		err := fmt.Errorf("%w: new quota window usage %d exceeds total %d", ErrSubscriptionQuotaInvalid, used, total)
-		common.SysError(err.Error())
 		return nil, err
 	}
 	if end <= start {
@@ -284,9 +276,8 @@ func updateSubscriptionQuotaWindowUsageTx(tx *gorm.DB, window *SubscriptionQuota
 	if err := validateSubscriptionQuotaCounter("window usage", newUsed); err != nil {
 		return err
 	}
-	if window.AmountTotal > 0 && newUsed > window.AmountTotal {
-		return fmt.Errorf("%w: window=%d need=%d remaining=%d", ErrSubscriptionQuotaInsufficient, window.Id, newUsed-window.AmountUsed, window.AmountTotal-window.AmountUsed)
-	}
+	// The caller enforces admission limits. This CAS also persists settlement
+	// of already-consumed usage, which may exceed the original reservation.
 	expectedVersion := window.Version
 	nextVersion := expectedVersion + 1
 	result := tx.Model(&SubscriptionQuotaWindow{}).
@@ -445,7 +436,10 @@ func adjustSubscriptionUsageTx(tx *gorm.DB, record *SubscriptionPreConsumeRecord
 	if err != nil {
 		return err
 	}
-	if periodWindow.AmountTotal > 0 && periodUsed > periodWindow.AmountTotal {
+	// Reservations may never exceed the allowance. Settlement, however,
+	// records usage already incurred upstream; rejecting it would lose the
+	// charge. An exhausted window continues to reject subsequent admissions.
+	if state == SubscriptionUsageStateReserved && periodWindow.AmountTotal > 0 && periodUsed > periodWindow.AmountTotal {
 		return fmt.Errorf("%w: periodic window remaining=%d need=%d", ErrSubscriptionQuotaInsufficient, periodWindow.AmountTotal-periodWindow.AmountUsed, delta)
 	}
 	var fiveHourWindow *SubscriptionQuotaWindow
@@ -459,7 +453,7 @@ func adjustSubscriptionUsageTx(tx *gorm.DB, record *SubscriptionPreConsumeRecord
 		if err != nil {
 			return err
 		}
-		if fiveHourUsed > fiveHourWindow.AmountTotal {
+		if state == SubscriptionUsageStateReserved && fiveHourUsed > fiveHourWindow.AmountTotal {
 			return fmt.Errorf("%w: five-hour window remaining=%d need=%d", ErrSubscriptionQuotaInsufficient, fiveHourWindow.AmountTotal-fiveHourWindow.AmountUsed, delta)
 		}
 	}

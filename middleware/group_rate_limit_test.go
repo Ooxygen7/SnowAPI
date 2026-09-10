@@ -1,58 +1,60 @@
 package middleware
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
+	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/setting"
+	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
-func resetGroupRateState(t *testing.T) {
-	t.Helper()
-	groupRateState.Lock()
-	groupRateState.Users = make(map[int]*groupRateUserState)
-	groupRateState.Unlock()
+func TestGroupRateMiddlewareReleasesFailedAdmission(t *testing.T) {
+	previousDB := model.DB
+	previousPolicies := setting.GroupPolicies2JSONString()
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	sqlDB.SetMaxOpenConns(1)
+	require.NoError(t, db.AutoMigrate(&model.User{}, &model.GroupRateLease{}))
+	model.DB = db
 	t.Cleanup(func() {
-		groupRateState.Lock()
-		groupRateState.Users = make(map[int]*groupRateUserState)
-		groupRateState.Unlock()
+		model.DB = previousDB
+		_ = sqlDB.Close()
+		_ = setting.UpdateGroupPoliciesByJSONString(previousPolicies)
 	})
-}
-
-func TestEnterGroupRateWindowEnforcesConcurrencyAndSuccessLimits(t *testing.T) {
-	resetGroupRateState(t)
-	policy := setting.GroupPolicy{
-		MaxRequests:           10,
-		MaxSuccessfulRequests: 1,
-		PeriodMinutes:         1,
-		ConcurrencyLimit:      1,
+	require.NoError(t, db.Create(&model.User{Id: 42, Username: "rate-user", Group: "Light"}).Error)
+	require.NoError(t, setting.UpdateGroupPoliciesByJSONString(`{"Free":{"period_minutes":1},"Light":{"max_requests":10,"max_successful_requests":1,"period_minutes":1,"concurrency_limit":1,"tpm_limit":0}}`))
+	engine := gin.New()
+	engine.Use(func(c *gin.Context) { c.Set("id", 42); common.SetContextKey(c, constant.ContextKeyUserGroup, "Light") })
+	engine.GET("/request", ModelRequestRateLimit(), func(c *gin.Context) {
+		if c.Query("fail") == "1" {
+			c.Status(500)
+			return
+		}
+		c.Status(200)
+	})
+	engine.GET("/task", TaskSubmissionRateLimit(), func(c *gin.Context) { c.Status(200) })
+	engine.POST("/task", TaskSubmissionRateLimit(), func(c *gin.Context) { c.Status(200) })
+	for _, test := range []struct {
+		path   string
+		status int
+	}{{"/request?fail=1", 500}, {"/request", 200}, {"/request", 429}} {
+		recorder := httptest.NewRecorder()
+		engine.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, test.path, nil))
+		assert.Equal(t, test.status, recorder.Code)
 	}
-
-	leave, message := enterGroupRateWindow(42, policy)
-	require.NotNil(t, leave)
-	assert.Empty(t, message)
-
-	blocked, message := enterGroupRateWindow(42, policy)
-	assert.Nil(t, blocked)
-	assert.Contains(t, message, "concurrency limit reached")
-
-	leave(true)
-	blocked, message = enterGroupRateWindow(42, policy)
-	assert.Nil(t, blocked)
-	assert.Contains(t, message, "successful request limit reached")
-}
-
-func TestEnterGroupRateWindowCountsFailedRequestsTowardTotal(t *testing.T) {
-	resetGroupRateState(t)
-	policy := setting.GroupPolicy{MaxRequests: 1, PeriodMinutes: 1}
-
-	leave, message := enterGroupRateWindow(7, policy)
-	require.NotNil(t, leave)
-	assert.Empty(t, message)
-	leave(false)
-
-	blocked, message := enterGroupRateWindow(7, policy)
-	assert.Nil(t, blocked)
-	assert.Contains(t, message, "request limit reached")
+	for method, status := range map[string]int{http.MethodGet: 200, http.MethodPost: 429} {
+		recorder := httptest.NewRecorder()
+		engine.ServeHTTP(recorder, httptest.NewRequest(method, "/task", nil))
+		assert.Equal(t, status, recorder.Code, "exhausted users can still fetch existing task results")
+	}
 }

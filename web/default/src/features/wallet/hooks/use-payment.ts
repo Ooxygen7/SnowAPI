@@ -157,6 +157,12 @@ export function usePayment() {
                 await callbacks?.onSuccess?.()
               } else if (result === 'failed') {
                 toast.error(i18next.t('Payment failed'))
+              } else if (result === 'pending') {
+                toast.info(
+                  i18next.t(
+                    'Payment is awaiting confirmation. Check order history before paying again.'
+                  )
+                )
               }
             })
             return true

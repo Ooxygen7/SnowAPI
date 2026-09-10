@@ -160,17 +160,24 @@ func SyncOptions(frequency int) {
 }
 
 func UpdateOption(key string, value string) error {
+	if key == "console_setting.announcements" {
+		return UpdateOptionsBulk(map[string]string{key: value})
+	}
 	// Save to database first
 	option := Option{
 		Key: key,
 	}
 	// https://gorm.io/docs/update.html#Save-All-Fields
-	DB.FirstOrCreate(&option, Option{Key: key})
+	if err := DB.FirstOrCreate(&option, Option{Key: key}).Error; err != nil {
+		return err
+	}
 	option.Value = value
 	// Save is a combination function.
 	// If save value does not contain primary key, it will execute Create,
 	// otherwise it will execute Update (with all fields).
-	DB.Save(&option)
+	if err := DB.Save(&option).Error; err != nil {
+		return err
+	}
 	// Update OptionMap
 	return updateOptionMap(key, value)
 }
@@ -212,6 +219,23 @@ func UpdateOptionsWithTx(tx *gorm.DB, values map[string]string) error {
 		}
 		if err := lockForUpdate(tx).Where(commonKeyCol+" = ?", key).First(&option).Error; err != nil {
 			return err
+		}
+		if key == "console_setting.announcements" {
+			// Keep a counter even when all notices are removed, so a later
+			// publication cannot reuse an already-acknowledged revision.
+			counter := Option{Key: "console_setting.announcement_revision"}
+			if err := tx.FirstOrCreate(&counter, Option{Key: counter.Key}).Error; err != nil {
+				return err
+			}
+			previous, _ := strconv.ParseInt(counter.Value, 10, 64)
+			value, revision, err := prepareAnnouncementRevisions(option.Value, values[key], max(time.Now().UnixMilli(), previous))
+			if err != nil {
+				return err
+			}
+			if err := tx.Model(&counter).Update("value", strconv.FormatInt(revision, 10)).Error; err != nil {
+				return err
+			}
+			values[key] = value
 		}
 		if err := tx.Model(&Option{}).Where(commonKeyCol+" = ?", key).Update("value", values[key]).Error; err != nil {
 			return err

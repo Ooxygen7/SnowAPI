@@ -45,24 +45,13 @@ func applyUserGroupEntitlementTx(tx *gorm.DB, userID int, targetGroup string, du
 	if targetGroup == "" || len(targetGroup) > 64 {
 		return 0, errors.New("invalid target group")
 	}
-	if durationMinutes < 0 || durationMinutes > MaxRedemptionGroupDurationMinutes {
+	if durationMinutes <= 0 || durationMinutes > MaxRedemptionGroupDurationMinutes {
 		return 0, errors.New("invalid group entitlement duration")
 	}
 	user, err := loadUserGroupStateForUpdateTx(tx, userID, now)
 	if err != nil {
 		return 0, err
 	}
-	if durationMinutes == 0 {
-		if err := tx.Model(&User{}).Where("id = ?", userID).Updates(map[string]interface{}{
-			"group":            targetGroup,
-			"group_restore":    "",
-			"group_expires_at": 0,
-		}).Error; err != nil {
-			return 0, err
-		}
-		return 0, nil
-	}
-
 	restoreGroup := strings.TrimSpace(user.Group)
 	expiresFrom := now
 	if user.GroupExpiresAt > now {

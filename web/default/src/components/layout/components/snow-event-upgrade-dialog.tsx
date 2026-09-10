@@ -71,6 +71,7 @@ import {
 import { useIsMobile } from '@/hooks/use-mobile'
 import { getSelf } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth-store'
 
 import { SnowEventAurora } from './snow-event-aurora'
 
@@ -218,9 +219,17 @@ export function SnowEventUpgradeDialog(props: SnowEventUpgradeDialogProps) {
   }
 
   const refresh = async () => {
+    const selfResponse = await getSelf().catch(() => null)
+    if (selfResponse?.success && selfResponse.data) {
+      useAuthStore.getState().auth.setUser(selfResponse.data)
+    }
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: subscriptionOverviewQueryKey }),
       queryClient.invalidateQueries({ queryKey: ['snow-event-user'] }),
+      queryClient.invalidateQueries({ queryKey: ['model-catalog'] }),
+      queryClient.invalidateQueries({ queryKey: ['user-models'] }),
+      queryClient.invalidateQueries({ queryKey: ['user-models-ccswitch'] }),
+      queryClient.invalidateQueries({ queryKey: ['user-groups'] }),
     ])
   }
 
@@ -255,7 +264,7 @@ export function SnowEventUpgradeDialog(props: SnowEventUpgradeDialogProps) {
             <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2.4} />
           </Button>
 
-          <main className='relative z-10 mx-auto flex min-h-full w-full max-w-[92rem] flex-col justify-center px-0 py-8 sm:px-8 sm:py-16 lg:px-12 lg:py-10'>
+          <main className='snowapi-upgrade-main relative z-10 mx-auto flex min-h-full w-full max-w-[92rem] flex-col justify-center px-0 py-8 sm:px-8 sm:py-16 lg:px-12 lg:py-10'>
             <div className='snowapi-upgrade-layout flex w-full flex-col'>
               <header className='flex shrink-0 flex-col items-center px-5 text-center sm:px-0'>
                 <div className='flex items-center gap-3'>
@@ -269,7 +278,7 @@ export function SnowEventUpgradeDialog(props: SnowEventUpgradeDialogProps) {
                 </p>
               </header>
 
-              <section className='mt-6 flex min-h-0 flex-col items-center justify-center sm:mt-10 sm:min-h-[24rem]'>
+              <section className='snowapi-upgrade-plans mt-6 flex min-h-0 flex-col items-center justify-center sm:mt-10 sm:min-h-[24rem]'>
                 {isLoading ? (
                   <div className='flex min-h-[24rem] items-center justify-center'>
                     <Spinner className='size-6' />

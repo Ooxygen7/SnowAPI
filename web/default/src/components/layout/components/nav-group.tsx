@@ -48,10 +48,10 @@ import {
 } from '@/components/ui/sidebar'
 
 import { checkIsActive } from '../lib/url-utils'
-import {
-  type NavCollapsible,
-  type NavLink,
-  type NavGroup as NavGroupProps,
+import type {
+  NavCollapsible,
+  NavLink,
+  NavGroup as NavGroupProps,
 } from '../types'
 
 /**

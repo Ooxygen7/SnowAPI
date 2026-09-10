@@ -465,11 +465,11 @@ func getUserGroupByIdTx(tx *gorm.DB, userId int) (string, error) {
 	if tx == nil {
 		tx = DB
 	}
-	var group string
-	if err := tx.Model(&User{}).Where("id = ?", userId).Select(commonGroupCol).Find(&group).Error; err != nil {
+	var user User
+	if err := tx.Model(&User{}).Where("id = ?", userId).Select("group").Find(&user).Error; err != nil {
 		return "", err
 	}
-	return group, nil
+	return user.Group, nil
 }
 
 type activeSubscriptionSelection struct {
@@ -809,14 +809,16 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 				currentGroup = "Free"
 			}
 		}
-		if currentGroup != upgradeGroup {
+		if currentGroup != upgradeGroup || temporaryEntitlementActive {
 			prevGroup = currentGroup
-			column := "group"
-			if temporaryEntitlementActive {
-				column = "group_restore"
-			}
+			// Replacing the redeemed subscription also replaces its temporary
+			// group lifecycle. The new plan must take effect immediately.
 			if err := tx.Model(&User{}).Where("id = ?", userId).
-				Update(column, upgradeGroup).Error; err != nil {
+				Updates(map[string]interface{}{
+					"group":            upgradeGroup,
+					"group_restore":    "",
+					"group_expires_at": 0,
+				}).Error; err != nil {
 				return nil, err
 			}
 		}
@@ -844,9 +846,6 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 		QuotaWindowVersion:  0,
 		CreatedAt:           common.GetTimestamp(),
 		UpdatedAt:           common.GetTimestamp(),
-	}
-	if sub.AmountTotal > 0 && sub.AmountUsed > sub.AmountTotal {
-		sub.AmountUsed = sub.AmountTotal
 	}
 	if replacementPrevGroup != "" {
 		sub.PrevUserGroup = replacementPrevGroup
@@ -2132,9 +2131,8 @@ func PostConsumeUserSubscriptionDelta(userSubscriptionId int, delta int64) error
 		if err != nil {
 			return err
 		}
-		if sub.AmountTotal > 0 && newUsed > sub.AmountTotal {
-			return fmt.Errorf("%w: used=%d total=%d", ErrSubscriptionQuotaInsufficient, newUsed, sub.AmountTotal)
-		}
+		// Legacy settlement also records already-incurred usage; admission
+		// limits are enforced before the upstream request, not at settlement.
 		now := getSubscriptionDBTimestampTx(tx)
 		if sub.CurrentPeriodWindowId > 0 {
 			window, err := loadSubscriptionQuotaWindowTx(tx, sub.CurrentPeriodWindowId, sub.Id, SubscriptionQuotaWindowPeriod)

@@ -31,6 +31,10 @@ const STATUS_RELATED_KEYS = new Set([
   'Notice',
   'console_setting.announcements',
   'console_setting.announcements_enabled',
+  'console_setting.api_info',
+  'console_setting.api_info_enabled',
+  'console_setting.faq',
+  'console_setting.faq_enabled',
   'LogConsumeEnabled',
   'LinuxDOOAuthInvitationRequired',
   'QuotaPerUnit',
@@ -46,7 +50,13 @@ export function useUpdateOption() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (request: UpdateOptionRequest) => updateSystemOption(request),
+    mutationFn: async (request: UpdateOptionRequest) => {
+      const result = await updateSystemOption(request)
+      if (!result.success) {
+        throw new Error(result.message || i18next.t('Failed to update setting'))
+      }
+      return result
+    },
     onSuccess: (data, variables) => {
       if (data.success) {
         // Always refresh system-options

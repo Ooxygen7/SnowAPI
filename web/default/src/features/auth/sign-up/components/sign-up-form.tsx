@@ -101,7 +101,7 @@ export function SignUpForm({
       } else {
         toast.error(response.message || t('Failed to create invited account'))
       }
-    } catch (_error) {
+    } catch {
       // Errors are handled by the global interceptor.
     } finally {
       setIsLoading(false)

@@ -576,16 +576,21 @@ const getOperationSummary = (
 }
 
 const getModeTagTailwind = (mode: string): string => {
-  if (mode.includes('header'))
+  if (mode.includes('header')) {
     return 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/20'
-  if (mode.includes('replace') || mode.includes('trim'))
+  }
+  if (mode.includes('replace') || mode.includes('trim')) {
     return 'bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/20'
-  if (mode.includes('copy') || mode.includes('move'))
+  }
+  if (mode.includes('copy') || mode.includes('move')) {
     return 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/20'
-  if (mode.includes('error') || mode.includes('prune'))
+  }
+  if (mode.includes('error') || mode.includes('prune')) {
     return 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/20'
-  if (mode.includes('sync'))
+  }
+  if (mode.includes('sync')) {
     return 'bg-green-500/15 text-green-700 dark:text-green-300 border-green-500/20'
+  }
   return 'bg-muted text-muted-foreground'
 }
 
@@ -630,17 +635,20 @@ const getModeToPlaceholder = (mode: string): string => {
 }
 
 const getModeValueLabel = (mode: string): string => {
-  if (mode === 'set_header')
+  if (mode === 'set_header') {
     return 'Header Value (supports string or JSON mapping)'
-  if (mode === 'pass_headers')
+  }
+  if (mode === 'pass_headers') {
     return 'Pass-through Headers (comma-separated or JSON array)'
+  }
   if (
     mode === 'trim_prefix' ||
     mode === 'trim_suffix' ||
     mode === 'ensure_prefix' ||
     mode === 'ensure_suffix'
-  )
+  ) {
     return 'Prefix/Suffix Text'
+  }
   if (mode === 'prune_objects') return 'Prune Rule (string or JSON object)'
   return 'Value (supports JSON or plain text)'
 }
@@ -653,8 +661,9 @@ const getModeValuePlaceholder = (mode: string): string => {
     mode === 'trim_suffix' ||
     mode === 'ensure_prefix' ||
     mode === 'ensure_suffix'
-  )
+  ) {
     return 'openai/'
+  }
   if (mode === 'prune_objects') return '{"type":"redacted_thinking"}'
   return '0.7'
 }
@@ -790,8 +799,9 @@ const parsePruneObjectsDraft = (valueText: string): PruneObjectsDraft => {
   if (!raw) return defaults
   try {
     const parsed = JSON.parse(raw)
-    if (typeof parsed === 'string')
+    if (typeof parsed === 'string') {
       return { ...defaults, typeText: parsed.trim() }
+    }
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
       const rules: PruneRule[] = []
       if (
@@ -807,8 +817,9 @@ const parsePruneObjectsDraft = (valueText: string): PruneObjectsDraft => {
       }
       if (Array.isArray(parsed.conditions)) {
         for (const item of parsed.conditions) {
-          if (item && typeof item === 'object')
+          if (item && typeof item === 'object') {
             rules.push(normalizePruneRule(item))
+          }
         }
       } else if (
         parsed.conditions &&
@@ -867,31 +878,35 @@ const buildPruneObjectsValueText = (draft: PruneObjectsDraft): string => {
       return conditionPayload
     })
   if (conditions.length > 0) payload.conditions = conditions
-  if (!payload.type && !payload.conditions)
+  if (!payload.type && !payload.conditions) {
     return JSON.stringify({ logic: 'AND' })
+  }
   return JSON.stringify(payload)
 }
 
 // pass_headers helpers
 
 const parsePassHeaderNames = (rawValue: unknown): string[] => {
-  if (Array.isArray(rawValue))
+  if (Array.isArray(rawValue)) {
     return rawValue.map((i) => String(i ?? '').trim()).filter(Boolean)
+  }
   if (rawValue && typeof rawValue === 'object') {
     const obj = rawValue as Record<string, unknown>
-    if (Array.isArray(obj.headers))
+    if (Array.isArray(obj.headers)) {
       return obj.headers.map((i) => String(i ?? '').trim()).filter(Boolean)
+    }
     if (obj.header !== undefined) {
       const single = String(obj.header ?? '').trim()
       return single ? [single] : []
     }
     return []
   }
-  if (typeof rawValue === 'string')
+  if (typeof rawValue === 'string') {
     return rawValue
       .split(',')
       .map((i) => i.trim())
       .filter(Boolean)
+  }
   return []
 }
 
@@ -926,18 +941,22 @@ const validateOperations = (
     const fromValue = op.from.trim()
     const toValue = op.to.trim()
 
-    if (meta.path && !pathValue)
+    if (meta.path && !pathValue) {
       return t('Rule {{line}} is missing target path', { line })
+    }
     if (FROM_REQUIRED_MODES.has(mode) && !fromValue) {
-      if (!(meta.pathAlias && pathValue))
+      if (!(meta.pathAlias && pathValue)) {
         return t('Rule {{line}} is missing source field', { line })
+      }
     }
     if (TO_REQUIRED_MODES.has(mode) && !toValue) {
-      if (!(meta.pathAlias && pathValue))
+      if (!(meta.pathAlias && pathValue)) {
         return t('Rule {{line}} is missing target field', { line })
+      }
     }
-    if (VALUE_REQUIRED_MODES.has(mode) && op.value_text.trim() === '')
+    if (VALUE_REQUIRED_MODES.has(mode) && op.value_text.trim() === '') {
       return t('Rule {{line}} is missing value', { line })
+    }
 
     if (mode === 'return_error') {
       const raw = op.value_text.trim()
@@ -945,10 +964,13 @@ const validateOperations = (
       try {
         const parsed = JSON.parse(raw)
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-          if (!String((parsed as Record<string, unknown>).message || '').trim())
+          if (
+            !String((parsed as Record<string, unknown>).message || '').trim()
+          ) {
             return t('Rule {{line}} return_error requires a message field', {
               line,
             })
+          }
         }
       } catch {
         /* plain string is allowed */
@@ -957,18 +979,21 @@ const validateOperations = (
 
     if (mode === 'prune_objects') {
       const raw = op.value_text.trim()
-      if (!raw)
+      if (!raw) {
         return t('Rule {{line}} prune_objects is missing conditions', { line })
+      }
     }
 
     if (mode === 'pass_headers') {
       const raw = op.value_text.trim()
-      if (!raw)
+      if (!raw) {
         return t('Rule {{line}} pass_headers is missing header names', { line })
+      }
       const parsed = parseLooseValue(raw)
       const headers = parsePassHeaderNames(parsed)
-      if (headers.length === 0)
+      if (headers.length === 0) {
         return t('Rule {{line}} pass_headers format is invalid', { line })
+      }
     }
   }
   return ''
@@ -1214,14 +1239,16 @@ export function ParamOverrideEditorDialog(
   )
 
   const returnErrorDraft = useMemo(() => {
-    if (!selectedOperation || selectedOperation.mode !== 'return_error')
+    if (!selectedOperation || selectedOperation.mode !== 'return_error') {
       return null
+    }
     return parseReturnErrorDraft(selectedOperation.value_text)
   }, [selectedOperation])
 
   const pruneObjectsDraft = useMemo(() => {
-    if (!selectedOperation || selectedOperation.mode !== 'prune_objects')
+    if (!selectedOperation || selectedOperation.mode !== 'prune_objects') {
       return null
+    }
     return parsePruneObjectsDraft(selectedOperation.value_text)
   }, [selectedOperation])
 
@@ -1478,11 +1505,13 @@ export function ParamOverrideEditorDialog(
     if (visualMode === 'legacy') {
       const trimmed = legacyValue.trim()
       if (!trimmed) return ''
-      if (!verifyJSON(trimmed))
+      if (!verifyJSON(trimmed)) {
         throw new Error(t('Parameter override must be valid JSON format'))
+      }
       const parsed = JSON.parse(trimmed) as unknown
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
         throw new Error(t('Legacy format must be a JSON object'))
+      }
       return JSON.stringify(parsed, null, 2)
     }
     return buildOperationsJson(operations, { validate: true }, t)
@@ -1578,7 +1607,7 @@ export function ParamOverrideEditorDialog(
             }
             parsedCurrent = JSON.parse(trimmed) as Record<string, unknown>
           }
-          const merged = { ...(payload || {}), ...parsedCurrent }
+          const merged = { ...payload, ...parsedCurrent }
           const text = JSON.stringify(merged, null, 2)
           setVisualMode('legacy')
           setLegacyValue(text)
@@ -1684,8 +1713,9 @@ export function ParamOverrideEditorDialog(
       if (editMode === 'json') {
         const trimmed = jsonText.trim()
         if (trimmed) {
-          if (!verifyJSON(trimmed))
+          if (!verifyJSON(trimmed)) {
             throw new Error(t('Parameter override must be valid JSON format'))
+          }
           result = JSON.stringify(JSON.parse(trimmed), null, 2)
         }
       } else {
@@ -1774,12 +1804,10 @@ export function ParamOverrideEditorDialog(
             {t('Template')}
           </span>
           <Select
-            items={[
-              ...templatePresetOptions.map((o) => ({
-                value: o.value,
-                label: t(o.label),
-              })),
-            ]}
+            items={templatePresetOptions.map((o) => ({
+              value: o.value,
+              label: t(o.label),
+            }))}
             value={templatePresetKey}
             onValueChange={(v) =>
               setTemplatePresetKey(v || 'operations_default')
@@ -1826,251 +1854,262 @@ export function ParamOverrideEditorDialog(
       </div>
       {/* Content */}
       <div className='min-h-0 flex-1 overflow-hidden'>
-        {editMode === 'visual' ? (
-          visualMode === 'legacy' ? (
-            <div className='p-4'>
-              <p className='text-muted-foreground mb-2 text-sm'>
-                {t('Legacy Format (JSON Object)')}
-              </p>
-              <Textarea
-                value={legacyValue}
-                onChange={(e) => setLegacyValue(e.target.value)}
-                placeholder={JSON.stringify(LEGACY_TEMPLATE, null, 2)}
-                rows={14}
-                className='font-mono text-xs'
-              />
-              <p className='text-muted-foreground mt-2 text-xs'>
-                {t(
-                  'Edit JSON object directly. Suitable for simple parameter overrides.'
-                )}
-              </p>
-            </div>
-          ) : (
-            <div className='flex h-full'>
-              {/* Left sidebar */}
-              <div className='flex w-[280px] flex-shrink-0 flex-col border-r'>
-                <div className='flex items-center justify-between border-b px-3 py-2'>
-                  <div className='flex items-center gap-2'>
-                    <span className='text-sm font-medium'>{t('Rules')}</span>
-                    <Badge variant='secondary'>
-                      {operationCount}/{operations.length}
-                    </Badge>
+        {
+          <>
+            {editMode === 'visual' && visualMode === 'legacy' ? (
+              <div className='p-4'>
+                <p className='text-muted-foreground mb-2 text-sm'>
+                  {t('Legacy Format (JSON Object)')}
+                </p>
+                <Textarea
+                  value={legacyValue}
+                  onChange={(e) => setLegacyValue(e.target.value)}
+                  placeholder={JSON.stringify(LEGACY_TEMPLATE, null, 2)}
+                  rows={14}
+                  className='font-mono text-xs'
+                />
+                <p className='text-muted-foreground mt-2 text-xs'>
+                  {t(
+                    'Edit JSON object directly. Suitable for simple parameter overrides.'
+                  )}
+                </p>
+              </div>
+            ) : null}
+            {editMode === 'visual' && !(visualMode === 'legacy') ? (
+              <div className='flex h-full'>
+                {/* Left sidebar */}
+                <div className='flex w-[280px] flex-shrink-0 flex-col border-r'>
+                  <div className='flex items-center justify-between border-b px-3 py-2'>
+                    <div className='flex items-center gap-2'>
+                      <span className='text-sm font-medium'>{t('Rules')}</span>
+                      <Badge variant='secondary'>
+                        {operationCount}/{operations.length}
+                      </Badge>
+                    </div>
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='sm'
+                      onClick={addOperation}
+                    >
+                      <Plus className='h-4 w-4' />
+                    </Button>
                   </div>
-                  <Button
-                    type='button'
-                    variant='ghost'
-                    size='sm'
-                    onClick={addOperation}
-                  >
-                    <Plus className='h-4 w-4' />
-                  </Button>
-                </div>
 
-                {topOperationModes.length > 0 && (
-                  <div className='flex flex-wrap gap-1 border-b px-3 py-2'>
-                    {topOperationModes.map(([mode, count]) => (
-                      <span
-                        key={`mode_stat_${mode}`}
-                        className={cn(
-                          'inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium',
-                          getModeTagTailwind(mode)
-                        )}
-                      >
-                        {t(OPERATION_MODE_LABEL_MAP[mode] || mode)} · {count}
-                      </span>
-                    ))}
+                  {topOperationModes.length > 0 && (
+                    <div className='flex flex-wrap gap-1 border-b px-3 py-2'>
+                      {topOperationModes.map(([mode, count]) => (
+                        <span
+                          key={`mode_stat_${mode}`}
+                          className={cn(
+                            'inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium',
+                            getModeTagTailwind(mode)
+                          )}
+                        >
+                          {t(OPERATION_MODE_LABEL_MAP[mode] || mode)} · {count}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className='px-3 py-2'>
+                    <div className='relative'>
+                      <Search className='text-muted-foreground absolute top-2.5 left-2.5 h-3.5 w-3.5' />
+                      <Input
+                        value={operationSearch}
+                        onChange={(e) => setOperationSearch(e.target.value)}
+                        placeholder={t('Search rules...')}
+                        className='h-8 pl-8 text-xs'
+                      />
+                    </div>
                   </div>
-                )}
 
-                <div className='px-3 py-2'>
-                  <div className='relative'>
-                    <Search className='text-muted-foreground absolute top-2.5 left-2.5 h-3.5 w-3.5' />
-                    <Input
-                      value={operationSearch}
-                      onChange={(e) => setOperationSearch(e.target.value)}
-                      placeholder={t('Search rules...')}
-                      className='h-8 pl-8 text-xs'
-                    />
-                  </div>
-                </div>
-
-                <ScrollArea className='flex-1'>
-                  <div className='flex flex-col gap-1 px-3 pb-3'>
-                    {filteredOperations.length === 0 ? (
-                      <p className='text-muted-foreground py-4 text-center text-xs'>
-                        {t('No matching rules')}
-                      </p>
-                    ) : (
-                      filteredOperations.map((operation) => {
-                        const index = operations.findIndex(
-                          (o) => o.id === operation.id
-                        )
-                        const isActive = operation.id === selectedOperationId
-                        const isDragging = operation.id === draggedOperationId
-                        const isDropTarget =
-                          operation.id === dragOverOperationId &&
-                          draggedOperationId !== '' &&
-                          draggedOperationId !== operation.id
-                        return (
-                          <div
-                            key={operation.id}
-                            role='button'
-                            tabIndex={0}
-                            draggable={operations.length > 1}
-                            onClick={() => setSelectedOperationId(operation.id)}
-                            onDragStart={(e) =>
-                              handleDragStart(e, operation.id)
-                            }
-                            onDragOver={(e) => handleDragOver(e, operation.id)}
-                            onDrop={(e) => handleDrop(e, operation.id)}
-                            onDragEnd={resetDragState}
-                            onKeyDown={(e: KeyboardEvent) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault()
+                  <ScrollArea className='flex-1'>
+                    <div className='flex flex-col gap-1 px-3 pb-3'>
+                      {filteredOperations.length === 0 ? (
+                        <p className='text-muted-foreground py-4 text-center text-xs'>
+                          {t('No matching rules')}
+                        </p>
+                      ) : (
+                        filteredOperations.map((operation) => {
+                          const index = operations.findIndex(
+                            (o) => o.id === operation.id
+                          )
+                          const isActive = operation.id === selectedOperationId
+                          const isDragging = operation.id === draggedOperationId
+                          const isDropTarget =
+                            operation.id === dragOverOperationId &&
+                            draggedOperationId !== '' &&
+                            draggedOperationId !== operation.id
+                          return (
+                            <div
+                              key={operation.id}
+                              role='button'
+                              tabIndex={0}
+                              draggable={operations.length > 1}
+                              onClick={() =>
                                 setSelectedOperationId(operation.id)
                               }
-                            }}
-                            className={cn(
-                              'cursor-pointer rounded-lg border p-2.5 transition-colors',
-                              isActive
-                                ? 'border-primary bg-primary/5'
-                                : 'hover:bg-muted/50',
-                              isDragging && 'opacity-50',
-                              isDropTarget &&
-                                dragOverPosition === 'before' &&
-                                'border-t-primary border-t-2',
-                              isDropTarget &&
-                                dragOverPosition === 'after' &&
-                                'border-b-primary border-b-2'
-                            )}
-                          >
-                            <div className='flex items-start gap-2'>
-                              <GripVertical
-                                className={cn(
-                                  'text-muted-foreground mt-0.5 h-3.5 w-3.5 flex-shrink-0',
-                                  operations.length > 1
-                                    ? 'cursor-grab'
-                                    : 'cursor-default'
-                                )}
-                              />
-                              <div className='min-w-0 flex-1'>
-                                <div className='flex items-center justify-between gap-1'>
-                                  <span className='text-xs font-semibold'>
-                                    #{index + 1}
-                                  </span>
-                                  <Badge
-                                    variant='outline'
-                                    className='text-[10px]'
-                                  >
-                                    {operation.conditions.length}
-                                  </Badge>
-                                </div>
-                                <p className='text-muted-foreground mt-0.5 line-clamp-1 text-[11px]'>
-                                  {getOperationSummary(operation, index)}
-                                </p>
-                                {operation.description.trim() && (
-                                  <p className='text-muted-foreground mt-0.5 line-clamp-2 text-[10px]'>
-                                    {operation.description}
-                                  </p>
-                                )}
-                                <span
+                              onDragStart={(e) =>
+                                handleDragStart(e, operation.id)
+                              }
+                              onDragOver={(e) =>
+                                handleDragOver(e, operation.id)
+                              }
+                              onDrop={(e) => handleDrop(e, operation.id)}
+                              onDragEnd={resetDragState}
+                              onKeyDown={(e: KeyboardEvent) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault()
+                                  setSelectedOperationId(operation.id)
+                                }
+                              }}
+                              className={cn(
+                                'cursor-pointer rounded-lg border p-2.5 transition-colors',
+                                isActive
+                                  ? 'border-primary bg-primary/5'
+                                  : 'hover:bg-muted/50',
+                                isDragging && 'opacity-50',
+                                isDropTarget &&
+                                  dragOverPosition === 'before' &&
+                                  'border-t-primary border-t-2',
+                                isDropTarget &&
+                                  dragOverPosition === 'after' &&
+                                  'border-b-primary border-b-2'
+                              )}
+                            >
+                              <div className='flex items-start gap-2'>
+                                <GripVertical
                                   className={cn(
-                                    'mt-1 inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium',
-                                    getModeTagTailwind(operation.mode || 'set')
+                                    'text-muted-foreground mt-0.5 h-3.5 w-3.5 flex-shrink-0',
+                                    operations.length > 1
+                                      ? 'cursor-grab'
+                                      : 'cursor-default'
                                   )}
-                                >
-                                  {t(
-                                    OPERATION_MODE_LABEL_MAP[
-                                      operation.mode || 'set'
-                                    ] ||
-                                      operation.mode ||
-                                      'set'
+                                />
+                                <div className='min-w-0 flex-1'>
+                                  <div className='flex items-center justify-between gap-1'>
+                                    <span className='text-xs font-semibold'>
+                                      #{index + 1}
+                                    </span>
+                                    <Badge
+                                      variant='outline'
+                                      className='text-[10px]'
+                                    >
+                                      {operation.conditions.length}
+                                    </Badge>
+                                  </div>
+                                  <p className='text-muted-foreground mt-0.5 line-clamp-1 text-[11px]'>
+                                    {getOperationSummary(operation, index)}
+                                  </p>
+                                  {operation.description.trim() && (
+                                    <p className='text-muted-foreground mt-0.5 line-clamp-2 text-[10px]'>
+                                      {operation.description}
+                                    </p>
                                   )}
-                                </span>
+                                  <span
+                                    className={cn(
+                                      'mt-1 inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium',
+                                      getModeTagTailwind(
+                                        operation.mode || 'set'
+                                      )
+                                    )}
+                                  >
+                                    {t(
+                                      OPERATION_MODE_LABEL_MAP[
+                                        operation.mode || 'set'
+                                      ] ||
+                                        operation.mode ||
+                                        'set'
+                                    )}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        )
-                      })
-                    )}
-                  </div>
-                </ScrollArea>
-              </div>
+                          )
+                        })
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
 
-              {/* Right panel - Rule editor */}
-              <div className='flex min-w-0 flex-1 flex-col overflow-y-auto'>
-                {selectedOperation ? (
-                  <RuleEditor
-                    operation={selectedOperation}
-                    operationIndex={selectedOperationIndex}
-                    operations={operations}
-                    returnErrorDraft={returnErrorDraft}
-                    pruneObjectsDraft={pruneObjectsDraft}
-                    expandedConditions={expandedConditions}
-                    setExpandedConditions={setExpandedConditions}
-                    updateOperation={updateOperation}
-                    duplicateOperation={duplicateOperation}
-                    removeOperation={removeOperation}
-                    addCondition={addCondition}
-                    updateCondition={updateCondition}
-                    removeCondition={removeCondition}
-                    updateReturnErrorDraft={updateReturnErrorDraft}
-                    updatePruneObjectsDraft={updatePruneObjectsDraft}
-                    addPruneRule={addPruneRule}
-                    updatePruneRule={updatePruneRule}
-                    removePruneRule={removePruneRule}
-                    expandAllConditions={expandAllConditions}
-                    collapseAllConditions={collapseAllConditions}
-                  />
-                ) : (
-                  <div className='flex flex-1 items-center justify-center'>
-                    <p className='text-muted-foreground text-sm'>
-                      {t('Select a rule to edit.')}
-                    </p>
-                  </div>
-                )}
+                {/* Right panel - Rule editor */}
+                <div className='flex min-w-0 flex-1 flex-col overflow-y-auto'>
+                  {selectedOperation ? (
+                    <RuleEditor
+                      operation={selectedOperation}
+                      operationIndex={selectedOperationIndex}
+                      operations={operations}
+                      returnErrorDraft={returnErrorDraft}
+                      pruneObjectsDraft={pruneObjectsDraft}
+                      expandedConditions={expandedConditions}
+                      setExpandedConditions={setExpandedConditions}
+                      updateOperation={updateOperation}
+                      duplicateOperation={duplicateOperation}
+                      removeOperation={removeOperation}
+                      addCondition={addCondition}
+                      updateCondition={updateCondition}
+                      removeCondition={removeCondition}
+                      updateReturnErrorDraft={updateReturnErrorDraft}
+                      updatePruneObjectsDraft={updatePruneObjectsDraft}
+                      addPruneRule={addPruneRule}
+                      updatePruneRule={updatePruneRule}
+                      removePruneRule={removePruneRule}
+                      expandAllConditions={expandAllConditions}
+                      collapseAllConditions={collapseAllConditions}
+                    />
+                  ) : (
+                    <div className='flex flex-1 items-center justify-center'>
+                      <p className='text-muted-foreground text-sm'>
+                        {t('Select a rule to edit.')}
+                      </p>
+                    </div>
+                  )}
 
-                {visualValidationError && (
-                  <div className='border-t px-4 py-2'>
-                    <p className='text-destructive text-xs'>
-                      {visualValidationError}
-                    </p>
-                  </div>
+                  {visualValidationError && (
+                    <div className='border-t px-4 py-2'>
+                      <p className='text-destructive text-xs'>
+                        {visualValidationError}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+            {!(editMode === 'visual') ? (
+              <div className='p-4'>
+                <div className='mb-2 flex items-center gap-2'>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='sm'
+                    onClick={formatJson}
+                  >
+                    {t('Format')}
+                  </Button>
+                  <span className='text-muted-foreground text-xs'>
+                    {t('Advanced text editing')}
+                  </span>
+                </div>
+                <Textarea
+                  value={jsonText}
+                  onChange={(e) => handleJsonChange(e.target.value)}
+                  placeholder={JSON.stringify(OPERATION_TEMPLATE, null, 2)}
+                  rows={20}
+                  className='font-mono text-xs'
+                />
+                <p className='text-muted-foreground mt-2 text-xs'>
+                  {t(
+                    'Edit JSON text directly. Format will be validated on save.'
+                  )}
+                </p>
+                {jsonError && (
+                  <p className='text-destructive mt-1 text-xs'>{jsonError}</p>
                 )}
               </div>
-            </div>
-          )
-        ) : (
-          /* JSON mode */
-          <div className='p-4'>
-            <div className='mb-2 flex items-center gap-2'>
-              <Button
-                type='button'
-                variant='outline'
-                size='sm'
-                onClick={formatJson}
-              >
-                {t('Format')}
-              </Button>
-              <span className='text-muted-foreground text-xs'>
-                {t('Advanced text editing')}
-              </span>
-            </div>
-            <Textarea
-              value={jsonText}
-              onChange={(e) => handleJsonChange(e.target.value)}
-              placeholder={JSON.stringify(OPERATION_TEMPLATE, null, 2)}
-              rows={20}
-              className='font-mono text-xs'
-            />
-            <p className='text-muted-foreground mt-2 text-xs'>
-              {t('Edit JSON text directly. Format will be validated on save.')}
-            </p>
-            {jsonError && (
-              <p className='text-destructive mt-1 text-xs'>{jsonError}</p>
-            )}
-          </div>
-        )}
+            ) : null}
+          </>
+        }
       </div>
       {/* Footer */}
     </Dialog>
@@ -2177,12 +2216,10 @@ function RuleEditor(ruleEditorProps: RuleEditorProps) {
           <div className='space-y-1.5'>
             <label className='text-xs font-medium'>{t('Operation Type')}</label>
             <Select
-              items={[
-                ...OPERATION_MODE_OPTIONS.map((o) => ({
-                  value: o.value,
-                  label: t(o.label),
-                })),
-              ]}
+              items={OPERATION_MODE_OPTIONS.map((o) => ({
+                value: o.value,
+                label: t(o.label),
+              }))}
               value={mode}
               onValueChange={(nextMode) =>
                 nextMode !== null &&
@@ -2257,62 +2294,70 @@ function RuleEditor(ruleEditorProps: RuleEditorProps) {
         </div>
 
         {/* Value section */}
-        {meta.value &&
-          (mode === 'return_error' && ruleEditorProps.returnErrorDraft ? (
-            <ReturnErrorEditor
-              operationId={operation.id}
-              draft={ruleEditorProps.returnErrorDraft}
-              updateDraft={ruleEditorProps.updateReturnErrorDraft}
-            />
-          ) : mode === 'prune_objects' && ruleEditorProps.pruneObjectsDraft ? (
-            <PruneObjectsEditor
-              operationId={operation.id}
-              draft={ruleEditorProps.pruneObjectsDraft}
-              updateDraft={ruleEditorProps.updatePruneObjectsDraft}
-              addRule={ruleEditorProps.addPruneRule}
-              updateRule={ruleEditorProps.updatePruneRule}
-              removeRule={ruleEditorProps.removePruneRule}
-            />
-          ) : (
-            <div className='space-y-1.5'>
-              <div className='flex items-center justify-between'>
-                <label className='text-xs font-medium'>
-                  {t(getModeValueLabel(mode))}
-                </label>
-                {operation.value_text.trim().startsWith('{') && (
-                  <Button
-                    type='button'
-                    variant='ghost'
-                    size='sm'
-                    className='text-muted-foreground h-auto px-1.5 py-0.5 text-xs'
-                    onClick={() => {
-                      try {
-                        const parsed = JSON.parse(operation.value_text)
-                        ruleEditorProps.updateOperation(operation.id, {
-                          value_text: JSON.stringify(parsed, null, 2),
-                        })
-                      } catch (_e) {
-                        /* not valid JSON */
-                      }
-                    }}
-                  >
-                    {t('Format')}
-                  </Button>
-                )}
-              </div>
-              <Textarea
-                value={operation.value_text}
-                onChange={(e) =>
-                  ruleEditorProps.updateOperation(operation.id, {
-                    value_text: e.target.value,
-                  })
-                }
-                placeholder={getModeValuePlaceholder(mode)}
-                rows={3}
-                className='max-h-[200px] resize-y overflow-y-auto font-mono text-xs'
+        {meta.value && (
+          <>
+            {mode === 'return_error' && ruleEditorProps.returnErrorDraft ? (
+              <ReturnErrorEditor
+                operationId={operation.id}
+                draft={ruleEditorProps.returnErrorDraft}
+                updateDraft={ruleEditorProps.updateReturnErrorDraft}
               />
-            </div>
-          ))}
+            ) : null}
+            {!(mode === 'return_error' && ruleEditorProps.returnErrorDraft) &&
+            mode === 'prune_objects' &&
+            ruleEditorProps.pruneObjectsDraft ? (
+              <PruneObjectsEditor
+                operationId={operation.id}
+                draft={ruleEditorProps.pruneObjectsDraft}
+                updateDraft={ruleEditorProps.updatePruneObjectsDraft}
+                addRule={ruleEditorProps.addPruneRule}
+                updateRule={ruleEditorProps.updatePruneRule}
+                removeRule={ruleEditorProps.removePruneRule}
+              />
+            ) : null}
+            {!(mode === 'return_error' && ruleEditorProps.returnErrorDraft) &&
+            !(mode === 'prune_objects' && ruleEditorProps.pruneObjectsDraft) ? (
+              <div className='space-y-1.5'>
+                <div className='flex items-center justify-between'>
+                  <label className='text-xs font-medium'>
+                    {t(getModeValueLabel(mode))}
+                  </label>
+                  {operation.value_text.trim().startsWith('{') && (
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='sm'
+                      className='text-muted-foreground h-auto px-1.5 py-0.5 text-xs'
+                      onClick={() => {
+                        try {
+                          const parsed = JSON.parse(operation.value_text)
+                          ruleEditorProps.updateOperation(operation.id, {
+                            value_text: JSON.stringify(parsed, null, 2),
+                          })
+                        } catch {
+                          /* not valid JSON */
+                        }
+                      }}
+                    >
+                      {t('Format')}
+                    </Button>
+                  )}
+                </div>
+                <Textarea
+                  value={operation.value_text}
+                  onChange={(e) =>
+                    ruleEditorProps.updateOperation(operation.id, {
+                      value_text: e.target.value,
+                    })
+                  }
+                  placeholder={getModeValuePlaceholder(mode)}
+                  rows={3}
+                  className='max-h-[200px] resize-y overflow-y-auto font-mono text-xs'
+                />
+              </div>
+            ) : null}
+          </>
+        )}
 
         {/* keep_origin */}
         {meta.keepOrigin && (
@@ -2332,51 +2377,58 @@ function RuleEditor(ruleEditorProps: RuleEditorProps) {
         )}
 
         {/* sync_fields */}
-        {mode === 'sync_fields' && syncFromTarget && syncToTarget ? (
-          <SyncFieldsEditor
-            operationId={operation.id}
-            syncFromTarget={syncFromTarget}
-            syncToTarget={syncToTarget}
-            updateOperation={ruleEditorProps.updateOperation}
-          />
-        ) : (meta.from || meta.to !== undefined) && mode !== 'sync_fields' ? (
-          <div className='grid gap-3 sm:grid-cols-2'>
-            {(meta.from || meta.to === false) && (
-              <div className='space-y-1.5'>
-                <label className='text-xs font-medium'>
-                  {t(getModeFromLabel(mode))}
-                </label>
-                <Input
-                  value={operation.from}
-                  onChange={(e) =>
-                    ruleEditorProps.updateOperation(operation.id, {
-                      from: e.target.value,
-                    })
-                  }
-                  placeholder={getModeFromPlaceholder(mode)}
-                  className='h-9'
-                />
+        {
+          <>
+            {mode === 'sync_fields' && syncFromTarget && syncToTarget ? (
+              <SyncFieldsEditor
+                operationId={operation.id}
+                syncFromTarget={syncFromTarget}
+                syncToTarget={syncToTarget}
+                updateOperation={ruleEditorProps.updateOperation}
+              />
+            ) : null}
+            {!(mode === 'sync_fields' && syncFromTarget && syncToTarget) &&
+            (meta.from || meta.to !== undefined) &&
+            mode !== 'sync_fields' ? (
+              <div className='grid gap-3 sm:grid-cols-2'>
+                {(meta.from || meta.to === false) && (
+                  <div className='space-y-1.5'>
+                    <label className='text-xs font-medium'>
+                      {t(getModeFromLabel(mode))}
+                    </label>
+                    <Input
+                      value={operation.from}
+                      onChange={(e) =>
+                        ruleEditorProps.updateOperation(operation.id, {
+                          from: e.target.value,
+                        })
+                      }
+                      placeholder={getModeFromPlaceholder(mode)}
+                      className='h-9'
+                    />
+                  </div>
+                )}
+                {(meta.to || meta.to === false) && (
+                  <div className='space-y-1.5'>
+                    <label className='text-xs font-medium'>
+                      {t(getModeToLabel(mode))}
+                    </label>
+                    <Input
+                      value={operation.to}
+                      onChange={(e) =>
+                        ruleEditorProps.updateOperation(operation.id, {
+                          to: e.target.value,
+                        })
+                      }
+                      placeholder={getModeToPlaceholder(mode)}
+                      className='h-9'
+                    />
+                  </div>
+                )}
               </div>
-            )}
-            {(meta.to || meta.to === false) && (
-              <div className='space-y-1.5'>
-                <label className='text-xs font-medium'>
-                  {t(getModeToLabel(mode))}
-                </label>
-                <Input
-                  value={operation.to}
-                  onChange={(e) =>
-                    ruleEditorProps.updateOperation(operation.id, {
-                      to: e.target.value,
-                    })
-                  }
-                  placeholder={getModeToPlaceholder(mode)}
-                  className='h-9'
-                />
-              </div>
-            )}
-          </div>
-        ) : null}
+            ) : null}
+          </>
+        }
 
         {/* Conditions */}
         <div className='rounded-lg border p-3'>
@@ -2566,12 +2618,10 @@ function ConditionEditor(conditionEditorProps: ConditionEditorProps) {
                   {t('Match Mode')}
                 </label>
                 <Select
-                  items={[
-                    ...CONDITION_MODE_OPTIONS.map((o) => ({
-                      value: o.value,
-                      label: t(o.label),
-                    })),
-                  ]}
+                  items={CONDITION_MODE_OPTIONS.map((o) => ({
+                    value: o.value,
+                    label: t(o.label),
+                  }))}
                   value={condition.mode}
                   onValueChange={(v) =>
                     v !== null &&
@@ -2739,7 +2789,7 @@ function ReturnErrorEditor(returnErrorEditorProps: ReturnErrorEditorProps) {
                 onChange={(e) =>
                   returnErrorEditorProps.updateDraft(
                     returnErrorEditorProps.operationId,
-                    { statusCode: parseInt(e.target.value, 10) || 400 }
+                    { statusCode: Number.parseInt(e.target.value, 10) || 400 }
                   )
                 }
                 placeholder='400'
@@ -3086,12 +3136,10 @@ function PruneObjectsEditor(pruneObjectsEditorProps: PruneObjectsEditorProps) {
                           {t('Match Mode')}
                         </label>
                         <Select
-                          items={[
-                            ...CONDITION_MODE_OPTIONS.map((o) => ({
-                              value: o.value,
-                              label: t(o.label),
-                            })),
-                          ]}
+                          items={CONDITION_MODE_OPTIONS.map((o) => ({
+                            value: o.value,
+                            label: t(o.label),
+                          }))}
                           value={rule.mode}
                           onValueChange={(v) =>
                             v !== null &&
@@ -3199,12 +3247,10 @@ function SyncFieldsEditor(syncFieldsEditorProps: SyncFieldsEditorProps) {
           </label>
           <div className='flex gap-2'>
             <Select
-              items={[
-                ...SYNC_TARGET_TYPE_OPTIONS.map((o) => ({
-                  value: o.value,
-                  label: t(o.label),
-                })),
-              ]}
+              items={SYNC_TARGET_TYPE_OPTIONS.map((o) => ({
+                value: o.value,
+                label: t(o.label),
+              }))}
               value={syncFieldsEditorProps.syncFromTarget.type || 'json'}
               onValueChange={(v) =>
                 v !== null &&
@@ -3256,12 +3302,10 @@ function SyncFieldsEditor(syncFieldsEditorProps: SyncFieldsEditorProps) {
           </label>
           <div className='flex gap-2'>
             <Select
-              items={[
-                ...SYNC_TARGET_TYPE_OPTIONS.map((o) => ({
-                  value: o.value,
-                  label: t(o.label),
-                })),
-              ]}
+              items={SYNC_TARGET_TYPE_OPTIONS.map((o) => ({
+                value: o.value,
+                label: t(o.label),
+              }))}
               value={syncFieldsEditorProps.syncToTarget.type || 'json'}
               onValueChange={(v) =>
                 v !== null &&

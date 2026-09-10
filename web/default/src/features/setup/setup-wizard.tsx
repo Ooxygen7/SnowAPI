@@ -330,22 +330,20 @@ export function SetupWizard() {
                     key={step.titleKey}
                     className={cn(
                       'rounded-xl border p-3',
-                      isActive
-                        ? 'border-primary ring-primary/20 ring-2'
-                        : isCompleted
-                          ? 'border-primary/40 bg-primary/5'
-                          : 'border-muted bg-card'
+                      isActive && 'border-primary ring-primary/20 ring-2',
+                      !isActive &&
+                        isCompleted &&
+                        'border-primary/40 bg-primary/5',
+                      !isActive && !isCompleted && 'border-muted bg-card'
                     )}
                   >
                     <div className='flex items-start gap-3'>
                       <span
                         className={cn(
                           'flex size-6 items-center justify-center rounded-md border text-xs font-semibold',
-                          isActive
+                          isActive || isCompleted
                             ? 'border-primary bg-primary text-primary-foreground'
-                            : isCompleted
-                              ? 'border-primary bg-primary text-primary-foreground'
-                              : 'border-muted-foreground/40 text-muted-foreground'
+                            : 'border-muted-foreground/40 text-muted-foreground'
                         )}
                       >
                         {index + 1}
@@ -364,23 +362,29 @@ export function SetupWizard() {
               })}
             </ol>
 
-            {isLoading ? (
-              <LoadingState message={t('Loading setup status…')} />
-            ) : isError ? (
-              <ErrorState
-                title={t('We could not load the setup status.')}
-                onRetry={() => refetch()}
-              />
-            ) : (
-              <Form {...form}>
-                <form
-                  className='space-y-6'
-                  onSubmit={(event) => event.preventDefault()}
-                >
-                  {currentStepComponent}
-                </form>
-              </Form>
-            )}
+            {
+              <>
+                {isLoading ? (
+                  <LoadingState message={t('Loading setup status…')} />
+                ) : null}
+                {!isLoading && isError ? (
+                  <ErrorState
+                    title={t('We could not load the setup status.')}
+                    onRetry={() => refetch()}
+                  />
+                ) : null}
+                {!isLoading && !isError ? (
+                  <Form {...form}>
+                    <form
+                      className='space-y-6'
+                      onSubmit={(event) => event.preventDefault()}
+                    >
+                      {currentStepComponent}
+                    </form>
+                  </Form>
+                ) : null}
+              </>
+            }
           </CardContent>
 
           {!isLoading && !isError && (

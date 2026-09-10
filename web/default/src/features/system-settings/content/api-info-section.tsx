@@ -44,22 +44,12 @@ import { Checkbox } from '@/components/ui/checkbox'
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { getBgColorClass } from '@/lib/colors'
 
 import { SettingsSwitchField } from '../components/settings-form-layout'
 import { SettingsSection } from '../components/settings-section'
@@ -89,23 +79,6 @@ const createApiInfoSchema = (t: (key: string) => string) =>
 type ApiInfoFormValues = z.infer<ReturnType<typeof createApiInfoSchema>>
 
 const API_INFO_FORM_ID = 'api-info-form'
-
-const colorOptions = [
-  { value: 'blue', label: 'Blue' },
-  { value: 'green', label: 'Green' },
-  { value: 'cyan', label: 'Cyan' },
-  { value: 'purple', label: 'Purple' },
-  { value: 'pink', label: 'Pink' },
-  { value: 'red', label: 'Red' },
-  { value: 'orange', label: 'Orange' },
-  { value: 'amber', label: 'Amber' },
-  { value: 'yellow', label: 'Yellow' },
-  { value: 'lime', label: 'Lime' },
-  { value: 'teal', label: 'Teal' },
-  { value: 'indigo', label: 'Indigo' },
-  { value: 'violet', label: 'Violet' },
-  { value: 'slate', label: 'Slate' },
-]
 
 function parseApiInfoList(data: string): ApiInfo[] {
   try {
@@ -179,7 +152,7 @@ export function ApiInfoSection({ enabled, data }: ApiInfoSectionProps) {
       url: apiInfo.url,
       route: apiInfo.route,
       description: apiInfo.description,
-      color: apiInfo.color,
+      color: apiInfo.color || 'blue',
     })
     setShowDialog(true)
   }
@@ -259,8 +232,6 @@ export function ApiInfoSection({ enabled, data }: ApiInfoSectionProps) {
       checked ? [...prev, id] : prev.filter((item) => item !== id)
     )
   }
-
-  const getColorClass = (color: string) => getBgColorClass(color)
 
   return (
     <SettingsSection title={t('API Addresses')}>
@@ -359,18 +330,6 @@ export function ApiInfoSection({ enabled, data }: ApiInfoSectionProps) {
               cell: (apiInfo) => apiInfo.description,
             },
             {
-              id: 'color',
-              header: t('Color'),
-              cell: (apiInfo) => (
-                <div className='flex items-center gap-2'>
-                  <div
-                    className={`h-4 w-4 rounded-full ${getColorClass(apiInfo.color)}`}
-                  />
-                  <span className='text-sm capitalize'>{apiInfo.color}</span>
-                </div>
-              ),
-            },
-            {
               id: 'actions',
               header: t('Actions'),
               cell: (apiInfo) => (
@@ -458,54 +417,6 @@ export function ApiInfoSection({ enabled, data }: ApiInfoSectionProps) {
                       {...field}
                     />
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='color'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Badge Color')}</FormLabel>
-                  <Select
-                    items={colorOptions.map((option) => ({
-                      value: option.value,
-                      label: (
-                        <div className='flex items-center gap-2'>
-                          <div
-                            className={`h-4 w-4 rounded-full ${getBgColorClass(option.value)}`}
-                          />
-                          {option.label}
-                        </div>
-                      ),
-                    }))}
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('Select a color')} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent alignItemWithTrigger={false}>
-                      <SelectGroup>
-                        {colorOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            <div className='flex items-center gap-2'>
-                              <div
-                                className={`h-4 w-4 rounded-full ${getBgColorClass(option.value)}`}
-                              />
-                              {option.label}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    {t('Visual indicator color for the API card')}
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

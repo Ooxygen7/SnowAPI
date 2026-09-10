@@ -132,7 +132,7 @@ export function ModelDetailsDialog(props: {
           )}
         </DialogHeader>
 
-        <div className='grid min-h-0 grid-rows-[auto_auto_1fr] gap-3 overflow-hidden px-5 py-3 sm:px-6'>
+        <div className='flex min-h-0 flex-col gap-3 overflow-y-auto overscroll-contain px-5 py-3 sm:px-6 [&>section]:shrink-0'>
           <DialogSection title={t('Price')}>
             {model.priceUnitKey === 'request' ? (
               <PriceCard

@@ -38,8 +38,11 @@ import type { LegalDocumentResponse } from './types'
 type LegalDocumentProps = {
   title: string
   queryKey: string
-  fetchDocument: () => Promise<LegalDocumentResponse>
-  builtInDocument: BuiltInLegalDocument
+  fetchDocument?: () => Promise<LegalDocumentResponse>
+  builtInDocument?: BuiltInLegalDocument
+  sections?: RenderedLegalSection[]
+  loading?: boolean
+  emptyMessage?: string
 }
 
 type RenderedLegalSection = {
@@ -128,21 +131,24 @@ export function LegalDocument(props: LegalDocumentProps) {
   const { history } = useRouter()
   const isMobile = useMediaQuery('(max-width: 767px)')
   const [activeIndex, setActiveIndex] = useState(0)
-  const { data, isLoading } = useQuery({
+  const { data, isLoading: documentLoading } = useQuery({
     queryKey: [props.queryKey],
     queryFn: props.fetchDocument,
+    enabled: Boolean(props.fetchDocument) && !props.sections,
     staleTime: 10 * 60 * 1000,
   })
+  const isLoading = props.loading ?? documentLoading
 
   const rawContent = data?.data?.trim() ?? ''
   const isExternal = rawContent.length > 0 && isHttpUrl(rawContent)
   const contentIsHtml = rawContent.length > 0 && isLikelyHtml(rawContent)
   const sections = useMemo<RenderedLegalSection[]>(() => {
+    if (props.sections) return props.sections
     if (rawContent && !isExternal && !contentIsHtml) {
       return parseCustomMarkdown(props.title, rawContent)
     }
 
-    return props.builtInDocument.sections.map((section) => ({
+    return (props.builtInDocument?.sections ?? []).map((section) => ({
       id: section.id,
       title: t(section.titleKey),
       paragraphs: section.contentKeys.map((key) => t(key)),
@@ -150,7 +156,8 @@ export function LegalDocument(props: LegalDocumentProps) {
   }, [
     contentIsHtml,
     isExternal,
-    props.builtInDocument.sections,
+    props.builtInDocument?.sections,
+    props.sections,
     props.title,
     rawContent,
     t,
@@ -190,6 +197,9 @@ export function LegalDocument(props: LegalDocumentProps) {
         </header>
 
         {isLoading ? <LoadingState className='min-h-[42svh]' /> : null}
+        {!isLoading && sections.length === 0 && props.emptyMessage ? (
+          <p className='text-muted-foreground'>{props.emptyMessage}</p>
+        ) : null}
 
         {!isLoading && isExternal ? (
           <section className='snowapi-legal-section rounded-2xl p-6 sm:p-8'>
@@ -239,7 +249,11 @@ export function LegalDocument(props: LegalDocumentProps) {
           </article>
         ) : null}
 
-        {!isLoading && !isExternal && !contentIsHtml && !isMobile ? (
+        {!isLoading &&
+        !isExternal &&
+        !contentIsHtml &&
+        !isMobile &&
+        sections.length > 0 ? (
           <div className='snowapi-legal-chapter-layout'>
             <aside className='snowapi-legal-wheel-panel'>
               <LegalChapterWheel

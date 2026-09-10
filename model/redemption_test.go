@@ -102,6 +102,7 @@ func TestSearchRedemptionsFiltersAndPaginates(t *testing.T) {
 
 func setupRedeemFixture(t *testing.T, quota int) (userId int, key string) {
 	t.Helper()
+	truncateTables(t)
 	require.NoError(t, DB.AutoMigrate(&Redemption{}))
 	require.NoError(t, DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Unscoped().Delete(&Redemption{}).Error)
 	require.NoError(t, DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&UserSubscription{}).Error)
@@ -288,7 +289,7 @@ func TestRedeemQuotaStillAllowedWithActiveSubscription(t *testing.T) {
 	assert.Equal(t, 500, user.Quota)
 }
 
-func TestRedeemGrantsPermanentGroupEntitlement(t *testing.T) {
+func TestRedeemRejectsPermanentGroupEntitlementWithoutUsingCode(t *testing.T) {
 	userID, key := setupRedeemFixture(t, 0)
 	require.NoError(t, DB.Model(&User{}).Where("id = ?", userID).Updates(map[string]interface{}{
 		"group":            "Light",
@@ -301,17 +302,17 @@ func TestRedeemGrantsPermanentGroupEntitlement(t *testing.T) {
 		"group_duration_minutes": 0,
 	}).Error)
 
-	result, err := Redeem(key, userID)
-	require.NoError(t, err)
-	assert.Equal(t, RedemptionTypeGroup, result.Type)
-	assert.Equal(t, "Heavy", result.GroupName)
-	assert.Zero(t, result.GroupExpiresAt)
+	_, err := Redeem(key, userID)
+	require.Error(t, err)
 
 	var user User
 	require.NoError(t, DB.First(&user, "id = ?", userID).Error)
-	assert.Equal(t, "Heavy", user.Group)
-	assert.Empty(t, user.GroupRestore)
-	assert.Zero(t, user.GroupExpiresAt)
+	assert.Equal(t, "Light", user.Group)
+	assert.Equal(t, "Free", user.GroupRestore)
+	assert.Positive(t, user.GroupExpiresAt)
+	var code Redemption
+	require.NoError(t, DB.Where(commonKeyCol+" = ?", key).First(&code).Error)
+	assert.Equal(t, common.RedemptionCodeStatusEnabled, code.Status)
 }
 
 func TestRedeemExtendsMatchingTemporaryGroupEntitlement(t *testing.T) {

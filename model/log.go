@@ -350,6 +350,11 @@ type RecordConsumeLogParams struct {
 }
 
 func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams) {
+	// TPM accounting must not depend on optional consume-log persistence.
+	if c != nil {
+		tokens := int64(max(params.PromptTokens, 0)) + int64(max(params.CompletionTokens, 0))
+		c.Set(GroupRateActualTokensKey, c.GetInt64(GroupRateActualTokensKey)+tokens)
+	}
 	if !common.LogConsumeEnabled {
 		return
 	}

@@ -119,6 +119,22 @@ for theme in default classic; do
   ln -s ../../../assets/static "$temporary_release/$theme/static"
 done
 
+# Record every emitted asset, including lazy chunks not referenced by index.html.
+python3 - "$incoming_directory" "$temporary_release/STATIC_ASSETS.json" <<'PY'
+import json
+import pathlib
+import sys
+
+incoming = pathlib.Path(sys.argv[1])
+assets = sorted({
+    target.relative_to(incoming / theme / "static").as_posix()
+    for theme in ("default", "classic")
+    for target in (incoming / theme / "static").rglob("*")
+    if target.is_file()
+})
+pathlib.Path(sys.argv[2]).write_text(json.dumps({"version": 1, "assets": assets}, indent=2) + "\n", encoding="utf-8")
+PY
+
 container_environment=$(docker inspect snowapi --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null || true)
 export SNOWAPI_UMAMI_WEBSITE_ID=$(printf '%s\n' "$container_environment" | sed -n 's/^UMAMI_WEBSITE_ID=//p' | head -n 1)
 export SNOWAPI_UMAMI_SCRIPT_URL=$(printf '%s\n' "$container_environment" | sed -n 's/^UMAMI_SCRIPT_URL=//p' | head -n 1)

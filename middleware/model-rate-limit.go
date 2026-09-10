@@ -1,9 +1,8 @@
 package middleware
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -13,29 +12,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
-
-type groupRateUserState struct {
-	Requests    []time.Time
-	Successes   []time.Time
-	Concurrency int
-}
-
-var groupRateState = struct {
-	sync.Mutex
-	Users map[int]*groupRateUserState
-}{Users: make(map[int]*groupRateUserState)}
-
-func pruneRequestTimes(values []time.Time, cutoff time.Time) []time.Time {
-	first := 0
-	for first < len(values) && values[first].Before(cutoff) {
-		first++
-	}
-	if first == 0 {
-		return values
-	}
-	remaining := append([]time.Time(nil), values[first:]...)
-	return remaining
-}
 
 func policyForRelayGroup(group string) (setting.GroupPolicy, bool) {
 	if setting.GroupPoliciesConfigured() {
@@ -61,78 +37,83 @@ func policyForRelayGroup(group string) (setting.GroupPolicy, bool) {
 	return policy, true
 }
 
-func enterGroupRateWindow(userID int, policy setting.GroupPolicy) (func(bool), string) {
-	now := time.Now()
-	cutoff := now.Add(-time.Duration(policy.PeriodMinutes) * time.Minute)
-	groupRateState.Lock()
-	state := groupRateState.Users[userID]
-	if state == nil {
-		state = &groupRateUserState{}
-		groupRateState.Users[userID] = state
-	}
-	state.Requests = pruneRequestTimes(state.Requests, cutoff)
-	state.Successes = pruneRequestTimes(state.Successes, cutoff)
-	if policy.MaxRequests > 0 && len(state.Requests) >= policy.MaxRequests {
-		groupRateState.Unlock()
-		return nil, fmt.Sprintf("request limit reached: at most %d requests every %d minutes", policy.MaxRequests, policy.PeriodMinutes)
-	}
-	if policy.MaxSuccessfulRequests > 0 && len(state.Successes) >= policy.MaxSuccessfulRequests {
-		groupRateState.Unlock()
-		return nil, fmt.Sprintf("successful request limit reached: at most %d requests every %d minutes", policy.MaxSuccessfulRequests, policy.PeriodMinutes)
-	}
-	if policy.ConcurrencyLimit > 0 && state.Concurrency >= policy.ConcurrencyLimit {
-		groupRateState.Unlock()
-		return nil, fmt.Sprintf("concurrency limit reached: at most %d concurrent requests", policy.ConcurrencyLimit)
-	}
-	state.Requests = append(state.Requests, now)
-	state.Concurrency++
-	groupRateState.Unlock()
+const GroupRateLeaseIDKey = "group_rate_lease_id"
+const GroupRateTPMLimitKey = model.GroupRateTPMLimitKey
 
-	var once sync.Once
-	return func(success bool) {
-		once.Do(func() {
-			groupRateState.Lock()
-			current := groupRateState.Users[userID]
-			if current != nil {
-				if current.Concurrency > 0 {
-					current.Concurrency--
-				}
-				if success {
-					current.Successes = append(current.Successes, time.Now())
-				}
-			}
-			groupRateState.Unlock()
-		})
-	}, ""
+// Task polling does not create a new generation and must remain available
+// when the submission allowance is exhausted. Provider converters run first
+// and normalize result queries (including Jimeng's POST query) to GET.
+func TaskSubmissionRateLimit() gin.HandlerFunc {
+	limit := ModelRequestRateLimit()
+	return func(c *gin.Context) {
+		if c.Request.Method == http.MethodGet || c.Request.Method == http.MethodHead {
+			c.Next()
+			return
+		}
+		limit(c)
+	}
 }
 
 func ModelRequestRateLimit() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		group := common.GetContextKeyString(c, constant.ContextKeyUserGroup)
 		policy, enabled := policyForRelayGroup(group)
-		if !enabled {
+		if !enabled || (policy.MaxRequests == 0 && policy.MaxSuccessfulRequests == 0 && policy.ConcurrencyLimit == 0 && policy.TPMLimit == 0) {
 			c.Next()
 			return
 		}
-		userID := c.GetInt("id")
-		if policy.TPMLimit > 0 {
-			usedTokens, err := model.SumUserTokensSince(userID, common.GetTimestamp()-60)
-			if err != nil {
-				common.SysError(fmt.Sprintf("failed to read TPM usage for user %d: %v", userID, err))
+		lease, err := model.AcquireGroupRateLease(c.GetInt("id"), policy)
+		if err != nil {
+			if errors.Is(err, model.ErrGroupRateLimited) {
+				abortWithOpenAiMessage(c, http.StatusTooManyRequests, err.Error())
+			} else {
+				common.SysError("group rate admission failed: " + err.Error())
 				abortWithOpenAiMessage(c, http.StatusInternalServerError, "rate_limit_check_failed")
-				return
 			}
-			if usedTokens >= int64(policy.TPMLimit) {
-				abortWithOpenAiMessage(c, http.StatusTooManyRequests, fmt.Sprintf("TPM limit reached: at most %d tokens per minute", policy.TPMLimit))
-				return
-			}
-		}
-		leave, message := enterGroupRateWindow(userID, policy)
-		if leave == nil {
-			abortWithOpenAiMessage(c, http.StatusTooManyRequests, message)
 			return
 		}
-		defer func() { leave(c.Writer.Status() < http.StatusBadRequest) }()
+		c.Set(GroupRateLeaseIDKey, lease.Id)
+		c.Set(GroupRateTPMLimitKey, policy.TPMLimit)
+		// Reject an already exhausted TPM window even for non-text task routes.
+		if policy.TPMLimit > 0 {
+			err = model.ReserveGroupRateTokens(lease.Id, lease.UserId, 0, int64(policy.TPMLimit))
+			if err != nil {
+				_ = model.CompleteGroupRateLease(lease, false, nil, policy.PeriodMinutes)
+				if errors.Is(err, model.ErrGroupRateLimited) {
+					abortWithOpenAiMessage(c, http.StatusTooManyRequests, err.Error())
+				} else {
+					abortWithOpenAiMessage(c, http.StatusInternalServerError, "rate_limit_check_failed")
+				}
+				return
+			}
+		}
+		done := make(chan struct{})
+		go func() {
+			ticker := time.NewTicker(30 * time.Second)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-done:
+					return
+				case <-ticker.C:
+					if err := model.RenewGroupRateLease(lease.Id); err != nil {
+						common.SysError("group rate lease renewal failed: " + err.Error())
+					}
+				}
+			}
+		}()
+		defer func() {
+			close(done)
+			var actual *int64
+			if value, exists := c.Get(model.GroupRateActualTokensKey); exists {
+				if tokens, ok := value.(int64); ok {
+					actual = &tokens
+				}
+			}
+			if err := model.CompleteGroupRateLease(lease, c.Writer.Status() < http.StatusBadRequest, actual, policy.PeriodMinutes); err != nil {
+				common.SysError("group rate completion failed: " + err.Error())
+			}
+		}()
 		c.Next()
 	}
 }

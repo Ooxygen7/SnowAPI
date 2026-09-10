@@ -28,7 +28,6 @@ import type {
   ResetPlanSubscriptionsRequest,
   SubscriptionResetResult,
   SubscriptionBalanceQuote,
-  SubscriptionPayResponse,
   SubscriptionPayRequest,
   SelfSubscriptionData,
 } from './types'
@@ -149,16 +148,6 @@ export async function getSubscriptionBalanceQuote(
     params: { plan_id: planId },
   })
   return res.data
-}
-
-export async function paySubscriptionEpay(
-  data: SubscriptionPayRequest & { payment_method: string }
-): Promise<SubscriptionPayResponse & { url?: string }> {
-  const res = await api.post('/api/subscription/epay/pay', data)
-  return {
-    ...res.data,
-    url: res.data.url || (res as unknown as { url?: string }).url,
-  }
 }
 
 // ============================================================================

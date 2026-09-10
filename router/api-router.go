@@ -66,6 +66,8 @@ func SetApiRouter(router *gin.Engine) {
 
 			selfRoute := userRoute.Group("/")
 			selfRoute.Use(middleware.UserAuth())
+			selfRoute.GET("/announcements", controller.GetUnreadAnnouncement)
+			selfRoute.POST("/announcements/acknowledge", middleware.CriticalRateLimit(), controller.AcknowledgeAnnouncement)
 			{
 				selfRoute.GET("/self/groups", controller.GetUserGroups)
 				selfRoute.GET("/self", controller.GetSelf)
@@ -126,7 +128,8 @@ func SetApiRouter(router *gin.Engine) {
 			subscriptionRoute.PUT("/self/preference", controller.UpdateSubscriptionPreference)
 			subscriptionRoute.GET("/balance/quote", controller.GetSubscriptionBalanceQuote)
 			subscriptionRoute.POST("/balance/pay", middleware.CriticalRateLimit(), controller.SubscriptionRequestBalancePay)
-			subscriptionRoute.POST("/epay/pay", middleware.CriticalRateLimit(), controller.SubscriptionRequestEpay)
+			// New subscriptions are purchased with wallet balance only. Keep the
+			// legacy callbacks below so already-paid orders can still settle.
 		}
 		subscriptionAdminRoute := apiRouter.Group("/subscription/admin")
 		subscriptionAdminRoute.Use(middleware.AdminAuth())

@@ -1,17 +1,33 @@
+/*
+Copyright (C) 2023-2026 QuantumNous
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+For commercial licensing, please contact support@quantumnous.com
+*/
 import { useQuery } from '@tanstack/react-query'
-import { Copy, ExternalLink } from 'lucide-react'
 import { useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
 
-import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getUserQuotaDates } from '@/features/dashboard/api'
 import type { QuotaDataItem } from '@/features/dashboard/types'
-import { useStatus } from '@/hooks/use-status'
 import { formatNumber, formatQuota } from '@/lib/format'
 import { computeTimeRange } from '@/lib/time'
 import { useAuthStore } from '@/stores/auth-store'
+
+import { ApiAccessPanel } from './api-access-panel'
 
 const CHART_BUCKETS = 24
 const CHART_WIDTH = 1000
@@ -195,7 +211,6 @@ function SummaryMetric({
 export function SummaryCards() {
   const { t } = useTranslation()
   const user = useAuthStore((state) => state.auth.user)
-  const { status } = useStatus()
   const timeRange = useMemo(() => computeTimeRange(1), [])
   const usageQuery = useQuery({
     queryKey: [
@@ -242,13 +257,6 @@ export function SummaryCards() {
       usageItems.reduce((total, item) => total + (Number(item.quota) || 0), 0),
     [usageItems]
   )
-  const apiBase = `${String(status?.server_address || window.location.origin).replace(/\/$/, '')}/v1`
-
-  const copyApiBase = async () => {
-    await navigator.clipboard.writeText(apiBase)
-    toast.success(t('Copied'))
-  }
-
   const metrics = [
     {
       label: t('Credit remaining'),
@@ -287,31 +295,7 @@ export function SummaryCards() {
         formatValue={formatNumber}
       />
 
-      <section className='snowapi-rainflow-panel grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:p-5'>
-        <div className='min-w-0'>
-          <p className='text-muted-foreground text-xs'>{t('API URL')}</p>
-          <code className='mt-2 block truncate font-mono text-sm'>
-            {apiBase}
-          </code>
-          <div className='text-muted-foreground mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs'>
-            <a
-              className='hover:text-foreground inline-flex items-center gap-1'
-              href='/user-agreement'
-            >
-              {t('Terms of Service')} <ExternalLink className='size-3' />
-            </a>
-            <a
-              className='hover:text-foreground inline-flex items-center gap-1'
-              href='/privacy-policy'
-            >
-              {t('Privacy Policy')} <ExternalLink className='size-3' />
-            </a>
-          </div>
-        </div>
-        <Button variant='outline' onClick={copyApiBase}>
-          <Copy className='size-4' /> {t('Copy')}
-        </Button>
-      </section>
+      <ApiAccessPanel />
     </div>
   )
 }

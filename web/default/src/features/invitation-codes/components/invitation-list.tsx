@@ -195,87 +195,107 @@ export function InvitationList() {
         </select>
       </div>
 
-      {invitationQuery.isLoading ? (
-        <div className='text-muted-foreground flex min-h-56 items-center justify-center gap-2'>
-          <Loader2 className='h-4 w-4 animate-spin' />
-          {t('Loading invitation codes')}
-        </div>
-      ) : invitationQuery.isError ? (
-        <div className='border-destructive/30 text-destructive rounded-xl border p-6 text-sm'>
-          {invitationQuery.error.message}
-        </div>
-      ) : items.length === 0 ? (
-        <div className='border-border text-muted-foreground rounded-xl border border-dashed p-10 text-center text-sm'>
-          {t('No invitation codes found.')}
-        </div>
-      ) : (
+      {
         <>
-          <div className='hidden overflow-hidden rounded-xl border md:block'>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('Batch')}</TableHead>
-                  <TableHead>{t('Invitation code')}</TableHead>
-                  <TableHead>{t('Status')}</TableHead>
-                  <TableHead>{t('Created by')}</TableHead>
-                  <TableHead>{t('Used by')}</TableHead>
-                  <TableHead>{t('Created')}</TableHead>
-                  <TableHead className='text-right'>{t('Actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className='font-medium'>{item.name}</TableCell>
-                    <TableCell className='font-mono text-xs'>
-                      {item.code_prefix}
-                    </TableCell>
-                    <TableCell>{statusBadge(item.status)}</TableCell>
-                    <TableCell>
-                      {item.creator_username || `#${item.created_by}`}
-                    </TableCell>
-                    <TableCell>
-                      {item.used_username ||
-                        (item.used_by ? `#${item.used_by}` : '—')}
-                    </TableCell>
-                    <TableCell>{formatTimestamp(item.created_at)}</TableCell>
-                    <TableCell>{actions(item)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          <div className='grid gap-3 md:hidden'>
-            {items.map((item) => (
-              <div key={item.id} className='space-y-3 rounded-xl border p-4'>
-                <div className='flex items-start justify-between gap-3'>
-                  <div>
-                    <p className='font-medium'>{item.name}</p>
-                    <p className='text-muted-foreground font-mono text-xs'>
-                      {item.code_prefix}
-                    </p>
-                  </div>
-                  {statusBadge(item.status)}
-                </div>
-                <div className='text-muted-foreground grid grid-cols-2 gap-2 text-xs'>
-                  <span>
-                    {t('Created by')}:{' '}
-                    {item.creator_username || `#${item.created_by}`}
-                  </span>
-                  <span>
-                    {t('Used by')}: {item.used_username || '—'}
-                  </span>
-                  <span className='col-span-2'>
-                    {formatTimestamp(item.created_at)}
-                  </span>
-                </div>
-                {actions(item)}
+          {invitationQuery.isLoading ? (
+            <div className='text-muted-foreground flex min-h-56 items-center justify-center gap-2'>
+              <Loader2 className='h-4 w-4 animate-spin' />
+              {t('Loading invitation codes')}
+            </div>
+          ) : null}
+          {!invitationQuery.isLoading && invitationQuery.isError ? (
+            <div className='border-destructive/30 text-destructive rounded-xl border p-6 text-sm'>
+              {invitationQuery.error.message}
+            </div>
+          ) : null}
+          {!invitationQuery.isLoading &&
+          !invitationQuery.isError &&
+          items.length === 0 ? (
+            <div className='border-border text-muted-foreground rounded-xl border border-dashed p-10 text-center text-sm'>
+              {t('No invitation codes found.')}
+            </div>
+          ) : null}
+          {!invitationQuery.isLoading &&
+          !invitationQuery.isError &&
+          !(items.length === 0) ? (
+            <>
+              <div className='hidden overflow-hidden rounded-xl border md:block'>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('Batch')}</TableHead>
+                      <TableHead>{t('Invitation code')}</TableHead>
+                      <TableHead>{t('Status')}</TableHead>
+                      <TableHead>{t('Created by')}</TableHead>
+                      <TableHead>{t('Used by')}</TableHead>
+                      <TableHead>{t('Created')}</TableHead>
+                      <TableHead className='text-right'>
+                        {t('Actions')}
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className='font-medium'>
+                          {item.name}
+                        </TableCell>
+                        <TableCell className='font-mono text-xs'>
+                          {item.code_prefix}
+                        </TableCell>
+                        <TableCell>{statusBadge(item.status)}</TableCell>
+                        <TableCell>
+                          {item.creator_username || `#${item.created_by}`}
+                        </TableCell>
+                        <TableCell>
+                          {item.used_username ||
+                            (item.used_by ? `#${item.used_by}` : '—')}
+                        </TableCell>
+                        <TableCell>
+                          {formatTimestamp(item.created_at)}
+                        </TableCell>
+                        <TableCell>{actions(item)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-            ))}
-          </div>
+
+              <div className='grid gap-3 md:hidden'>
+                {items.map((item) => (
+                  <div
+                    key={item.id}
+                    className='space-y-3 rounded-xl border p-4'
+                  >
+                    <div className='flex items-start justify-between gap-3'>
+                      <div>
+                        <p className='font-medium'>{item.name}</p>
+                        <p className='text-muted-foreground font-mono text-xs'>
+                          {item.code_prefix}
+                        </p>
+                      </div>
+                      {statusBadge(item.status)}
+                    </div>
+                    <div className='text-muted-foreground grid grid-cols-2 gap-2 text-xs'>
+                      <span>
+                        {t('Created by')}:{' '}
+                        {item.creator_username || `#${item.created_by}`}
+                      </span>
+                      <span>
+                        {t('Used by')}: {item.used_username || '—'}
+                      </span>
+                      <span className='col-span-2'>
+                        {formatTimestamp(item.created_at)}
+                      </span>
+                    </div>
+                    {actions(item)}
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : null}
         </>
-      )}
+      }
 
       <div className='flex items-center justify-between'>
         <p className='text-muted-foreground text-sm'>

@@ -93,19 +93,21 @@ export function VendorMutateDialog({
   const onSubmit = async (values: Record<string, unknown>) => {
     setIsSaving(true)
     try {
-      const response = isEdit
-        ? await updateVendor({ ...values, id: currentVendor!.id })
+      const response = currentVendor
+        ? await updateVendor({ ...values, id: currentVendor.id })
         : await createVendor(values)
 
       if (response.success) {
         toast.success(
-          isEdit ? 'Vendor updated successfully' : 'Vendor created successfully'
+          isEdit
+            ? t('Vendor updated successfully')
+            : t('Vendor created successfully')
         )
         queryClient.invalidateQueries({ queryKey: vendorsQueryKeys.lists() })
         queryClient.invalidateQueries({ queryKey: modelsQueryKeys.lists() })
         onOpenChange(false)
       } else {
-        toast.error(response.message || 'Operation failed')
+        toast.error(response.message || t('Operation failed'))
       }
     } catch (error: unknown) {
       toast.error((error as Error)?.message || 'Operation failed')
@@ -146,7 +148,13 @@ export function VendorMutateDialog({
             {isSaving ? (
               <Loader2 className='mr-2 h-4 w-4 animate-spin' />
             ) : null}
-            {isSaving ? t('Saving...') : isEdit ? t('Update') : t('Create')}
+            {
+              <>
+                {isSaving ? t('Saving...') : null}
+                {!isSaving && isEdit ? t('Update') : null}
+                {!isSaving && !isEdit ? t('Create') : null}
+              </>
+            }
           </Button>
         </>
       }

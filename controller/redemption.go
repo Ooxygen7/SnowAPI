@@ -246,7 +246,7 @@ func normalizeRedemptionBenefit(c *gin.Context, redemption *model.Redemption) bo
 			common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 			return false
 		}
-		if redemption.GroupDurationMinutes < 0 || redemption.GroupDurationMinutes > model.MaxRedemptionGroupDurationMinutes {
+		if redemption.GroupDurationMinutes <= 0 || redemption.GroupDurationMinutes > model.MaxRedemptionGroupDurationMinutes {
 			common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 			return false
 		}

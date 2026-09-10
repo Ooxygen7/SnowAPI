@@ -29,6 +29,39 @@ import {
 const waitImmediately = async () => {}
 
 describe('payment window monitoring', () => {
+  test('timeout and unavailable order status remain unconfirmed', async () => {
+    for (const getStatus of [
+      async () => 'pending' as const,
+      async () => {
+        throw new Error('offline')
+      },
+    ]) {
+      assert.equal(
+        await monitorPaymentWindow({
+          popup: { closed: false, close: () => {} },
+          getStatus,
+          maxChecks: 2,
+          wait: waitImmediately,
+        }),
+        'pending'
+      )
+    }
+  })
+
+  test('accepts a delayed success after checkout closes', async () => {
+    const statuses: TopupStatus[] = ['pending', 'success']
+    assert.equal(
+      await monitorPaymentWindow({
+        popup: { closed: true, close: () => {} },
+        getStatus: async () => statuses.shift() ?? null,
+        closureGraceChecks: 2,
+        maxChecks: 3,
+        wait: waitImmediately,
+      }),
+      'success'
+    )
+  })
+
   test('extracts the EasyPay order number from form parameters', () => {
     assert.equal(
       getPaymentTradeNo({ out_trade_no: ' USR1NO123 ' }),
@@ -52,7 +85,7 @@ describe('payment window monitoring', () => {
     assert.equal(result, 'success')
   })
 
-  test('reports failure after a closed popup remains pending', async () => {
+  test('keeps a pending order unconfirmed after the popup closes', async () => {
     const popup: PaymentPopup = { closed: true, close: () => {} }
 
     const result = await monitorPaymentWindow({
@@ -63,7 +96,7 @@ describe('payment window monitoring', () => {
       wait: waitImmediately,
     })
 
-    assert.equal(result, 'failed')
+    assert.equal(result, 'pending')
   })
 
   test('reports an explicit failed order without waiting for popup closure', async () => {

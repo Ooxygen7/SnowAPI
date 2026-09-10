@@ -19,6 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { useLayoutEffect } from 'react'
 
 import { SearchProvider } from '@/context/search-provider'
+import { AnnouncementNotice } from '@/features/dashboard/components/announcement-notice'
 import { RelayBanToastProvider } from '@/features/ip-audit/ban-toast-provider'
 
 import { AstryxAppShell } from './astryx-app-shell'
@@ -39,6 +40,7 @@ export function AuthenticatedLayout(props: AuthenticatedLayoutProps) {
   return (
     <SearchProvider>
       <RelayBanToastProvider />
+      <AnnouncementNotice />
       <AstryxAppShell>{props.children}</AstryxAppShell>
     </SearchProvider>
   )
