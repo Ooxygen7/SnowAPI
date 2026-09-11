@@ -1297,6 +1297,13 @@ body[data-snowapi-console='true']
 
 body[data-snowapi-console='true']
   .snowapi-astryx-content
+  [data-slot='badge'][data-variant='default'] {
+  background-color: var(--primary);
+  color: var(--primary-foreground) !important;
+}
+
+body[data-snowapi-console='true']
+  .snowapi-astryx-content
   [data-slot='status-badge']
   > span[aria-hidden='true'] {
   background: var(--foreground) !important;

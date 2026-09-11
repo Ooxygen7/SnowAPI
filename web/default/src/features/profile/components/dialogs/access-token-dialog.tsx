@@ -16,8 +16,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { RefreshCw, Loader2 } from 'lucide-react'
-import { useEffect } from 'react'
+import { Link } from '@tanstack/react-router'
+import { ArrowUpRight, RefreshCw, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { CopyButton } from '@/components/copy-button'
@@ -33,31 +33,28 @@ import { useAccessToken } from '../../hooks'
 // ============================================================================
 
 interface AccessTokenDialogProps {
+  userId: number
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
 export function AccessTokenDialog({
+  userId,
   open,
   onOpenChange,
 }: AccessTokenDialogProps) {
   const { t } = useTranslation()
   const { token, generating, generate } = useAccessToken()
-
-  // Auto-generate token when dialog opens if no token exists
-  useEffect(() => {
-    if (open && !token) {
-      generate()
-    }
-  }, [open, token, generate])
+  let generateLabel = token ? t('Regenerate') : t('Generate')
+  if (generating) generateLabel = t('Generating...')
 
   return (
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      title={t('Access Token')}
+      title={t('Automatic Access')}
       description={t(
-        "Your system access token for API authentication. Keep it secure and don't share it with others."
+        'Use a management token to automate your account. Model calls still require an API key.'
       )}
       contentClassName='sm:max-w-md'
       contentHeight='auto'
@@ -82,7 +79,7 @@ export function AccessTokenDialog({
             ) : (
               <RefreshCw className='h-4 w-4' />
             )}
-            {generating ? t('Generating...') : t('Regenerate')}
+            {generateLabel}
           </Button>
         </>
       }
@@ -109,8 +106,29 @@ export function AccessTokenDialog({
             />
           </div>
           <p className='text-muted-foreground text-xs'>
-            {t('Use this token for API authentication')}
+            {t(
+              'Generating a token replaces the previous one. Keep it private; it has no automatic expiry.'
+            )}
           </p>
+        </div>
+        <div className='bg-muted/50 flex flex-col gap-3 rounded-lg p-3 text-sm'>
+          <div className='flex flex-wrap items-center justify-between gap-2'>
+            <Label>{t('User ID')}</Label>
+            <code>{userId}</code>
+          </div>
+          <p className='text-muted-foreground font-mono text-xs break-all'>
+            {window.location.origin}/api
+          </p>
+          <Button
+            variant='outline'
+            nativeButton={false}
+            render={
+              <Link to='/auto-access' onClick={() => onOpenChange(false)} />
+            }
+          >
+            {t('Management API documentation')}
+            <ArrowUpRight aria-hidden='true' />
+          </Button>
         </div>
       </div>
     </Dialog>

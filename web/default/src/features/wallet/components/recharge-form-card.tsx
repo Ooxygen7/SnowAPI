@@ -31,15 +31,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { formatNumber } from '@/lib/format'
+import { useSystemConfig } from '@/hooks/use-system-config'
+import { formatCurrencyFromUSD, getCurrencyLabel } from '@/lib/currency'
 import { cn } from '@/lib/utils'
 
-import {
-  formatCurrency,
-  getPaymentIcon,
-  getMinTopupAmount,
-  calculatePresetPricing,
-} from '../lib'
+import { formatCurrency, getPaymentIcon, getMinTopupAmount } from '../lib'
 import type { PaymentMethod, PresetAmount, TopupInfo } from '../types'
 
 interface RechargeFormCardProps {
@@ -53,8 +49,6 @@ interface RechargeFormCardProps {
   calculating: boolean
   onPaymentMethodSelect: (method: PaymentMethod) => void
   paymentLoading: string | null
-  priceRatio?: number
-  usdExchangeRate?: number
 }
 
 export function RechargeFormCard({
@@ -68,10 +62,11 @@ export function RechargeFormCard({
   calculating,
   onPaymentMethodSelect,
   paymentLoading,
-  priceRatio = 1,
-  usdExchangeRate = 1,
 }: RechargeFormCardProps) {
   const { t } = useTranslation()
+  const { currency } = useSystemConfig()
+  const currencyLabel =
+    currency.quotaDisplayType === 'TOKENS' ? t('Tokens') : getCurrencyLabel()
   const [localAmount, setLocalAmount] = useState(topupAmount.toString())
 
   useEffect(() => {
@@ -112,29 +107,22 @@ export function RechargeFormCard({
                   </Label>
                   <div className='grid grid-cols-2 gap-1.5 sm:gap-3 md:grid-cols-4'>
                     {presetAmounts.map((preset) => {
-                      const discount =
-                        preset.discount ||
-                        topupInfo?.discount?.[preset.value] ||
-                        1.0
-                      const { displayValue } = calculatePresetPricing(
-                        preset.value,
-                        priceRatio,
-                        discount,
-                        usdExchangeRate
-                      )
                       return (
                         <Button
                           key={preset.value}
                           variant='outline'
                           className={cn(
-                            'h-8 rounded-full border-0 bg-background/55 font-mono text-xs shadow-none',
+                            'min-h-8 h-auto min-w-0 rounded-full border-0 bg-background/55 px-3 py-2 font-mono text-xs whitespace-normal break-words shadow-none',
                             selectedPreset === preset.value
                               ? 'bg-foreground text-background hover:bg-foreground/90 hover:text-background'
                               : 'hover:bg-background/80'
                           )}
                           onClick={() => onSelectPreset(preset)}
                         >
-                          {formatNumber(displayValue)}
+                          {formatCurrencyFromUSD(preset.value, {
+                            showSymbol: false,
+                          })}
+                          {currencyLabel ? ` ${currencyLabel}` : null}
                         </Button>
                       )
                     })}

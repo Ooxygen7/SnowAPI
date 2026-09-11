@@ -65,16 +65,18 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
                   @{profile.username}
                 </p>
               </div>
-              <Button
-                type='button'
-                variant='ghost'
-                size='sm'
-                className='bg-background/70 gap-2'
-                onClick={() => setPasswordDialogOpen(true)}
-              >
-                <KeyRound className='size-4' />
-                {t('Change Password')}
-              </Button>
+              {profile.has_password === true && (
+                <Button
+                  type='button'
+                  variant='ghost'
+                  size='sm'
+                  className='bg-background/70 gap-2'
+                  onClick={() => setPasswordDialogOpen(true)}
+                >
+                  <KeyRound className='size-4' />
+                  {t('Change Password')}
+                </Button>
+              )}
             </div>
 
             <div className='mt-6 grid grid-cols-2 gap-2'>
@@ -123,11 +125,13 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
         </Card>
       </div>
 
-      <ChangePasswordDialog
-        open={passwordDialogOpen}
-        onOpenChange={setPasswordDialogOpen}
-        username={profile.username}
-      />
+      {profile.has_password === true && (
+        <ChangePasswordDialog
+          open={passwordDialogOpen}
+          onOpenChange={setPasswordDialogOpen}
+          username={profile.username}
+        />
+      )}
     </>
   )
 }

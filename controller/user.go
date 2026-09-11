@@ -413,6 +413,11 @@ func GetSelf(c *gin.Context) {
 	}
 	// Hide admin remarks: set to empty to trigger omitempty tag, ensuring the remark field is not included in JSON returned to regular users
 	user.Remark = ""
+	hasPassword, err := model.UserHasPassword(id)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
 
 	// 计算用户权限信息
 	permissions := calculateUserPermissions(userRole)
@@ -434,6 +439,7 @@ func GetSelf(c *gin.Context) {
 		"role":             user.Role,
 		"status":           user.Status,
 		"email":            user.Email,
+		"has_password":     hasPassword,
 		"github_id":        user.GitHubId,
 		"discord_id":       user.DiscordId,
 		"oidc_id":          user.OidcId,

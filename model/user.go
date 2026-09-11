@@ -399,6 +399,13 @@ func GetUserById(id int, selectAll bool) (*User, error) {
 	return &user, err
 }
 
+// UserHasPassword reports password availability without loading any credentials.
+func UserHasPassword(id int) (bool, error) {
+	var count int64
+	err := DB.Model(&User{}).Where("id = ? AND password IS NOT NULL AND password <> ?", id, "").Count(&count).Error
+	return count > 0, err
+}
+
 func DeleteUserById(id int) (err error) {
 	if id == 0 {
 		return errors.New("id 为空！")

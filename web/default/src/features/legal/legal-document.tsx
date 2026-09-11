@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { ArrowLeft01Icon, ArrowUpRight01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { useQuery } from '@tanstack/react-query'
+import { skipToken, useQuery } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -133,7 +133,7 @@ export function LegalDocument(props: LegalDocumentProps) {
   const [activeIndex, setActiveIndex] = useState(0)
   const { data, isLoading: documentLoading } = useQuery({
     queryKey: [props.queryKey],
-    queryFn: props.fetchDocument,
+    queryFn: props.fetchDocument ?? skipToken,
     enabled: Boolean(props.fetchDocument) && !props.sections,
     staleTime: 10 * 60 * 1000,
   })

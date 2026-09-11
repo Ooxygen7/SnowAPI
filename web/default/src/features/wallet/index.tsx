@@ -25,7 +25,6 @@ import { ContentLoading, ContentReveal } from '@/components/content-loading'
 import { SectionPageLayout } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { subscriptionOverviewQueryKey } from '@/features/subscriptions/use-subscription-overview'
-import { useStatus } from '@/hooks/use-status'
 import { useSystemConfig } from '@/hooks/use-system-config'
 import { getSelf } from '@/lib/api'
 
@@ -58,7 +57,6 @@ export function Wallet(props: WalletProps) {
   const [billingDialogOpen, setBillingDialogOpen] = useState(false)
   const [redemptionCode, setRedemptionCode] = useState('')
 
-  const { status } = useStatus()
   const { currency } = useSystemConfig()
   const { topupInfo, presetAmounts, loading: topupLoading } = useTopupInfo()
 
@@ -235,8 +233,6 @@ export function Wallet(props: WalletProps) {
                       calculating={calculating}
                       onPaymentMethodSelect={handlePaymentMethodSelect}
                       paymentLoading={paymentLoading}
-                      priceRatio={(status?.price as number) || 1}
-                      usdExchangeRate={effectiveUsdExchangeRate}
                     />
                   </div>
                   <div className='contents xl:order-2 xl:flex xl:min-w-0 xl:flex-col xl:gap-4 xl:self-stretch'>

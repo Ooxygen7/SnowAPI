@@ -44,8 +44,8 @@ export function ProfileSecurityCard(props: ProfileSecurityCardProps) {
   const securityActions = [
     {
       icon: Key,
-      title: t('Access Token'),
-      description: t('Generate and manage your API access token'),
+      title: t('Automatic Access'),
+      description: t('Manage your account with scripts and the management API'),
       action: () => dialogs.open('token'),
       variant: 'default' as const,
     },
@@ -93,6 +93,7 @@ export function ProfileSecurityCard(props: ProfileSecurityCardProps) {
 
       {/* Dialogs */}
       <AccessTokenDialog
+        userId={props.profile.id}
         open={dialogs.isOpen('token')}
         onOpenChange={(open) =>
           open ? dialogs.open('token') : dialogs.close('token')

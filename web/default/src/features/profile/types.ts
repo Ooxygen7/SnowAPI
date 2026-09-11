@@ -43,6 +43,8 @@ export interface UserProfile {
   role: number
   /** Email address */
   email?: string
+  /** Whether the account has a local password, independent of OAuth bindings. */
+  has_password?: boolean
   /** User group */
   group: string
   group_expires_at?: number
