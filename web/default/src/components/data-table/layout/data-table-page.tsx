@@ -72,6 +72,7 @@ export type DataTablePageToolbarProps<TData> = Omit<
 >
 
 export type DataTablePageProps<TData> = {
+  allowPageJump?: boolean
   /**
    * TanStack Table instance returned from `useReactTable`.
    */
@@ -388,7 +389,12 @@ function renderPagination<TData>(
     return null
   }
 
-  const pagination = <DataTablePagination table={props.table} />
+  const pagination = (
+    <DataTablePagination
+      table={props.table}
+      allowPageJump={props.allowPageJump}
+    />
+  )
 
   return props.paginationInFooter !== false ? (
     <PageFooterPortal>{pagination}</PageFooterPortal>

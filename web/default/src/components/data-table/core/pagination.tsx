@@ -24,6 +24,7 @@ import {
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -36,6 +37,7 @@ import { cn } from '@/lib/utils'
 
 type DataTablePaginationProps<TData> = {
   table: Table<TData>
+  allowPageJump?: boolean
 }
 
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50, 100] as const
@@ -46,6 +48,7 @@ const PAGE_SIZE_SELECT_ITEMS = PAGE_SIZE_OPTIONS.map((pageSize) => ({
 
 export function DataTablePagination<TData>({
   table,
+  allowPageJump,
 }: DataTablePaginationProps<TData>) {
   const { t } = useTranslation()
   const pagination = table.getState().pagination
@@ -106,9 +109,42 @@ export function DataTablePagination<TData>({
             <span className='sr-only'>{t('Go to previous page')}</span>
             <ChevronLeftIcon className='h-4 w-4' />
           </Button>
-          <span className='text-muted-foreground min-w-14 text-center text-xs tabular-nums'>
-            {currentPage} / {Math.max(totalPages, 1)}
-          </span>
+          <div className='text-muted-foreground flex min-w-14 items-center justify-center gap-1 text-xs tabular-nums'>
+            {allowPageJump ? (
+              <Input
+                key={`${currentPage}-${pageSize}`}
+                aria-label={t('Go to page')}
+                type='number'
+                inputMode='numeric'
+                min={1}
+                max={Math.max(totalPages, 1)}
+                defaultValue={currentPage}
+                className='h-8 w-12 [appearance:textfield] px-1 text-center text-xs [&::-webkit-inner-spin-button]:appearance-none'
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') event.currentTarget.blur()
+                }}
+                onBlur={(event) => {
+                  const requested = Number(event.currentTarget.value)
+                  if (
+                    !event.currentTarget.value.trim() ||
+                    !Number.isSafeInteger(requested)
+                  ) {
+                    event.currentTarget.value = String(currentPage)
+                    return
+                  }
+                  const page = Math.max(
+                    1,
+                    Math.min(Math.max(totalPages, 1), requested)
+                  )
+                  event.currentTarget.value = String(page)
+                  table.setPageIndex(page - 1)
+                }}
+              />
+            ) : (
+              currentPage
+            )}
+            <span>/ {Math.max(totalPages, 1)}</span>
+          </div>
           <Button
             variant='ghost'
             size='icon'

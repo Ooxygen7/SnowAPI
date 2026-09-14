@@ -24,6 +24,7 @@ import { UsersDeleteDialog } from './components/users-delete-dialog'
 import { UsersMutateDrawer } from './components/users-mutate-drawer'
 import { UsersPrimaryButtons } from './components/users-primary-buttons'
 import { UsersProvider, useUsers } from './components/users-provider'
+import { UsersSubscriptionDialog } from './components/users-subscription-dialog'
 import { UsersTable } from './components/users-table'
 
 function UsersContent() {
@@ -48,6 +49,13 @@ function UsersContent() {
         currentRow={open === 'update' ? currentRow || undefined : undefined}
       />
       <UsersDeleteDialog />
+      {open === 'subscription' && currentRow && (
+        <UsersSubscriptionDialog
+          key={currentRow.id}
+          user={currentRow}
+          onClose={() => setOpen(null)}
+        />
+      )}
     </>
   )
 }

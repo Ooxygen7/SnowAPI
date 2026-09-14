@@ -22,6 +22,7 @@ import {
   formatUptimePct,
   getSuccessRateDotClass,
   getSuccessRateTextClass,
+  getSuccessRateLevel,
 } from '@/features/performance-metrics/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -78,6 +79,7 @@ export function ModelHealthBar(props: {
             <span
               key={`missing-${index}`}
               aria-hidden='true'
+              data-health-level='unknown'
               title={t('No data')}
               className={cn(
                 'bg-muted-foreground/15 rounded-[2px]',
@@ -89,6 +91,11 @@ export function ModelHealthBar(props: {
             <span
               key={health.hour}
               aria-hidden='true'
+              data-health-level={
+                health.successRate === null
+                  ? 'unknown'
+                  : getSuccessRateLevel(health.successRate)
+              }
               title={
                 health.successRate === null
                   ? t('No data')

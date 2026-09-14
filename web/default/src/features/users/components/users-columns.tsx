@@ -42,6 +42,7 @@ import {
 } from '../constants'
 import type { User } from '../types'
 import { DataTableRowActions } from './data-table-row-actions'
+import { UserSubscriptionCell } from './user-subscription-cell'
 
 function getQuotaProgressColor(percentage: number): string {
   if (percentage <= 10) return '[&_[data-slot=progress-indicator]]:bg-rose-500'
@@ -274,6 +275,14 @@ export function useUsersColumns(): ColumnDef<User>[] {
       enableSorting: false,
       size: 120,
       meta: { mobileOrder: 20 },
+    },
+    {
+      id: 'subscription',
+      header: t('Subscription'),
+      cell: ({ row }) => <UserSubscriptionCell user={row.original} />,
+      enableSorting: false,
+      size: 230,
+      meta: { mobileOrder: 45 },
     },
     {
       accessorKey: 'created_at',

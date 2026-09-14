@@ -24,6 +24,29 @@ import type { AdminPermissionMatrix } from '@/lib/admin-permissions'
 // User Schema & Types
 // ============================================================================
 
+export const adminSubscriptionSchema = z.object({
+  subscription_id: z.number(),
+  plan_id: z.number(),
+  plan_title: z.string(),
+  source: z.string(),
+  group: z.string(),
+  period_total: z.number(),
+  period_remaining: z.number(),
+  five_hour_total: z.number(),
+  five_hour_remaining: z.number(),
+  end_time: z.number(),
+  version: z.number(),
+})
+export type AdminSubscriptionState = z.infer<typeof adminSubscriptionSchema>
+export interface AdminSubscriptionChange {
+  action: 'balance' | 'plan' | 'free'
+  subscription_id: number
+  expected_version: number
+  plan_id?: number
+  period_remaining?: number
+  five_hour_remaining?: number
+}
+
 /** User status: 1 = enabled, 2 = disabled, 3+ = other states */
 export const userStatusSchema = z.number()
 export type UserStatus = z.infer<typeof userStatusSchema>
@@ -34,6 +57,7 @@ export type UserRole = z.infer<typeof userRoleSchema>
 
 export const userSchema = z.object({
   id: z.number(),
+  subscription: adminSubscriptionSchema.nullable().optional(),
   username: z.string(),
   display_name: z.string(),
   password: z.string().optional(),
@@ -130,4 +154,4 @@ export interface ManageUserQuotaPayload {
 // Dialog Types
 // ============================================================================
 
-export type UsersDialogType = 'create' | 'update' | 'delete'
+export type UsersDialogType = 'create' | 'update' | 'delete' | 'subscription'

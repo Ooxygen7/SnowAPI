@@ -139,6 +139,7 @@ export function UsersTable() {
     data: users,
     columns,
     enableRowSelection: true,
+    getRowId: (user) => String(user.id),
     initialColumnVisibility: {
       id: false,
       created_at: false,
@@ -173,6 +174,7 @@ export function UsersTable() {
   return (
     <DataTablePage
       table={table}
+      allowPageJump
       columns={columns}
       isLoading={isLoading}
       isFetching={isFetching}

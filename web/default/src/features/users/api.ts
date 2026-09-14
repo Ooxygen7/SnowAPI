@@ -28,7 +28,28 @@ import type {
   ManageUserAction,
   ManageUserQuotaPayload,
   ApiResponse,
+  AdminSubscriptionState,
+  AdminSubscriptionChange,
 } from './types'
+
+export async function batchDeleteUsers(
+  ids: number[]
+): Promise<ApiResponse<{ deleted_ids: number[]; count: number }>> {
+  return (await api.post('/api/user/batch-delete', { ids })).data
+}
+
+export async function getAdminUserSubscription(
+  id: number
+): Promise<ApiResponse<AdminSubscriptionState | null>> {
+  return (await api.get(`/api/user/${id}/subscription-status`)).data
+}
+
+export async function updateAdminUserSubscription(
+  id: number,
+  change: AdminSubscriptionChange
+): Promise<ApiResponse> {
+  return (await api.put(`/api/user/${id}/subscription-status`, change)).data
+}
 
 // ============================================================================
 // User Management APIs

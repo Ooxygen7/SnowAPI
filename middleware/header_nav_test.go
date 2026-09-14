@@ -59,6 +59,7 @@ func performHeaderNavRequest(t *testing.T, handler gin.HandlerFunc, authenticate
 
 	var cookies []*http.Cookie
 	if authenticated {
+		setupSessionAuthUser(t)
 		loginRecorder := httptest.NewRecorder()
 		loginRequest := httptest.NewRequest(http.MethodGet, "/login", nil)
 		router.ServeHTTP(loginRecorder, loginRequest)

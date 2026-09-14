@@ -1238,15 +1238,21 @@ body[data-snowapi-console='true']
   .snowapi-astryx-content
   [data-slot='model-health']
   [data-health-hours]
-  > span {
-  background: var(--foreground) !important;
+  > span[data-health-level] {
+  background: var(--health-color, var(--muted)) !important;
 }
 
-body[data-snowapi-console='true']
-  .snowapi-astryx-content
-  [data-slot='model-health']
-  :is([class*='text-emerald-'], [class*='text-amber-'], [class*='text-red-']) {
-  color: var(--foreground) !important;
+[data-slot='model-health'] [data-health-level='excellent'] {
+  --health-color: #10b981;
+}
+[data-slot='model-health'] [data-health-level='good'] {
+  --health-color: #34d399;
+}
+[data-slot='model-health'] [data-health-level='warning'] {
+  --health-color: #f59e0b;
+}
+[data-slot='model-health'] [data-health-level='critical'] {
+  --health-color: #ef4444;
 }
 
 body[data-snowapi-console='true']
