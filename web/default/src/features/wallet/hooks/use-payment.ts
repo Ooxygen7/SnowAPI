@@ -50,6 +50,7 @@ export function usePayment() {
   const [amount, setAmount] = useState<number>(0)
   const [calculating, setCalculating] = useState(false)
   const [processing, setProcessing] = useState(false)
+  const [channelClosed, setChannelClosed] = useState(false)
   const activeMonitorRef = useRef<ActivePaymentMonitor | null>(null)
 
   const stopActiveMonitor = useCallback((closePopup: boolean) => {
@@ -121,6 +122,10 @@ export function usePayment() {
 
         if (!isApiSuccess(response)) {
           paymentWindow.popup.close()
+          if (response.code === 'payment_channel_closed') {
+            setChannelClosed(true)
+            return false
+          }
           toast.error(response.message || i18next.t('Payment request failed'))
           return false
         }
@@ -187,6 +192,8 @@ export function usePayment() {
     amount,
     calculating,
     processing,
+    channelClosed,
+    setChannelClosed,
     calculatePaymentAmount,
     processPayment,
     setAmount,

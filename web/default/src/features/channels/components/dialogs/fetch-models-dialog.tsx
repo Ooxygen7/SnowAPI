@@ -314,7 +314,7 @@ export function FetchModelsDialog({
           <div className='flex items-center gap-2'>
             <span className='text-muted-foreground text-sm'>
               {categoryModels.filter((m) => selectedModels.includes(m)).length}{' '}
-              / {categoryModels.length} selected
+              / {categoryModels.length} {t('selected')}
             </span>
             <Checkbox
               checked={allSelected}

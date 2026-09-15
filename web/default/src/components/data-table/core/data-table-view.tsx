@@ -49,10 +49,7 @@ export { DataTableRowActionMenu } from './row-action-menu'
 
 export function DataTableView<TData>(props: DataTableViewProps<TData>) {
   const rows = props.rows ?? props.table.getRowModel().rows
-  const colSpan = React.useMemo(
-    () => props.table.getVisibleLeafColumns().length,
-    [props.table]
-  )
+  const colSpan = props.table.getVisibleLeafColumns().length
   const columnClassName = useResolvedColumnClassName(
     props.table,
     props.getColumnClassName,
@@ -296,7 +293,7 @@ function renderEmptyState<TData>(
 ) {
   if (props.emptyContent) {
     return (
-      <TableRow>
+      <TableRow data-empty='true'>
         <TableCell colSpan={colSpan} className={props.emptyCellClassName}>
           {props.emptyContent}
         </TableCell>

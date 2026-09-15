@@ -17,9 +17,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import axios, { type AxiosRequestConfig } from 'axios'
-import { t } from 'i18next'
+import i18next, { t } from 'i18next'
 import { toast } from 'sonner'
 
+import { localizeApiMessage } from '@/i18n/api-messages'
+import { toIntlLocale } from '@/i18n/languages'
 import { useAuthStore } from '@/stores/auth-store'
 
 declare module 'axios' {
@@ -81,6 +83,9 @@ api.get = ((url: string, config: ApiRequestConfig = {}) => {
 // Handle business logic errors and HTTP errors globally
 api.interceptors.response.use(
   (response) => {
+    if (typeof response.data?.message === 'string') {
+      response.data.message = localizeApiMessage(response.data.message)
+    }
     const skipBusiness = response.config.skipBusinessError
 
     // Unified business response format: { success, message, data }
@@ -99,6 +104,11 @@ api.interceptors.response.use(
     return response
   },
   (error) => {
+    if (typeof error?.response?.data?.message === 'string') {
+      error.response.data.message = localizeApiMessage(
+        error.response.data.message
+      )
+    }
     const skip = error?.config?.skipErrorHandler
     const status = error?.response?.status
 
@@ -162,6 +172,7 @@ export function getCommonHeaders(): Record<string, string> {
 
 // Attach user ID header for all requests
 api.interceptors.request.use((config) => {
+  config.headers.set('Accept-Language', toIntlLocale(i18next.language) ?? 'en')
   const uid = getUserId()
   if (uid) {
     // Custom header for user identification

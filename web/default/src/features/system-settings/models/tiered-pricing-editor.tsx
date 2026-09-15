@@ -519,7 +519,7 @@ function ConditionRow({ condition, onChange, onRemove }: ConditionRowProps) {
         variant='ghost'
         size='icon'
         onClick={onRemove}
-        aria-label='remove'
+        aria-label={t('Remove')}
         className='ml-auto'
       >
         <Trash2 className='text-destructive h-4 w-4' />

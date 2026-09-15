@@ -19,6 +19,12 @@ For commercial licensing, please contact support@quantumnous.com
 // Static translation keys that don't get picked up by the t('...') regex.
 // These cover dynamic labels (e.g. constants, configs) that are passed into t at runtime.
 export const STATIC_I18N_KEYS = [
+  // Dynamic model-preset labels.
+  'Tag Group',
+  'Endpoint Group',
+  'Reusable sets of models you can attach to channels.',
+  'Collections of metadata tags for bulk operations.',
+  'HTTP endpoint mappings shared across providers.',
   // Header navigation
   'Home',
   'Console',

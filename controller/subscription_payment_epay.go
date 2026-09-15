@@ -22,6 +22,9 @@ type SubscriptionEpayPayRequest struct {
 }
 
 func SubscriptionRequestEpay(c *gin.Context) {
+	if !requirePaymentChannelOpen(c) {
+		return
+	}
 	if !requirePaymentCompliance(c) {
 		return
 	}

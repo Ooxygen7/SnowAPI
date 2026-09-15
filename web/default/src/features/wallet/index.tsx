@@ -22,6 +22,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { ContentLoading, ContentReveal } from '@/components/content-loading'
+import { Dialog } from '@/components/dialog'
 import { SectionPageLayout } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { subscriptionOverviewQueryKey } from '@/features/subscriptions/use-subscription-overview'
@@ -70,10 +71,16 @@ export function Wallet(props: WalletProps) {
     amount: paymentAmount,
     calculating,
     processing,
+    channelClosed,
+    setChannelClosed,
     calculatePaymentAmount,
     processPayment,
   } = usePayment()
   const { redeeming, redeemCode } = useRedemption()
+
+  useEffect(() => {
+    if (channelClosed) setConfirmDialogOpen(false)
+  }, [channelClosed])
 
   // Fetch and refresh user data
   const fetchUser = useCallback(async () => {
@@ -135,6 +142,10 @@ export function Wallet(props: WalletProps) {
 
   // Handle payment method selection
   const handlePaymentMethodSelect = async (method: PaymentMethod) => {
+    if (topupInfo?.payment_enabled === false) {
+      setChannelClosed(true)
+      return
+    }
     setSelectedPaymentMethod(method)
     setPaymentLoading(method.type)
 
@@ -279,6 +290,20 @@ export function Wallet(props: WalletProps) {
         discountRate={getDiscountRate()}
         usdExchangeRate={effectiveUsdExchangeRate}
       />
+
+      <Dialog
+        open={channelClosed}
+        onOpenChange={setChannelClosed}
+        title={t('Payment unavailable')}
+        contentClassName='sm:max-w-sm'
+        footer={
+          <Button onClick={() => setChannelClosed(false)}>{t('OK')}</Button>
+        }
+      >
+        <p className='text-sm'>
+          {t('The payment channel is currently closed.')}
+        </p>
+      </Dialog>
 
       <BillingHistoryDialog
         open={billingDialogOpen}

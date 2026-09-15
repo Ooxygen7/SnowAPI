@@ -46,7 +46,6 @@ type DragState = {
 const DEFAULT_ROW_HEIGHT = 58
 const CURVE = 0.9
 const TILT_DEGREES = 9
-const BLUR_PER_STEP = 1.35
 const OPACITY_FADE = 0.23
 const MIN_OPACITY = 0.06
 const SMOOTHING_MS = 180
@@ -64,6 +63,7 @@ export function LegalChapterWheel(props: LegalChapterWheelProps) {
   const selectedRef = useRef(props.activeIndex)
   const animationRef = useRef<number | null>(null)
   const lastFrameRef = useRef(0)
+  const reducedMotionRef = useRef(false)
   const wheelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dragRef = useRef<DragState | null>(null)
   const dragMovedRef = useRef(false)
@@ -86,7 +86,7 @@ export function LegalChapterWheel(props: LegalChapterWheelProps) {
     const target = targetRef.current
     const current = positionRef.current
     let next = current + (target - current) * easing
-    const settled = Math.abs(target - next) < 0.001
+    const settled = reducedMotionRef.current || Math.abs(target - next) < 0.005
     if (settled) next = target
     positionRef.current = next
 
@@ -98,6 +98,13 @@ export function LegalChapterWheel(props: LegalChapterWheelProps) {
 
       const distanceFromSelection = index - next
       const distance = Math.abs(distanceFromSelection)
+      // Only the visible arc needs compositing. Do not rasterize blurred text
+      // or change font metrics on every frame.
+      if (distance > 5) {
+        item.style.visibility = 'hidden'
+        return
+      }
+      item.style.visibility = 'visible'
       const angle = Math.max(
         -Math.PI / 2,
         Math.min(Math.PI / 2, distanceFromSelection * tiltRadians)
@@ -107,12 +114,10 @@ export function LegalChapterWheel(props: LegalChapterWheelProps) {
       const rotation = (angle * 180) / Math.PI
       const progress = Math.max(0, 1 - Math.min(distance, 1))
 
-      item.style.transform = `translate(${x.toFixed(2)}px, calc(${y.toFixed(2)}px - 50%)) rotate(${rotation.toFixed(3)}deg)`
+      item.style.transform = `translate3d(${x.toFixed(2)}px, calc(${y.toFixed(2)}px - 50%), 0) rotate(${rotation.toFixed(3)}deg) scale(${(0.62 + progress * 0.38).toFixed(3)})`
       item.style.opacity = String(
         Math.max(MIN_OPACITY, 1 - distance * OPACITY_FADE)
       )
-      item.style.filter = `blur(${(distance * BLUR_PER_STEP).toFixed(2)}px)`
-      item.style.setProperty('--legal-wheel-focus', progress.toFixed(4))
     })
 
     animationRef.current = settled ? null : requestAnimationFrame(runFrame)
@@ -120,7 +125,7 @@ export function LegalChapterWheel(props: LegalChapterWheelProps) {
 
   const startAnimation = useCallback(() => {
     if (animationRef.current !== null) {
-      cancelAnimationFrame(animationRef.current)
+      return
     }
     lastFrameRef.current = performance.now()
     animationRef.current = requestAnimationFrame(runFrame)
@@ -136,7 +141,9 @@ export function LegalChapterWheel(props: LegalChapterWheelProps) {
       targetRef.current = next
 
       const selectedIndex = clampIndex(Math.round(next), count)
-      if (selectedIndex !== selectedRef.current) {
+      // Commit content only after a wheel gesture settles, or on explicit
+      // click/keyboard selection. Trackpad events must not remount rich text.
+      if (snap && selectedIndex !== selectedRef.current) {
         selectedRef.current = selectedIndex
         onChangeRef.current(selectedIndex)
       }
@@ -148,6 +155,13 @@ export function LegalChapterWheel(props: LegalChapterWheelProps) {
   useLayoutEffect(() => {
     const root = rootRef.current
     if (!root) return
+
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const syncMotion = () => {
+      reducedMotionRef.current = motionQuery.matches
+    }
+    syncMotion()
+    motionQuery.addEventListener('change', syncMotion)
 
     const syncRowHeight = () => {
       const value = Number.parseFloat(
@@ -164,7 +178,10 @@ export function LegalChapterWheel(props: LegalChapterWheelProps) {
     syncRowHeight()
     const observer = new ResizeObserver(syncRowHeight)
     observer.observe(root)
-    return () => observer.disconnect()
+    return () => {
+      observer.disconnect()
+      motionQuery.removeEventListener('change', syncMotion)
+    }
   }, [startAnimation])
 
   useEffect(() => {
@@ -202,7 +219,7 @@ export function LegalChapterWheel(props: LegalChapterWheelProps) {
     }
 
     if (props.capturePageWheel) {
-      window.addEventListener('wheel', handleWheel, { passive: false })
+      window.addEventListener('wheel', handleWheel, { passive: true })
     } else {
       root.addEventListener('wheel', handleWheel, { passive: false })
     }

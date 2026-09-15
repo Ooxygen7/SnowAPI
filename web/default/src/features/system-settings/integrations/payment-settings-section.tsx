@@ -43,6 +43,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 
 import { confirmPaymentCompliance } from '../api'
@@ -88,6 +89,7 @@ function jsonField(expect: (value: unknown) => boolean) {
 }
 
 const paymentSchema = z.object({
+  PaymentEnabled: z.boolean(),
   PayAddress: z
     .string()
     .refine(
@@ -191,6 +193,7 @@ export function PaymentSettingsSection({
 
   const onSubmit = async (values: PaymentFormValues) => {
     const sanitized: PaymentFormValues = {
+      PaymentEnabled: values.PaymentEnabled,
       PayAddress: removeTrailingSlash(values.PayAddress.trim()),
       EpayId: values.EpayId.trim(),
       EpayKey: values.EpayKey.trim(),
@@ -218,6 +221,9 @@ export function PaymentSettingsSection({
 
     if (sanitized.PayAddress !== initial.PayAddress) {
       add('PayAddress', sanitized.PayAddress)
+    }
+    if (sanitized.PaymentEnabled !== initial.PaymentEnabled) {
+      add('payment_setting.enabled', String(sanitized.PaymentEnabled))
     }
     if (sanitized.EpayId !== initial.EpayId) add('EpayId', sanitized.EpayId)
     if (sanitized.EpayKey && sanitized.EpayKey !== initial.EpayKey) {
@@ -347,6 +353,30 @@ export function PaymentSettingsSection({
             saveLabel='Save all settings'
           />
           <SettingsFormGrid>
+            <SettingsFormGridItem span='full'>
+              <FormField
+                control={form.control}
+                name='PaymentEnabled'
+                render={({ field }) => (
+                  <FormItem className='flex items-center justify-between gap-4'>
+                    <div className='flex flex-col gap-1'>
+                      <FormLabel>{t('Accept payments')}</FormLabel>
+                      <FormDescription>
+                        {t(
+                          'Pause new payments without interrupting existing orders or balance purchases.'
+                        )}
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </SettingsFormGridItem>
             <FormField
               control={form.control}
               name='PayAddress'

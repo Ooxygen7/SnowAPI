@@ -24,6 +24,7 @@ For commercial licensing, please contact support@quantumnous.com
  * Generic API response
  */
 export interface ApiResponse<T = unknown> {
+  code?: string
   success?: boolean
   message?: string
   data?: T
@@ -70,6 +71,8 @@ export interface PaymentMethod {
  * Topup configuration information
  */
 export interface TopupInfo {
+  /** Operational checkout switch; does not affect existing callbacks. */
+  payment_enabled?: boolean
   /** Whether online topup is enabled */
   enable_online_topup: boolean
   /** Available payment methods */

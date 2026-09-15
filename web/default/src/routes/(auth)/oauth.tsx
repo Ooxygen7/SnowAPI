@@ -18,16 +18,17 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { createFileRoute, useNavigate, useSearch } from '@tanstack/react-router'
 import i18next from 'i18next'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 
 import { wechatLoginByCode } from '@/features/auth/api'
 import { OAuthCallbackScreen } from '@/features/auth/components/oauth-callback-screen'
-import { getSelf } from '@/lib/api'
-import { useAuthStore, type AuthUser } from '@/stores/auth-store'
+import { useAuthRedirect } from '@/features/auth/hooks/use-auth-redirect'
 
 function OAuthComponent() {
   const navigate = useNavigate()
+  const { handleLoginSuccess } = useAuthRedirect()
+  const startedRef = useRef('')
   const search = useSearch({ from: '/(auth)/oauth' }) as {
     redirect?: string
     provider?: 'github' | 'discord' | 'oidc' | 'linuxdo' | 'telegram' | 'wechat'
@@ -36,25 +37,23 @@ function OAuthComponent() {
   }
 
   useEffect(() => {
+    const callbackKey = `${search?.provider}:${search?.code}:${search?.state}`
+    if (startedRef.current === callbackKey) return
+    startedRef.current = callbackKey
     ;(async () => {
       try {
         if (search?.provider === 'wechat' && search.code) {
           await wechatLoginByCode(search.code)
         }
-        const res = await getSelf()
-        if (res?.success) {
-          useAuthStore.getState().auth.setUser(res.data as AuthUser)
-          const target = search?.redirect || '/dashboard'
-          navigate({ to: target, replace: true })
-          return
-        }
+        await handleLoginSuccess(null, search?.redirect)
+        return
       } catch {
         /* empty */
       }
       toast.error(i18next.t('OAuth failed'))
       navigate({ to: '/sign-in', replace: true })
     })()
-  }, [navigate, search])
+  }, [navigate, search, handleLoginSuccess])
 
   return (
     <OAuthCallbackScreen

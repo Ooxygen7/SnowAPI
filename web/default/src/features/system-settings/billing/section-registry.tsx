@@ -132,6 +132,7 @@ const BILLING_SECTIONS = [
       <PaymentSettingsSection
         defaultValues={{
           PayAddress: settings.PayAddress,
+          PaymentEnabled: settings['payment_setting.enabled'],
           EpayId: settings.EpayId,
           EpayKey: settings.EpayKey,
           Price: settings.Price,

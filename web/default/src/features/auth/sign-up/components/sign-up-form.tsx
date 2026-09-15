@@ -54,9 +54,12 @@ export function SignUpForm({
   const [isLoading, setIsLoading] = useState(false)
   const [agreedToLegal, setAgreedToLegal] = useState(false)
   const {
+    isSecurityReady,
     isTurnstileEnabled,
     turnstileSiteKey,
     turnstileToken,
+    turnstileAttempt,
+    resetTurnstile,
     setTurnstileToken,
     validateTurnstile,
   } = useTurnstile()
@@ -64,7 +67,6 @@ export function SignUpForm({
   const hasUserAgreement = Boolean(status?.user_agreement_enabled)
   const hasPrivacyPolicy = Boolean(status?.privacy_policy_enabled)
   const requiresLegalConsent = hasUserAgreement || hasPrivacyPolicy
-  const turnstileReady = !isTurnstileEnabled || Boolean(turnstileToken)
 
   useEffect(() => {
     setAgreedToLegal(!requiresLegalConsent)
@@ -104,6 +106,7 @@ export function SignUpForm({
     } catch {
       // Errors are handled by the global interceptor.
     } finally {
+      resetTurnstile()
       setIsLoading(false)
     }
   }
@@ -115,15 +118,6 @@ export function SignUpForm({
         className={cn('grid gap-4', className)}
         {...props}
       >
-        <div className='border-border/80 bg-muted/30 flex items-start gap-3 rounded-xl border p-4'>
-          <TicketCheck className='mt-0.5 h-5 w-5 shrink-0' />
-          <p className='text-muted-foreground text-sm leading-6'>
-            {t(
-              'Invitation codes are issued by administrators and can be used only once.'
-            )}
-          </p>
-        </div>
-
         <FormField
           control={form.control}
           name='invitationCode'
@@ -198,7 +192,11 @@ export function SignUpForm({
         />
 
         {isTurnstileEnabled && (
-          <Turnstile siteKey={turnstileSiteKey} onVerify={setTurnstileToken} />
+          <Turnstile
+            key={turnstileAttempt}
+            siteKey={turnstileSiteKey}
+            onVerify={setTurnstileToken}
+          />
         )}
 
         <LegalConsent
@@ -212,7 +210,7 @@ export function SignUpForm({
           className='mt-1 h-11 w-full gap-2'
           disabled={
             isLoading ||
-            !turnstileReady ||
+            !isSecurityReady ||
             (requiresLegalConsent && !agreedToLegal)
           }
         >

@@ -68,7 +68,7 @@ export function UserAuthForm({
   const [isPasskeyLoading, setIsPasskeyLoading] = useState(false)
   const [isWeChatDialogOpen, setIsWeChatDialogOpen] = useState(false)
   const [isWeChatSubmitting, setIsWeChatSubmitting] = useState(false)
-  const [showInvitationLogin, setShowInvitationLogin] = useState(false)
+  const [showPasswordLogin, setShowPasswordLogin] = useState(false)
   const [linuxDOInvitationCode, setLinuxDOInvitationCode] = useState('')
   const legalConsentErrorMessage = t('Please agree to the legal terms first')
   const loginFailedMessage = t('Login failed')
@@ -90,9 +90,12 @@ export function UserAuthForm({
       status?.data?.invitation_registration_enabled ??
       true) !== false
   const {
+    isSecurityReady,
     isTurnstileEnabled,
     turnstileSiteKey,
     turnstileToken,
+    turnstileAttempt,
+    resetTurnstile,
     setTurnstileToken,
     validateTurnstile,
   } = useTurnstile()
@@ -116,6 +119,12 @@ export function UserAuthForm({
   )
   const hasAlternativeLogin =
     passkeyLoginEnabled || hasWeChatLogin || hasOAuthLogin
+  let submitLabel = t('Performing security verification...')
+  if (isSecurityReady) {
+    submitLabel = passwordLoginEnabled
+      ? t('Sign in')
+      : t('Sign in to an invited account')
+  }
 
   useEffect(() => {
     if (requiresLegalConsent) {
@@ -172,11 +181,11 @@ export function UserAuthForm({
 
       if (res.success) {
         await handleLoginSuccess(res.data as { id?: number } | null, redirectTo)
-        toast.success(t('Welcome back!'))
       }
     } catch {
       // Errors are handled by global interceptor
     } finally {
+      resetTurnstile()
       setIsLoading(false)
     }
   }
@@ -209,7 +218,6 @@ export function UserAuthForm({
       const res = await wechatLoginByCode(wechatCode)
       if (res?.success) {
         await handleLoginSuccess(res.data as { id?: number } | null, redirectTo)
-        toast.success(t('Signed in via WeChat'))
         handleWeChatDialogChange(false)
       } else {
         toast.error(res?.message || loginFailedMessage)
@@ -275,7 +283,6 @@ export function UserAuthForm({
         finish.data as { id?: number } | null,
         redirectTo
       )
-      toast.success(t('Signed in with Passkey'))
     } catch (error: unknown) {
       if (error instanceof DOMException && error.name === 'NotAllowedError') {
         toast.info(t('Passkey login was cancelled or timed out'))
@@ -359,31 +366,27 @@ export function UserAuthForm({
         className={cn('grid gap-4', className)}
         {...props}
       >
-        {hasAlternativeLogin && alternativeLoginMethods}
+        <Button
+          type='button'
+          variant='outline'
+          className='h-11 w-full justify-center gap-2 rounded-lg'
+          onClick={() => setShowPasswordLogin((current) => !current)}
+          aria-expanded={showPasswordLogin}
+          aria-controls='password-login-fields'
+        >
+          {t('Sign in with username and password')}
+          <ChevronDown
+            className={cn(
+              'h-4 w-4 transition-transform',
+              showPasswordLogin && 'rotate-180'
+            )}
+          />
+        </Button>
 
-        {!passwordLoginEnabled && (
-          <Button
-            type='button'
-            variant='ghost'
-            className='text-muted-foreground h-9 gap-2 text-sm'
-            onClick={() => setShowInvitationLogin((current) => !current)}
-            aria-expanded={showInvitationLogin}
-            aria-controls='invited-account-fields'
-          >
-            {t('Invited account sign in')}
-            <ChevronDown
-              className={cn(
-                'h-4 w-4 transition-transform',
-                showInvitationLogin && 'rotate-180'
-              )}
-            />
-          </Button>
-        )}
-
-        {(passwordLoginEnabled || showInvitationLogin) && (
+        {showPasswordLogin && (
           <div
-            id={!passwordLoginEnabled ? 'invited-account-fields' : undefined}
-            className='grid gap-4'
+            id='password-login-fields'
+            className='snowapi-password-fields grid gap-4'
           >
             {/* Username Field */}
             <FormField
@@ -395,6 +398,7 @@ export function UserAuthForm({
                   <FormControl>
                     <Input
                       placeholder={t('Enter your username or email')}
+                      autoComplete='username'
                       {...field}
                     />
                   </FormControl>
@@ -413,6 +417,7 @@ export function UserAuthForm({
                   <FormControl>
                     <PasswordInput
                       placeholder={t('Enter password')}
+                      autoComplete='current-password'
                       {...field}
                     />
                   </FormControl>
@@ -433,18 +438,25 @@ export function UserAuthForm({
             <Button
               type='submit'
               className='mt-2 w-full justify-center gap-2'
-              disabled={isLoading || (requiresLegalConsent && !agreedToLegal)}
+              disabled={
+                isLoading ||
+                !isSecurityReady ||
+                (requiresLegalConsent && !agreedToLegal)
+              }
             >
-              {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}
-              {passwordLoginEnabled
-                ? t('Sign in')
-                : t('Sign in to an invited account')}
+              {isLoading || !isSecurityReady ? (
+                <Loader2 className='animate-spin' />
+              ) : (
+                <LogIn />
+              )}
+              {submitLabel}
             </Button>
 
             {/* Turnstile */}
             {isTurnstileEnabled && (
               <div className='mt-2'>
                 <Turnstile
+                  key={turnstileAttempt}
                   siteKey={turnstileSiteKey}
                   onVerify={setTurnstileToken}
                 />
@@ -453,12 +465,14 @@ export function UserAuthForm({
           </div>
         )}
 
+        {hasAlternativeLogin && alternativeLoginMethods}
+
         {invitationRegistrationEnabled && (
           <Link
             to='/sign-up'
             className='text-muted-foreground hover:text-primary mx-auto w-fit text-sm font-medium underline underline-offset-4'
           >
-            {t('Have an invitation code? Register here')}
+            {t('Register with an invitation code')}
           </Link>
         )}
 

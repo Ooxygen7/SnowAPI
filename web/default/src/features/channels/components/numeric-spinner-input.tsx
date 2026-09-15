@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { Minus, Plus } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
@@ -43,6 +44,7 @@ export function NumericSpinnerInput({
   className,
   label,
 }: NumericSpinnerInputProps) {
+  const { t } = useTranslation()
   const [localValue, setLocalValue] = useState(String(value ?? 0))
   const [editing, setEditing] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -96,7 +98,7 @@ export function NumericSpinnerInput({
   const commitValue = () => {
     setEditing(false)
     const num = Number(localValue)
-    if (isNaN(num) || localValue === '' || localValue === '-') {
+    if (Number.isNaN(num) || localValue === '' || localValue === '-') {
       setLocalValue(String(value ?? 0))
       return
     }
@@ -135,7 +137,7 @@ export function NumericSpinnerInput({
         <button
           type='button'
           tabIndex={-1}
-          aria-label='Decrement'
+          aria-label={t('Decrement')}
           onClick={handleDecrement}
           disabled={disabled || atMin}
           className={cn(
@@ -178,7 +180,7 @@ export function NumericSpinnerInput({
         <button
           type='button'
           tabIndex={-1}
-          aria-label='Increment'
+          aria-label={t('Increment')}
           onClick={handleIncrement}
           disabled={disabled || atMax}
           className={cn(

@@ -18,10 +18,13 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useNavigate } from '@tanstack/react-router'
 import i18n from 'i18next'
+import { useCallback } from 'react'
 
 import type { User } from '@/features/users/types'
-import { getSelf } from '@/lib/api'
+import { normalizeInterfaceLanguage } from '@/i18n/languages'
+import { api, getSelf } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
+import { useLoginTransition } from '@/stores/login-transition-store'
 
 import { saveUserId } from '../lib/storage'
 
@@ -48,49 +51,60 @@ function getSavedLanguage(user: User): string | undefined {
  */
 export function useAuthRedirect() {
   const navigate = useNavigate()
-  const { auth } = useAuthStore()
+  const setUser = useAuthStore((state) => state.auth.setUser)
 
   /**
    * Handle successful login
    * @param userData - Optional user data from login response
    * @param redirectTo - Redirect path after login
    */
-  const handleLoginSuccess = async (
-    userData?: { id?: number } | null,
-    redirectTo?: string
-  ) => {
-    // Save user ID if available
-    if (userData?.id) {
-      saveUserId(userData.id)
-    }
-
-    // Fetch and set user data
-    try {
-      const self = await getSelf()
-      if (self?.success && self.data) {
-        const user = self.data as User
-        auth.setUser(user)
-
-        // Update user ID if not already set
-        if (user.id) {
-          saveUserId(user.id)
-        }
-
-        // Restore saved language preference
-        const savedLang = getSavedLanguage(user)
-        if (savedLang && savedLang !== i18n.language) {
-          i18n.changeLanguage(savedLang)
-        }
+  const handleLoginSuccess = useCallback(
+    async (userData?: { id?: number } | null, redirectTo?: string) => {
+      const language = normalizeInterfaceLanguage(i18n.language)
+      // Save user ID if available
+      if (userData?.id) {
+        saveUserId(userData.id)
       }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to fetch user data:', error)
-    }
 
-    // Navigate to target page
-    const targetPath = redirectTo || '/dashboard'
-    navigate({ to: targetPath, replace: true })
-  }
+      const self = await getSelf()
+      if (!self?.success || !self.data) {
+        throw new Error(i18n.t('Failed to load user profile'))
+      }
+      const user = self.data as User
+      setUser(user)
+      if (user.id) saveUserId(user.id)
+      // The language selected on this device wins over an old account setting.
+      await i18n.changeLanguage(language)
+      if (getSavedLanguage(user) !== language) {
+        void api
+          .put(
+            '/api/user/self',
+            { language },
+            {
+              skipBusinessError: true,
+              skipErrorHandler: true,
+            }
+          )
+          .catch(() => {
+            /* Keep the local language when preference sync fails. */
+          })
+      }
+
+      const transition = useLoginTransition.getState()
+      await transition.start(user.username || user.display_name || '')
+
+      // Navigate to target page
+      const targetPath = redirectTo || '/dashboard'
+      try {
+        await navigate({ to: targetPath, replace: true })
+        transition.leave()
+      } catch (error) {
+        transition.reset()
+        throw error
+      }
+    },
+    [navigate, setUser]
+  )
 
   /**
    * Redirect to login page

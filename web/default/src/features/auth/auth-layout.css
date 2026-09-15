@@ -132,8 +132,26 @@ body:has(.snowapi-auth-shell) [data-sonner-toast] [data-close-button] {
   }
 }
 
+.snowapi-password-fields {
+  animation: snowapi-password-reveal 260ms ease-out both;
+}
+
+@keyframes snowapi-password-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .snowapi-auth-shell {
+    animation: none;
+  }
+  .snowapi-password-fields {
     animation: none;
   }
 }

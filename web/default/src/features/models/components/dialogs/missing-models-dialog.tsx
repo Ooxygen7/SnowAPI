@@ -196,7 +196,7 @@ export function MissingModelsDialog({
                           onClick={() => handleConfigureModel(modelName)}
                         >
                           <Plus className='h-4 w-4' />
-                          Configure
+                          {t('Configure')}
                         </Button>
                       </div>
                     ))}

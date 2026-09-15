@@ -1167,7 +1167,7 @@ export function CodexUsageDialog({
                 copyable={false}
               />
               <InfoField
-                label='User ID'
+                label={t('User ID')}
                 value={payload?.user_id}
                 mono
                 className='md:col-span-2'

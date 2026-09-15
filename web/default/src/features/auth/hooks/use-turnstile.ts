@@ -26,19 +26,18 @@ import { useStatus } from '@/hooks/use-status'
  * Hook for managing Turnstile verification
  */
 export function useTurnstile() {
-  const { status } = useStatus()
+  const { status, loading } = useStatus()
   const [turnstileToken, setTurnstileToken] = useState('')
+  const [turnstileAttempt, setTurnstileAttempt] = useState(0)
 
-  const isTurnstileEnabled = !!(
-    status?.turnstile_check && status?.turnstile_site_key
-  )
+  const isTurnstileEnabled = Boolean(status?.turnstile_check)
   const turnstileSiteKey = status?.turnstile_site_key || ''
 
   /**
    * Validate if turnstile is ready when required
    */
   const validateTurnstile = (): boolean => {
-    if (isTurnstileEnabled && !turnstileToken) {
+    if (!status || loading || (isTurnstileEnabled && !turnstileToken)) {
       toast.info(
         i18next.t('Please wait a moment, human check is initializing...')
       )
@@ -48,10 +47,19 @@ export function useTurnstile() {
   }
 
   return {
+    isSecurityReady:
+      Boolean(status) &&
+      !loading &&
+      (!isTurnstileEnabled || Boolean(turnstileToken)),
     isTurnstileEnabled,
     turnstileSiteKey,
     turnstileToken,
+    turnstileAttempt,
     setTurnstileToken,
+    resetTurnstile: () => {
+      setTurnstileToken('')
+      setTurnstileAttempt((current) => current + 1)
+    },
     validateTurnstile,
   }
 }

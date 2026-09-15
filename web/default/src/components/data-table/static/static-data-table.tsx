@@ -230,7 +230,7 @@ function StaticDataTableEmptyRow({
   className,
 }: StaticDataTableEmptyRowProps) {
   return (
-    <TableRow>
+    <TableRow data-empty='true'>
       <TableCell
         colSpan={colSpan}
         className={cn('h-24 text-center', className)}

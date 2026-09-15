@@ -589,9 +589,11 @@ export function useChannelsColumns(
                   )}
                 </Button>
                 <div className='flex items-center gap-1.5'>
-                  <span className='font-semibold'>Tag：{tag}</span>
+                  <span className='font-semibold'>
+                    {t('Tag')}: {tag}
+                  </span>
                   <StatusBadge
-                    label={`${childrenCount} channels`}
+                    label={t('{{count}} channels', { count: childrenCount })}
                     variant='blue'
                     size='sm'
                     copyable={false}

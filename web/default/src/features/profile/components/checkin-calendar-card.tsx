@@ -258,7 +258,7 @@ export function CheckinCalendarCard({
             key={turnstileWidgetKey}
             siteKey={turnstileSiteKey}
             onVerify={(token) => {
-              doCheckin(token)
+              if (token) doCheckin(token)
             }}
             onExpire={() => {
               setTurnstileWidgetKey((v) => v + 1)

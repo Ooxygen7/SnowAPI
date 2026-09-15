@@ -1,0 +1,82 @@
+/* Copyright (C) 2023-2026 QuantumNous — AGPL-3.0-or-later */
+.snowapi-login-welcome {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: var(--background);
+  color: var(--foreground);
+  animation: snowapi-welcome-colors 1200ms ease-in-out both;
+}
+
+.snowapi-login-welcome-heading {
+  max-width: 100%;
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.035em;
+  text-align: center;
+  outline: none;
+}
+
+.snowapi-login-welcome-segment {
+  display: inline-block;
+  white-space: pre-wrap;
+  animation: snowapi-welcome-text 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.snowapi-login-welcome-segment:nth-child(2) {
+  animation-delay: 240ms;
+}
+.snowapi-login-welcome-name {
+  display: block;
+  overflow-wrap: anywhere;
+  animation-delay: 500ms !important;
+}
+
+.snowapi-login-welcome[data-phase='leaving'] {
+  animation: snowapi-welcome-exit 350ms ease-out both;
+}
+
+@keyframes snowapi-welcome-text {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.7em, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+@keyframes snowapi-welcome-colors {
+  from {
+    background: #000;
+    color: #fff;
+    opacity: 0;
+  }
+  18% {
+    background: #000;
+    color: #fff;
+    opacity: 1;
+  }
+  to {
+    background: var(--background);
+    color: var(--foreground);
+    opacity: 1;
+  }
+}
+@keyframes snowapi-welcome-exit {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snowapi-login-welcome,
+  .snowapi-login-welcome-segment,
+  .snowapi-login-welcome[data-phase='leaving'] {
+    animation: none;
+  }
+}

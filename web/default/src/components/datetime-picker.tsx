@@ -35,6 +35,7 @@ import { cn } from '@/lib/utils'
 const calendarLocales = {
   en: enUS,
   zh: zhCN,
+  zhCN,
   fr,
   ru,
   ja,
@@ -155,7 +156,7 @@ export function DateTimePicker({
           size='icon'
           onClick={handleClear}
           className='shrink-0'
-          aria-label='Clear'
+          aria-label={t('Clear')}
         >
           <span aria-hidden='true'>✕</span>
         </Button>

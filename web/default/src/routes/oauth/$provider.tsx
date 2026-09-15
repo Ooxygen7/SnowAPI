@@ -24,11 +24,13 @@ import {
 } from '@tanstack/react-router'
 import type { AxiosRequestConfig } from 'axios'
 import i18next from 'i18next'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { OAuthCallbackScreen } from '@/features/auth/components/oauth-callback-screen'
 import { OAUTH_BIND_STORAGE_KEY } from '@/features/auth/constants'
+import { useAuthRedirect } from '@/features/auth/hooks/use-auth-redirect'
+import { localizeApiMessage } from '@/i18n/api-messages'
 import { api, getSelf } from '@/lib/api'
 import { useAuthStore, type AuthUser } from '@/stores/auth-store'
 
@@ -38,6 +40,8 @@ type OAuthRequestConfig = AxiosRequestConfig & {
 
 function OAuthCallback() {
   const navigate = useNavigate()
+  const { handleLoginSuccess } = useAuthRedirect()
+  const startedRef = useRef('')
   const { provider } = useParams({ from: '/oauth/$provider' }) as {
     provider: string
   }
@@ -58,6 +62,9 @@ function OAuthCallback() {
   }, [])
 
   useEffect(() => {
+    const callbackKey = `${provider}:${search?.code}:${search?.state}`
+    if (startedRef.current === callbackKey) return
+    startedRef.current = callbackKey
     ;(async () => {
       const safeNavigate = (target: string) => {
         navigate({ to: target as never, replace: true })
@@ -143,10 +150,9 @@ function OAuthCallback() {
         return false
       }
 
-      const redirectAfterLogin = (target?: string) => {
+      const redirectAfterLogin = async (target?: string) => {
         const to = target || search?.redirect || '/dashboard'
-        safeNavigate(to)
-        toast.success(i18next.t('Signed in successfully!'))
+        await handleLoginSuccess(useAuthStore.getState().auth.user, to)
       }
 
       const handleBindingFailure = (message: string) => {
@@ -156,7 +162,7 @@ function OAuthCallback() {
 
       const handleLoginFailure = async (message: string) => {
         if (await finalizeLogin()) {
-          redirectAfterLogin()
+          await redirectAfterLogin()
           return
         }
         toast.error(message)
@@ -194,11 +200,11 @@ function OAuthCallback() {
             } catch (_error) {
               void _error
             }
-            redirectAfterLogin()
+            await redirectAfterLogin()
             return
           }
           if (await finalizeLogin()) {
-            redirectAfterLogin()
+            await redirectAfterLogin()
             return
           }
           toast.error(res?.data?.message || i18next.t('OAuth failed'))
@@ -208,9 +214,9 @@ function OAuthCallback() {
         const message = res?.data?.message || 'OAuth failed'
         if (!res?.data?.success && !isBindingFlow) {
           // When logging in with an already bound GitHub account, backend may return this message
-          if (message === '该 GitHub 账户已被绑定') {
+          if (message === localizeApiMessage('该 GitHub 账户已被绑定')) {
             if (await finalizeLogin()) {
-              redirectAfterLogin()
+              await redirectAfterLogin()
               return
             }
           }
@@ -238,7 +244,7 @@ function OAuthCallback() {
         return
       }
     })()
-  }, [mode, navigate, provider, search])
+  }, [mode, navigate, provider, search, handleLoginSuccess])
 
   return <OAuthCallbackScreen provider={provider} mode={mode} />
 }
