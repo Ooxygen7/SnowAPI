@@ -1,0 +1,184 @@
+/*
+Copyright (C) 2023-2026 QuantumNous
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+For commercial licensing, please contact support@quantumnous.com
+*/
+
+.snowapi-subscription-reveal-overlay {
+  background: #fff;
+  backdrop-filter: none;
+}
+
+.snowapi-subscription-reveal.snowapi-dialog-content {
+  --background: #fff;
+  --foreground: #171717;
+  --popover: #fff;
+  --popover-foreground: #171717;
+  --primary: #111;
+  --primary-foreground: #fff;
+  --muted: #f3f3f3;
+  --muted-foreground: #686868;
+  --ring: #737373;
+  color-scheme: light;
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  gap: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-radius: 0;
+  padding: 0;
+  translate: none;
+  transform: none;
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: none;
+}
+
+/* This full-screen scene is not one of the console's floating panels. */
+:root
+  body[data-snowapi-console='true']
+  .snowapi-subscription-reveal.snowapi-dialog-content {
+  box-shadow: none !important;
+}
+
+.snowapi-subscription-reveal.snowapi-dialog-content[data-open] {
+  animation: snowapi-subscription-reveal-in 300ms ease-out both;
+}
+
+.snowapi-subscription-reveal.snowapi-dialog-content[data-closed] {
+  animation: snowapi-subscription-reveal-out 220ms ease-in both;
+}
+
+.snowapi-subscription-reveal-layout {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  align-items: center;
+  width: min(100%, 58rem);
+  min-height: min(100dvh, 58rem);
+  padding: max(4rem, env(safe-area-inset-top)) 1.5rem
+    max(2.5rem, env(safe-area-inset-bottom));
+  gap: 1rem;
+  text-align: center;
+}
+
+.snowapi-subscription-reveal-title {
+  margin: 0 auto;
+  max-width: 44rem;
+  font-size: clamp(1.9rem, 4.5vw, 3.5rem);
+  line-height: 1.15;
+  letter-spacing: -0.045em;
+  font-weight: 500;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.snowapi-subscription-reveal-stage {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  padding-block: 1rem;
+}
+
+.snowapi-subscription-pack {
+  display: block;
+  width: min(100%, 42rem, max(15rem, calc((100svh - 20rem) * 272 / 224)));
+  aspect-ratio: 272 / 224;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.snowapi-subscription-pack:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+
+.snowapi-subscription-reveal-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.snowapi-subscription-reveal-footer [data-slot='dialog-description'] {
+  max-width: 32rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  text-wrap: balance;
+}
+
+.snowapi-subscription-reveal-footer [data-slot='button'] {
+  min-height: 2.75rem;
+  padding-inline: 1.75rem;
+  border-radius: 999px;
+}
+
+.snowapi-subscription-reveal-close {
+  position: absolute;
+  top: max(1rem, env(safe-area-inset-top));
+  right: max(1rem, env(safe-area-inset-right));
+}
+
+.snowapi-subscription-pack-fallback {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: min(80%, 22rem);
+  aspect-ratio: 1.6;
+  padding: 1.5rem;
+  border-radius: 0.875rem;
+  background: linear-gradient(125deg, #e1e1e1, #9e9e9e);
+  box-shadow: 0 1.5rem 3rem #00000012;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.snowapi-subscription-pack-fallback img {
+  align-self: flex-end;
+  width: 4rem;
+  height: 4rem;
+  object-fit: contain;
+}
+
+@keyframes snowapi-subscription-reveal-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes snowapi-subscription-reveal-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snowapi-subscription-reveal.snowapi-dialog-content[data-open],
+  .snowapi-subscription-reveal.snowapi-dialog-content[data-closed] {
+    animation-duration: 1ms;
+  }
+}

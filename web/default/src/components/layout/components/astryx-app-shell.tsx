@@ -38,6 +38,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useDirection } from '@/context/direction-provider'
+import { SubscriptionReveal } from '@/features/subscriptions/components/subscription-reveal'
 import {
   getMinimalMode,
   minimalModeQueryKey,
@@ -272,6 +273,7 @@ export function AstryxAppShell(props: AstryxAppShellProps) {
             </div>
           </AppShell>
           <SnowEventCard />
+          <SubscriptionReveal />
         </>
       </LinkProvider>
     </InternationalizationProvider>

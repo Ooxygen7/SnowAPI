@@ -16,6 +16,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
+import { HugeiconsIcon } from '@hugeicons/react'
 import { useTranslation } from 'react-i18next'
 
 import { Badge } from '@/components/ui/badge'
@@ -78,24 +80,28 @@ export function SubscriptionFacts(props: {
 export function UserSubscriptionCell(props: { user: User }) {
   const { t } = useTranslation()
   const { setOpen, setCurrentRow } = useUsers()
+  const planTitle = props.user.subscription?.plan_title || 'Free'
+  const label = `${t('Manage subscription')}: ${planTitle}`
+
   return (
-    <div className='min-w-44 space-y-2'>
-      {props.user.subscription ? (
-        <SubscriptionFacts subscription={props.user.subscription} />
-      ) : (
-        <Badge variant='outline'>Free</Badge>
-      )}
-      <Button
-        variant='link'
-        size='sm'
-        className='h-auto p-0 text-xs'
-        onClick={() => {
-          setCurrentRow(props.user)
-          setOpen('subscription')
-        }}
-      >
-        {t('Manage subscription')}
-      </Button>
-    </div>
+    <Button
+      variant={props.user.subscription ? 'secondary' : 'outline'}
+      size='sm'
+      className='max-w-36'
+      aria-label={label}
+      aria-haspopup='dialog'
+      title={label}
+      onClick={() => {
+        setCurrentRow(props.user)
+        setOpen('subscription')
+      }}
+    >
+      <span className='truncate'>{planTitle}</span>
+      <HugeiconsIcon
+        icon={ArrowRight01Icon}
+        data-icon='inline-end'
+        aria-hidden='true'
+      />
+    </Button>
   )
 }

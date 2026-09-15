@@ -33,6 +33,7 @@ import { formatQuota } from '@/lib/format'
 
 import { getSubscriptionBalanceQuote, paySubscriptionBalance } from '../../api'
 import { formatDuration, formatResetPeriod } from '../../lib'
+import { useSubscriptionRevealStore } from '../../subscription-reveal-store'
 import type { PlanRecord } from '../../types'
 
 interface Props {
@@ -88,14 +89,14 @@ export function SubscriptionPurchaseDialog(props: Props) {
     try {
       const res = await paySubscriptionBalance({ plan_id: plan.id })
       if (res.success) {
-        toast.success(t('Subscription purchased successfully'))
+        props.onOpenChange(false)
+        useSubscriptionRevealStore.getState().show(plan.title)
         // A refresh failure does not undo a successful purchase.
         try {
           await props.onPurchaseSuccess?.()
         } catch {
           // The purchase is final even if refreshing the local view fails.
         }
-        props.onOpenChange(false)
       } else {
         toast.error(
           res.message && res.message !== 'success'

@@ -281,7 +281,7 @@ export function useUsersColumns(): ColumnDef<User>[] {
       header: t('Subscription'),
       cell: ({ row }) => <UserSubscriptionCell user={row.original} />,
       enableSorting: false,
-      size: 230,
+      size: 160,
       meta: { mobileOrder: 45 },
     },
     {

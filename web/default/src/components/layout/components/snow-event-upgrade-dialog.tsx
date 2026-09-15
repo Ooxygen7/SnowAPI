@@ -496,7 +496,10 @@ export function SnowEventUpgradeDialog(props: SnowEventUpgradeDialogProps) {
           selectedPlan ? (purchaseCounts.get(selectedPlan.plan.id) ?? 0) : 0
         }
         userQuota={selfQuery.data?.quota}
-        onPurchaseSuccess={refresh}
+        onPurchaseSuccess={() => {
+          props.onOpenChange(false)
+          return refresh()
+        }}
       />
     </>
   )
