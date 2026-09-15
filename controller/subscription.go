@@ -157,6 +157,8 @@ type AdminUpsertSubscriptionPlanRequest struct {
 }
 
 func AdminCreateSubscriptionPlan(c *gin.Context) {
+	model.GroupSettingsMutex.Lock()
+	defer model.GroupSettingsMutex.Unlock()
 	if !requirePaymentCompliance(c) {
 		return
 	}
@@ -241,6 +243,8 @@ func AdminCreateSubscriptionPlan(c *gin.Context) {
 }
 
 func AdminUpdateSubscriptionPlan(c *gin.Context) {
+	model.GroupSettingsMutex.Lock()
+	defer model.GroupSettingsMutex.Unlock()
 	if !requirePaymentCompliance(c) {
 		return
 	}

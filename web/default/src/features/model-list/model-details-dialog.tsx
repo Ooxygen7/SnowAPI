@@ -106,7 +106,7 @@ export function ModelDetailsDialog(props: {
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent
         data-visual-region='model-details-dialog'
-        className='h-[min(580px,calc(100dvh-2rem))] w-[672px] max-w-[calc(100%-2rem)] grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 sm:max-w-2xl'
+        className='flex max-h-[calc(100dvh-2rem)] w-[672px] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl'
       >
         <CopyButton
           value={model.name}
@@ -116,9 +116,9 @@ export function ModelDetailsDialog(props: {
           className='absolute top-2 right-11'
         />
 
-        <DialogHeader className='border-b px-5 py-4 pr-24 sm:px-6 sm:pr-24'>
+        <DialogHeader className='shrink-0 border-b px-5 py-4 pr-24 sm:px-6 sm:pr-24'>
           <ModelProvider model={model} />
-          <DialogTitle className='font-mono text-lg font-semibold sm:text-xl'>
+          <DialogTitle className='font-mono text-lg font-semibold break-all sm:text-xl'>
             {model.name}
           </DialogTitle>
           {model.description ? (
@@ -132,7 +132,10 @@ export function ModelDetailsDialog(props: {
           )}
         </DialogHeader>
 
-        <div className='flex min-h-0 flex-col gap-3 overflow-y-auto overscroll-contain px-5 py-3 sm:px-6 [&>section]:shrink-0'>
+        <div
+          tabIndex={0}
+          className='no-scrollbar flex min-h-0 flex-col gap-3 overflow-y-auto overscroll-contain px-5 py-3 sm:px-6 [&>section]:shrink-0'
+        >
           <DialogSection title={t('Price')}>
             {model.priceUnitKey === 'request' ? (
               <PriceCard

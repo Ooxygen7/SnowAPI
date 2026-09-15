@@ -13,12 +13,30 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/logger"
+	"github.com/QuantumNous/new-api/setting"
+	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"github.com/QuantumNous/new-api/types"
 
 	"github.com/samber/lo"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
+
+func (channel *Channel) BeforeCreate(_ *gorm.DB) error {
+	if channel.Group == "" {
+		channel.Group = setting.GetDefaultGroup()
+	}
+	if !ratio_setting.ContainsGroupRatio("Free") {
+		groups := strings.Split(channel.Group, ",")
+		for i, name := range groups {
+			if name == "Free" {
+				groups[i] = setting.GetDefaultGroup()
+			}
+		}
+		channel.Group = strings.Join(groups, ",")
+	}
+	return nil
+}
 
 type Channel struct {
 	Id                 int     `json:"id"`

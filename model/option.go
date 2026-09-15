@@ -99,6 +99,7 @@ func InitOptionMap() {
 	common.OptionMap["ModelRequestRateLimitSuccessCount"] = strconv.Itoa(setting.ModelRequestRateLimitSuccessCount)
 	common.OptionMap["ModelRequestRateLimitGroup"] = setting.ModelRequestRateLimitGroup2JSONString()
 	common.OptionMap["GroupPolicies"] = setting.GroupPolicies2JSONString()
+	common.OptionMap["DefaultUserGroup"] = setting.GetDefaultGroup()
 	common.OptionMap["ModelRatio"] = ratio_setting.ModelRatio2JSONString()
 	common.OptionMap["ModelPrice"] = ratio_setting.ModelPrice2JSONString()
 	common.OptionMap["CacheRatio"] = ratio_setting.CacheRatio2JSONString()
@@ -143,6 +144,8 @@ func InitOptionMap() {
 
 func loadOptionsFromDatabase() {
 	options, _ := AllOption()
+	// Apply the default group before validating its policy, also on cold start.
+	sort.Slice(options, func(i, j int) bool { return options[i].Key < options[j].Key })
 	for _, option := range options {
 		err := updateOptionMap(option.Key, option.Value)
 		if err != nil {
@@ -457,6 +460,8 @@ func updateOptionMap(key string, value string) (err error) {
 		err = setting.UpdateModelRequestRateLimitGroupByJSONString(value)
 	case "GroupPolicies":
 		err = setting.UpdateGroupPoliciesByJSONString(value)
+	case "DefaultUserGroup":
+		setting.SetDefaultGroup(value)
 	case "RetryTimes":
 		common.RetryTimes, _ = strconv.Atoi(value)
 	case "DataExportInterval":

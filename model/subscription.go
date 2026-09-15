@@ -11,6 +11,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/pkg/cachex"
+	"github.com/QuantumNous/new-api/setting"
 	"github.com/samber/hot"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -599,7 +600,7 @@ func downgradeUserGroupForSubscriptionTx(tx *gorm.DB, sub *UserSubscription, now
 	if temporaryEntitlementActive {
 		currentGroup = strings.TrimSpace(user.GroupRestore)
 		if currentGroup == "" {
-			currentGroup = "Free"
+			currentGroup = setting.GetDefaultGroup()
 		}
 	}
 	// If another active upgraded subscription exists, keep the current group.
@@ -806,7 +807,7 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 		if temporaryEntitlementActive {
 			currentGroup = strings.TrimSpace(user.GroupRestore)
 			if currentGroup == "" {
-				currentGroup = "Free"
+				currentGroup = setting.GetDefaultGroup()
 			}
 		}
 		if currentGroup != upgradeGroup || temporaryEntitlementActive {
@@ -1635,7 +1636,7 @@ func ExpireDueSubscriptions(limit int) (int, error) {
 			if temporaryEntitlementActive {
 				currentGroup = strings.TrimSpace(user.GroupRestore)
 				if currentGroup == "" {
-					currentGroup = "Free"
+					currentGroup = setting.GetDefaultGroup()
 				}
 			}
 			// An explicit downgrade group takes precedence; otherwise revert to the

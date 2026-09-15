@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
 	"regexp"
 	"sort"
@@ -19,6 +20,7 @@ var groupNamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$`)
 
 type GroupProfile struct {
 	Name                  string `json:"name"`
+	IsDefault             bool   `json:"is_default"`
 	Description           string `json:"description"`
 	MaxRequests           int    `json:"max_requests"`
 	MaxSuccessfulRequests int    `json:"max_successful_requests"`
@@ -32,11 +34,11 @@ type updateGroupProfilesRequest struct {
 }
 
 func GetGroups(c *gin.Context) {
-	groupNames := make([]string, 0)
-	for groupName := range ratio_setting.GetGroupRatioCopy() {
-		groupNames = append(groupNames, groupName)
+	groupNames, err := model.ListManagedGroupNames(model.DB)
+	if err != nil {
+		common.ApiError(c, err)
+		return
 	}
-	sort.Strings(groupNames)
 	common.ApiSuccess(c, groupNames)
 }
 
@@ -64,14 +66,23 @@ func GetUserGroups(c *gin.Context) {
 func GetGroupProfiles(c *gin.Context) {
 	descriptions := setting.GetUserUsableGroupsCopy()
 	policies := setting.GetGroupPoliciesCopy()
-	profiles := make([]GroupProfile, 0, len(descriptions))
-	for name, description := range descriptions {
+	names, err := model.ListManagedGroupNames(model.DB)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	profiles := make([]GroupProfile, 0, len(names))
+	for _, name := range names {
+		description := descriptions[name]
+		if description == "" {
+			description = name
+		}
 		policy, ok := policies[name]
 		if !ok {
 			policy = setting.GroupPolicy{PeriodMinutes: 1}
 		}
 		profiles = append(profiles, GroupProfile{
-			Name: name, Description: description,
+			Name: name, Description: description, IsDefault: name == setting.GetDefaultGroup(),
 			MaxRequests:           policy.MaxRequests,
 			MaxSuccessfulRequests: policy.MaxSuccessfulRequests,
 			PeriodMinutes:         policy.PeriodMinutes,
@@ -80,10 +91,10 @@ func GetGroupProfiles(c *gin.Context) {
 		})
 	}
 	sort.Slice(profiles, func(i, j int) bool {
-		if profiles[i].Name == "Free" {
+		if profiles[i].IsDefault {
 			return true
 		}
-		if profiles[j].Name == "Free" {
+		if profiles[j].IsDefault {
 			return false
 		}
 		return profiles[i].Name < profiles[j].Name
@@ -92,6 +103,8 @@ func GetGroupProfiles(c *gin.Context) {
 }
 
 func UpdateGroupProfiles(c *gin.Context) {
+	model.GroupSettingsMutex.Lock()
+	defer model.GroupSettingsMutex.Unlock()
 	request := updateGroupProfilesRequest{}
 	if err := c.ShouldBindJSON(&request); err != nil {
 		common.ApiError(c, err)
@@ -102,19 +115,21 @@ func UpdateGroupProfiles(c *gin.Context) {
 		return
 	}
 	descriptions := make(map[string]string, len(request.Groups))
+	seenNames := make(map[string]bool, len(request.Groups))
 	policies := make(map[string]setting.GroupPolicy, len(request.Groups))
 	legacyLimits := make(map[string][2]int, len(request.Groups))
 	for _, profile := range request.Groups {
 		profile.Name = strings.TrimSpace(profile.Name)
 		profile.Description = strings.TrimSpace(profile.Description)
-		if !groupNamePattern.MatchString(profile.Name) || profile.Description == "" {
+		if !groupNamePattern.MatchString(profile.Name) || strings.EqualFold(profile.Name, "auto") || profile.Description == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "invalid group name or description"})
 			return
 		}
-		if _, exists := descriptions[profile.Name]; exists {
+		if seenNames[strings.ToLower(profile.Name)] {
 			c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "duplicate group name"})
 			return
 		}
+		seenNames[strings.ToLower(profile.Name)] = true
 		descriptions[profile.Name] = profile.Description
 		policies[profile.Name] = setting.GroupPolicy{
 			MaxRequests:           profile.MaxRequests,
@@ -129,9 +144,14 @@ func UpdateGroupProfiles(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
-	for existing := range setting.GetUserUsableGroupsCopy() {
+	existingNames, err := model.ListManagedGroupNames(model.DB)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	for _, existing := range existingNames {
 		if _, ok := descriptions[existing]; !ok {
-			c.JSON(http.StatusConflict, gin.H{"success": false, "message": "existing groups cannot be removed while compatibility data is retained"})
+			c.JSON(http.StatusConflict, gin.H{"success": false, "message": "Group settings changed. Refresh before saving; use the rename or delete action to modify existing groups."})
 			return
 		}
 	}
@@ -162,13 +182,51 @@ func UpdateGroupProfiles(c *gin.Context) {
 		return
 	}
 	if err := model.UpdateOptionsBulk(map[string]string{
-		"GroupPolicies":              string(policyJSON),
-		"UserUsableGroups":           string(descriptionJSON),
-		"GroupRatio":                 string(ratioJSON),
-		"ModelRequestRateLimitGroup": string(legacyJSON),
+		"GroupPolicies":                   string(policyJSON),
+		"UserUsableGroups":                string(descriptionJSON),
+		"GroupRatio":                      string(ratioJSON),
+		"group_ratio_setting.group_ratio": string(ratioJSON),
+		"ModelRequestRateLimitGroup":      string(legacyJSON),
 	}); err != nil {
 		common.ApiError(c, err)
 		return
 	}
 	GetGroupProfiles(c)
+}
+
+func groupMutationResponse(c *gin.Context, err error) {
+	if err == nil {
+		GetGroupProfiles(c)
+		return
+	}
+	var conflict *model.GroupMutationError
+	if errors.As(err, &conflict) {
+		message := conflict.Code
+		if conflict.Code == "group_bound_subscription" {
+			message = "该分组已被订阅" + strings.Join(conflict.Names, "、") + "绑定。"
+		}
+		c.JSON(http.StatusConflict, gin.H{"success": false, "message": message, "code": conflict.Code, "names": conflict.Names})
+		return
+	}
+	common.ApiError(c, err)
+}
+
+func RenameGroup(c *gin.Context) {
+	var request struct {
+		Name string `json:"name"`
+	}
+	if err := c.ShouldBindJSON(&request); err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	name := strings.TrimSpace(request.Name)
+	if !groupNamePattern.MatchString(name) || strings.EqualFold(name, "auto") {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Invalid group name", "code": "invalid_group_name"})
+		return
+	}
+	groupMutationResponse(c, model.RenameManagedGroup(c.Param("name"), name))
+}
+
+func DeleteGroup(c *gin.Context) {
+	groupMutationResponse(c, model.DeleteManagedGroup(c.Param("name")))
 }

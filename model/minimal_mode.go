@@ -780,6 +780,8 @@ func GetMinimalModeSourceChannel(sourceId int) (*Channel, error) {
 }
 
 func ReconcileMinimalModeSource(input MinimalModeSourceInput) (MinimalModeSourceView, map[string]string, error) {
+	GroupSettingsMutex.Lock()
+	defer GroupSettingsMutex.Unlock()
 	for index := range input.Models {
 		input.Models[index].EndpointType = minimalEndpointType(input.Models[index].EndpointType, input.ChannelType)
 	}
@@ -1219,6 +1221,8 @@ func ReconcileMinimalModeSource(input MinimalModeSourceInput) (MinimalModeSource
 }
 
 func AdoptMinimalModeSource(sourceId int, expectedRevision int64) (MinimalModeSourceView, error) {
+	GroupSettingsMutex.Lock()
+	defer GroupSettingsMutex.Unlock()
 	var committedView MinimalModeSourceView
 	now := GetDBTimestamp()
 	err := runMinimalModeTransaction(func(tx *gorm.DB) error {
@@ -1294,6 +1298,8 @@ func AdoptMinimalModeSource(sourceId int, expectedRevision int64) (MinimalModeSo
 }
 
 func DetachMinimalModeSource(sourceId int, expectedRevision int64) error {
+	GroupSettingsMutex.Lock()
+	defer GroupSettingsMutex.Unlock()
 	channelId := 0
 	err := runMinimalModeTransaction(func(tx *gorm.DB) error {
 		source := MinimalModeSource{}
@@ -1319,6 +1325,8 @@ func DetachMinimalModeSource(sourceId int, expectedRevision int64) error {
 }
 
 func DeleteMinimalModeSource(sourceId int, expectedRevision int64) (map[string]string, error) {
+	GroupSettingsMutex.Lock()
+	defer GroupSettingsMutex.Unlock()
 	var runtimeOptions map[string]string
 	channelId := 0
 	err := runMinimalModeTransaction(func(tx *gorm.DB) error {

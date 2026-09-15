@@ -10,12 +10,21 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/logger"
+	"github.com/QuantumNous/new-api/setting"
+	"github.com/QuantumNous/new-api/setting/ratio_setting"
 
 	"github.com/bytedance/gopkg/util/gopool"
 	"gorm.io/gorm"
 )
 
 const UserNameMaxLength = 20
+
+func (user *User) BeforeCreate(_ *gorm.DB) error {
+	if user.Group == "" || (user.Group == "Free" && !ratio_setting.ContainsGroupRatio("Free")) {
+		user.Group = setting.GetDefaultGroup()
+	}
+	return nil
+}
 
 // User if you add sensitive fields, don't forget to clean them in setupLogin function.
 // Otherwise, the sensitive information will be saved on local storage in plain text!

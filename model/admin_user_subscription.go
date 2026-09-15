@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/setting"
 	"gorm.io/gorm"
 )
 
@@ -187,7 +188,7 @@ func ChangeAdminUserSubscription(operatorID, userID int, change AdminSubscriptio
 					return err
 				}
 			}
-			return tx.Model(&User{}).Where("id = ?", userID).Updates(map[string]interface{}{"group": "Free", "group_restore": "", "group_expires_at": 0}).Error
+			return tx.Model(&User{}).Where("id = ?", userID).Updates(map[string]interface{}{"group": setting.GetDefaultGroup(), "group_restore": "", "group_expires_at": 0}).Error
 		case "balance":
 			if sub == nil {
 				return ErrNoActiveSubscription

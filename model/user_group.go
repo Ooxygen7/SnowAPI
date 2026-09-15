@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/setting"
 
 	"gorm.io/gorm"
 )
@@ -25,7 +26,7 @@ func loadUserGroupStateForUpdateTx(tx *gorm.DB, userID int, now int64) (*User, e
 	}
 	restoredGroup := strings.TrimSpace(user.GroupRestore)
 	if restoredGroup == "" {
-		restoredGroup = "Free"
+		restoredGroup = setting.GetDefaultGroup()
 	}
 	if err := tx.Model(&User{}).Where("id = ?", userID).Updates(map[string]interface{}{
 		"group":            restoredGroup,
@@ -61,7 +62,7 @@ func applyUserGroupEntitlementTx(tx *gorm.DB, userID int, targetGroup string, du
 		}
 	}
 	if restoreGroup == "" {
-		restoreGroup = "Free"
+		restoreGroup = setting.GetDefaultGroup()
 	}
 	durationSeconds := durationMinutes * 60
 	if expiresFrom > math.MaxInt64-durationSeconds {

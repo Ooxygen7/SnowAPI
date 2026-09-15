@@ -9,6 +9,7 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 )
 
@@ -130,11 +131,11 @@ func selectModelHealthProbeGroup(groups []string, userGroup string) string {
 			if userGroup != "" {
 				return userGroup
 			}
-			return "Free"
+			return setting.GetDefaultGroup()
 		}
 	}
 	for _, group := range groups {
-		if group == "Free" {
+		if group == setting.GetDefaultGroup() {
 			return group
 		}
 	}
@@ -144,7 +145,7 @@ func selectModelHealthProbeGroup(groups []string, userGroup string) string {
 	if userGroup != "" {
 		return userGroup
 	}
-	return "Free"
+	return setting.GetDefaultGroup()
 }
 
 // channelTestHandler runs the scheduled "test all channels" job. Enablement and

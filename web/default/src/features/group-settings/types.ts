@@ -1,4 +1,5 @@
 export interface GroupProfile {
+  is_default?: boolean
   name: string
   description: string
   max_requests: number

@@ -79,8 +79,8 @@ func UpdateGroupPoliciesByJSONString(value string) error {
 }
 
 func ValidateGroupPolicies(policies map[string]GroupPolicy) error {
-	if _, ok := policies["Free"]; !ok {
-		return fmt.Errorf("Free group policy is required")
+	if _, ok := policies[GetDefaultGroup()]; !ok {
+		return fmt.Errorf("default group policy is required: %s", GetDefaultGroup())
 	}
 	for name, policy := range policies {
 		if name == "" {
