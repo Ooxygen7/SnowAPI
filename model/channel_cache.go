@@ -22,8 +22,13 @@ var channelsIDM map[int]*Channel                     // all channels include dis
 // path-aware selection avoids re-parsing JSON per request. Refreshed on full sync.
 var channel2advancedCustomConfig map[int]*dto.AdvancedCustomConfig
 var channelSyncLock sync.RWMutex
+var channelRefreshLock sync.Mutex
 
 func InitChannelCache() {
+	// Serialize the read-and-publish cycle, so an older refresh cannot replace
+	// the fresh routing snapshot published after a group rename.
+	channelRefreshLock.Lock()
+	defer channelRefreshLock.Unlock()
 	if !common.MemoryCacheEnabled {
 		InvalidatePricingCache()
 		return

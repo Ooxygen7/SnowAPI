@@ -167,6 +167,26 @@ func TestGroupRenameRollsBackReferencesWhenPersistenceFails(t *testing.T) {
 	assert.False(t, ratio_setting.ContainsGroupRatio("Starter"))
 }
 
+func TestGroupRenameRetriesTransientDatabaseLockWithoutPartialChanges(t *testing.T) {
+	setupGroupManagementTest(t)
+	user := User{Username: "retry-user", Group: "Light"}
+	require.NoError(t, DB.Create(&user).Error)
+	injected := false
+	require.NoError(t, DB.Callback().Update().Before("gorm:update").Register("transient-group-lock", func(tx *gorm.DB) {
+		if tx.Statement.Table == "options" && !injected {
+			injected = true
+			tx.AddError(errors.New("database is locked"))
+		}
+	}))
+	t.Cleanup(func() { DB.Callback().Update().Remove("transient-group-lock") })
+	require.NoError(t, RenameManagedGroup("Light", "Starter"))
+	require.True(t, injected)
+	require.NoError(t, DB.First(&user, user.Id).Error)
+	assert.Equal(t, "Starter", user.Group)
+	assert.True(t, ratio_setting.ContainsGroupRatio("Starter"))
+	assert.False(t, ratio_setting.ContainsGroupRatio("Light"))
+}
+
 func TestGroupRenamePreservesMinimalModeSyncAndDetectsStaleEditor(t *testing.T) {
 	setupGroupManagementTest(t)
 	setupMinimalModeFixture(t)

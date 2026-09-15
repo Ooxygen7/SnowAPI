@@ -143,6 +143,8 @@ func InitOptionMap() {
 }
 
 func loadOptionsFromDatabase() {
+	GroupSettingsMutex.Lock()
+	defer GroupSettingsMutex.Unlock()
 	options, _ := AllOption()
 	// Apply the default group before validating its policy, also on cold start.
 	sort.Slice(options, func(i, j int) bool { return options[i].Key < options[j].Key })

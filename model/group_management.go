@@ -163,7 +163,8 @@ func RenameManagedGroup(oldName, newName string) error {
 	var values map[string]string
 	var users []int
 	var planIDs []int
-	err := DB.Transaction(func(tx *gorm.DB) error {
+	err := runSubscriptionQuotaTransaction(func(tx *gorm.DB) error {
+		users, planIDs = nil, nil
 		var pendingTasks int64
 		if err := tx.Model(&Task{}).Where(clause.Eq{Column: "group", Value: oldName}).Where("status NOT IN ?", []TaskStatus{TaskStatusSuccess, TaskStatusFailure}).Count(&pendingTasks).Error; err != nil {
 			return err
@@ -310,7 +311,7 @@ func DeleteManagedGroup(name string) error {
 	GroupSettingsMutex.Lock()
 	defer GroupSettingsMutex.Unlock()
 	var values map[string]string
-	err := DB.Transaction(func(tx *gorm.DB) error {
+	err := runSubscriptionQuotaTransaction(func(tx *gorm.DB) error {
 		var plans []SubscriptionPlan
 		activeBindings := tx.Model(&UserSubscription{}).Select("plan_id").Where("status = ? AND end_time > ?", "active", common.GetTimestamp()).Where("upgrade_group = ? OR downgrade_group = ? OR prev_user_group = ?", name, name, name)
 		if err := lockForUpdate(tx).Where("upgrade_group = ? OR downgrade_group = ? OR id IN (?)", name, name, activeBindings).Order("id ASC").Find(&plans).Error; err != nil {
