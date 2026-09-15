@@ -34,6 +34,165 @@ For commercial licensing, please contact support@quantumnous.com
 @import './theme-presets.css';
 @import './astryx-app-shell.css';
 
+/* Shared SnowAPI surfaces also apply to portals outside the console shell. */
+:root {
+  --snowapi-floating-surface: #ffffff;
+  --snowapi-floating-ink: #111111;
+  --snowapi-floating-muted: #696969;
+  --snowapi-floating-hover: #f1f1ef;
+  --snowapi-floating-border: #e2e2df;
+  --snowapi-floating-shadow: 0 12px 36px rgb(0 0 0 / 0.1);
+  --snowapi-notice-surface: #ffffff;
+  --snowapi-notice-ink: #111111;
+  --snowapi-notice-error: #c23b2b;
+  --snowapi-notice-border: #e2e2df;
+  --snowapi-notice-hover: #f1f1ef;
+  --snowapi-notice-shadow: 0 8px 28px rgb(0 0 0 / 0.12);
+}
+
+.dark {
+  --snowapi-floating-surface: #181818;
+  --snowapi-floating-ink: #f4f4f2;
+  --snowapi-floating-muted: #a6a6a3;
+  --snowapi-floating-hover: #292929;
+  --snowapi-floating-border: #343434;
+  --snowapi-floating-shadow: 0 18px 52px rgb(0 0 0 / 0.42);
+}
+
+.snowapi-toaster[data-sonner-toaster] {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  font-family: var(--font-sans);
+}
+
+.snowapi-toaster [data-sonner-toast] {
+  --background: var(--snowapi-notice-surface);
+  --foreground: var(--snowapi-notice-ink);
+  --primary: var(--snowapi-notice-ink);
+  --primary-foreground: var(--snowapi-notice-surface);
+  --muted: var(--snowapi-notice-hover);
+  --muted-foreground: var(--snowapi-notice-ink);
+  --destructive: var(--snowapi-notice-error);
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  min-height: 3rem;
+  align-items: center;
+  gap: 0.625rem;
+  border: 1px solid var(--snowapi-notice-border);
+  border-radius: 2rem;
+  padding: 0.75rem 1.125rem;
+  background: var(--snowapi-notice-surface);
+  color: var(--snowapi-notice-ink);
+  box-shadow: var(--snowapi-notice-shadow);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.snowapi-toaster [data-sonner-toast][data-type='error'] {
+  color: var(--snowapi-notice-error);
+}
+
+.snowapi-toaster [data-content] {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.snowapi-toaster :is([data-title], [data-description]) {
+  color: inherit;
+  overflow-wrap: anywhere;
+}
+
+.snowapi-toaster [data-title] {
+  font-weight: 500;
+}
+
+.snowapi-toaster [data-description] {
+  font-weight: 400;
+}
+
+.snowapi-toaster [data-icon] {
+  position: relative;
+  display: flex;
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 1rem;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+
+.snowapi-toaster :is([data-button], [data-close-button]) {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--snowapi-notice-hover);
+  color: var(--snowapi-notice-ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.snowapi-toaster [data-button] {
+  min-height: 1.875rem;
+  margin-inline-start: auto;
+  padding: 0.25rem 0.75rem;
+}
+
+.snowapi-toaster [data-close-button] {
+  order: 1;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-inline-end: -0.5rem;
+  padding: 0;
+  background: transparent;
+}
+
+.snowapi-toaster :is([data-button], [data-close-button]):hover {
+  background: var(--snowapi-notice-border);
+}
+
+.snowapi-toaster :is([data-button], [data-close-button]):focus-visible {
+  outline: 2px solid var(--snowapi-notice-ink);
+  outline-offset: 2px;
+}
+
+.snowapi-toaster
+  [data-sonner-toast][data-expanded='false'][data-front='false']
+  > * {
+  opacity: 0;
+}
+
+.snowapi-tooltip[data-slot='tooltip-content'] {
+  --background: var(--snowapi-notice-surface);
+  --foreground: var(--snowapi-notice-ink);
+  --muted-foreground: var(--snowapi-notice-ink);
+  --destructive: var(--snowapi-notice-error);
+  max-width: min(24rem, calc(100vw - 2rem));
+  border: 1px solid var(--snowapi-notice-border);
+  border-radius: 1.25rem;
+  background: var(--snowapi-notice-surface);
+  color: var(--snowapi-notice-ink);
+  box-shadow: var(--snowapi-notice-shadow);
+  font-family: var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snowapi-toaster,
+  .snowapi-toaster *,
+  .snowapi-tooltip {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 .snowapi-home-gradient {
   background:
     radial-gradient(
@@ -1404,17 +1563,84 @@ body[data-snowapi-console='true'] [data-slot='dialog-footer'] {
   background: transparent;
 }
 
-body[data-snowapi-console='true']
-  :is(
-    [data-slot='popover-content'],
-    [data-slot='select-content'],
-    [data-slot='dropdown-menu-content']
-  ) {
-  border-color: var(--snowapi-rainflow-divider) !important;
-  border-radius: 0.625rem;
-  background: var(--popover) !important;
-  color: var(--popover-foreground) !important;
-  box-shadow: 0 12px 36px rgb(0 0 0 / 0.1) !important;
+/* Menus keep the same palette and typography on home, auth, docs and console.
+ * Set tokens on the portal itself instead of relying on a route ancestor. */
+:is(
+  [data-slot='popover-content'],
+  [data-slot='select-content'],
+  [data-slot='dropdown-menu-content'],
+  [data-slot='dropdown-menu-sub-content'],
+  [data-slot='context-menu-content'],
+  [data-slot='context-menu-sub-content'],
+  [data-slot='hover-card-content'],
+  [data-slot='combobox-content']
+) {
+  --background: var(--snowapi-floating-surface);
+  --popover: var(--snowapi-floating-surface);
+  --popover-foreground: var(--snowapi-floating-ink);
+  --foreground: var(--snowapi-floating-ink);
+  --primary: var(--snowapi-floating-ink);
+  --primary-foreground: var(--snowapi-floating-surface);
+  --secondary: var(--snowapi-floating-hover);
+  --secondary-foreground: var(--snowapi-floating-ink);
+  --accent: var(--snowapi-floating-hover);
+  --accent-foreground: var(--snowapi-floating-ink);
+  --muted: var(--snowapi-floating-hover);
+  --muted-foreground: var(--snowapi-floating-muted);
+  --border: var(--snowapi-floating-border);
+  --ring: var(--snowapi-floating-ink);
+  border-color: var(--snowapi-floating-border);
+  border-radius: 1rem;
+  background: var(--snowapi-floating-surface);
+  color: var(--snowapi-floating-ink);
+  box-shadow: var(--snowapi-floating-shadow);
+  font-family: var(--font-sans);
+}
+
+:is(
+  [data-slot='dropdown-menu-content'],
+  [data-slot='dropdown-menu-sub-content']
+) {
+  min-width: 10rem;
+  padding: 0.375rem;
+}
+
+:is(
+  [data-slot='dropdown-menu-item'],
+  [data-slot='dropdown-menu-checkbox-item'],
+  [data-slot='dropdown-menu-radio-item'],
+  [data-slot='dropdown-menu-sub-trigger']
+) {
+  min-height: 2rem;
+  border-radius: 999px;
+  padding-block: 0.375rem;
+  padding-inline: 0.75rem;
+}
+
+:is(
+  [data-slot='dropdown-menu-item'],
+  [data-slot='dropdown-menu-checkbox-item'],
+  [data-slot='dropdown-menu-radio-item'],
+  [data-slot='dropdown-menu-sub-trigger']
+)[data-inset='true'] {
+  padding-inline-start: 1.75rem;
+}
+
+:is(
+  [data-slot='dropdown-menu-checkbox-item'],
+  [data-slot='dropdown-menu-radio-item']
+) {
+  padding-inline-end: 2rem;
+}
+
+:is(
+  [data-slot='dropdown-menu-item'],
+  [data-slot='dropdown-menu-checkbox-item'],
+  [data-slot='dropdown-menu-radio-item'],
+  [data-slot='dropdown-menu-sub-trigger']
+):focus-visible {
+  outline: 2px solid var(--snowapi-floating-ink);
+  outline-offset: -2px;
 }
 
 .dark
@@ -1422,10 +1648,7 @@ body[data-snowapi-console='true']
   :is(
     [data-slot='dialog-content'],
     [data-slot='sheet-content'],
-    [data-slot='drawer-content'],
-    [data-slot='popover-content'],
-    [data-slot='select-content'],
-    [data-slot='dropdown-menu-content']
+    [data-slot='drawer-content']
   ) {
   box-shadow: 0 18px 52px rgb(0 0 0 / 0.42) !important;
 }

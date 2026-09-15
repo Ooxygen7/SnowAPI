@@ -21,11 +21,12 @@ import { describe, test } from 'node:test'
 
 import { handleDropdownMenuItemSelect } from './dropdown-menu-events'
 
-function createMenuEvent() {
-  let defaultPrevented = false
+function createMenuEvent(type = 'click', prevented = false) {
+  let defaultPrevented = prevented
   let baseUIHandlerPrevented = false
 
   return {
+    type,
     get defaultPrevented() {
       return defaultPrevented
     },
@@ -65,5 +66,50 @@ describe('DropdownMenuItem onSelect compatibility', () => {
 
     assert.equal(event.defaultPrevented, true)
     assert.equal(event.baseUIHandlerPrevented, true)
+  })
+
+  test('selects and closes for keyboard activation already handled by Base UI', () => {
+    const event = createMenuEvent('keydown', true)
+    const calls: string[] = []
+
+    handleDropdownMenuItemSelect(
+      event,
+      () => calls.push('click'),
+      () => calls.push('select')
+    )
+
+    assert.deepEqual(calls, ['click', 'select'])
+    assert.equal(event.baseUIHandlerPrevented, false)
+  })
+
+  test('preserves explicit keyboard onSelect cancellation for dialog actions', () => {
+    const event = createMenuEvent('keydown', true)
+    let selected = false
+
+    handleDropdownMenuItemSelect(event, undefined, (selectEvent) => {
+      selected = true
+      selectEvent.preventDefault()
+    })
+
+    assert.equal(selected, true)
+    assert.equal(event.baseUIHandlerPrevented, true)
+  })
+
+  test('does not select when a consumer cancels the keyboard click', () => {
+    const event = createMenuEvent('keydown', true)
+    const originalPreventDefault = event.preventDefault
+    let selected = false
+
+    handleDropdownMenuItemSelect(
+      event,
+      (clickEvent) => clickEvent.preventDefault(),
+      () => {
+        selected = true
+      }
+    )
+
+    assert.equal(selected, false)
+    assert.equal(event.baseUIHandlerPrevented, true)
+    assert.equal(event.preventDefault, originalPreventDefault)
   })
 })

@@ -84,44 +84,6 @@ body:has(.snowapi-auth-shell) {
   filter: invert(1);
 }
 
-body:has(.snowapi-auth-shell) [data-sonner-toaster] {
-  --normal-bg: #080808 !important;
-  --normal-border: rgb(255 255 255 / 20%) !important;
-  --normal-text: #fff !important;
-  --success-bg: #080808 !important;
-  --success-border: rgb(255 255 255 / 20%) !important;
-  --success-text: #fff !important;
-  --info-bg: #080808 !important;
-  --info-border: rgb(255 255 255 / 20%) !important;
-  --info-text: #fff !important;
-  --warning-bg: #080808 !important;
-  --warning-border: rgb(255 255 255 / 20%) !important;
-  --warning-text: #fff !important;
-  --error-bg: #080808 !important;
-  --error-border: rgb(255 255 255 / 20%) !important;
-  --error-text: #fff !important;
-}
-
-body:has(.snowapi-auth-shell) [data-sonner-toast] {
-  border-color: rgb(255 255 255 / 20%) !important;
-  background: #080808 !important;
-  color: #fff !important;
-}
-
-body:has(.snowapi-auth-shell) [data-sonner-toast] [data-description] {
-  color: rgb(255 255 255 / 68%) !important;
-}
-
-body:has(.snowapi-auth-shell) [data-sonner-toast] [data-icon] {
-  color: #fff !important;
-}
-
-body:has(.snowapi-auth-shell) [data-sonner-toast] [data-close-button] {
-  border-color: rgb(255 255 255 / 24%) !important;
-  background: #fff !important;
-  color: #000 !important;
-}
-
 @keyframes snowapi-auth-content-in {
   from {
     opacity: 0;

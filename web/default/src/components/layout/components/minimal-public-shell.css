@@ -17,6 +17,20 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 .snowapi-minimal-public-shell {
+  --background: #fdfdfc;
+  --foreground: #111111;
+  --card: #f5f5f3;
+  --card-foreground: #111111;
+  --primary: #111111;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f1ef;
+  --secondary-foreground: #111111;
+  --muted: #f0f0ee;
+  --muted-foreground: #696969;
+  --accent: #ebebe8;
+  --accent-foreground: #111111;
+  --border: #e2e2df;
+  --ring: #111111;
   --snowapi-public-surface: color-mix(
     in oklab,
     var(--foreground) 4%,
@@ -31,7 +45,25 @@ For commercial licensing, please contact support@quantumnous.com
   overflow-x: clip;
   background: var(--background);
   color: var(--foreground);
+  font-family: var(--font-sans);
   animation: snowapi-minimal-public-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.dark .snowapi-minimal-public-shell:not(.snowapi-minimal-public-shell-dark) {
+  --background: #0d0d0d;
+  --foreground: #f4f4f2;
+  --card: #181818;
+  --card-foreground: #f4f4f2;
+  --primary: #f4f4f2;
+  --primary-foreground: #111111;
+  --secondary: #202020;
+  --secondary-foreground: #f4f4f2;
+  --muted: #222222;
+  --muted-foreground: #a6a6a3;
+  --accent: #292929;
+  --accent-foreground: #f4f4f2;
+  --border: #343434;
+  --ring: #f4f4f2;
 }
 
 .snowapi-minimal-public-shell-dark {

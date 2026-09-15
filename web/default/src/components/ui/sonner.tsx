@@ -26,23 +26,25 @@ import {
   Loading03Icon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
+import { useTranslation } from 'react-i18next'
 import { Toaster as Sonner, type ToasterProps } from 'sonner'
 
-import { useTheme } from '@/context/theme-provider'
+import { cn } from '@/lib/utils'
 
 const Toaster = (props: ToasterProps) => {
-  const { resolvedTheme } = useTheme()
-  const neutralBackground =
-    resolvedTheme === 'dark' ? 'oklch(0.22 0 0)' : 'oklch(0.985 0 0)'
-  const neutralBorder =
-    resolvedTheme === 'dark' ? 'oklch(1 0 0 / 16%)' : 'oklch(0.18 0 0 / 18%)'
-  const neutralText =
-    resolvedTheme === 'dark' ? 'oklch(0.96 0 0)' : 'oklch(0.18 0 0)'
+  const { t } = useTranslation()
 
   return (
     <Sonner
-      theme={resolvedTheme}
-      className='toaster group'
+      {...props}
+      theme='light'
+      richColors={false}
+      className={cn('snowapi-toaster', props.className)}
+      toastOptions={{
+        ...props.toastOptions,
+        unstyled: true,
+        closeButtonAriaLabel: t('Close'),
+      }}
       icons={{
         success: (
           <HugeiconsIcon
@@ -80,27 +82,6 @@ const Toaster = (props: ToasterProps) => {
           />
         ),
       }}
-      style={
-        {
-          '--normal-bg': neutralBackground,
-          '--normal-text': neutralText,
-          '--normal-border': neutralBorder,
-          '--success-bg': neutralBackground,
-          '--success-border': neutralBorder,
-          '--success-text': 'var(--success)',
-          '--info-bg': neutralBackground,
-          '--info-border': neutralBorder,
-          '--info-text': 'var(--info)',
-          '--warning-bg': neutralBackground,
-          '--warning-border': neutralBorder,
-          '--warning-text': 'var(--warning)',
-          '--error-bg': neutralBackground,
-          '--error-border': neutralBorder,
-          '--error-text': 'var(--destructive)',
-          '--border-radius': 'var(--radius)',
-        } as React.CSSProperties
-      }
-      {...props}
     />
   )
 }

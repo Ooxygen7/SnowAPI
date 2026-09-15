@@ -31,13 +31,27 @@ export function handleDropdownMenuItemSelect(
   onClick?: React.MouseEventHandler<HTMLElement>,
   onSelect?: DropdownMenuItemSelectHandler
 ) {
-  onClick?.(event)
-
-  if (!event.defaultPrevented) {
-    onSelect?.(event)
+  // Base UI prevents the native Enter/Space action before invoking onClick on
+  // non-button menu items. Only a consumer's cancellation should stop selection.
+  const keyboardActivation = event.type === 'keydown' || event.type === 'keyup'
+  let selectionPrevented = event.defaultPrevented && !keyboardActivation
+  const preventDefault = event.preventDefault
+  event.preventDefault = () => {
+    selectionPrevented = true
+    preventDefault.call(event)
   }
 
-  if (event.defaultPrevented) {
-    event.preventBaseUIHandler?.()
+  try {
+    onClick?.(event)
+
+    if (!selectionPrevented) {
+      onSelect?.(event)
+    }
+
+    if (selectionPrevented) {
+      event.preventBaseUIHandler?.()
+    }
+  } finally {
+    event.preventDefault = preventDefault
   }
 }
