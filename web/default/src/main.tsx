@@ -30,6 +30,7 @@ import { toast } from 'sonner'
 
 import { getStatus } from '@/lib/api'
 import { installBuildMetadata } from '@/lib/build-metadata'
+import { APP_BASE_PATH } from '@/lib/deployment-mode'
 import { applyFaviconToDom } from '@/lib/dom-utils'
 import '@/lib/dayjs'
 import { initializeFrontendCache } from '@/lib/frontend-cache'
@@ -104,6 +105,7 @@ const queryClient = new QueryClient({
 
 // Create a new router instance
 const router = createRouter({
+  basepath: APP_BASE_PATH,
   routeTree,
   context: { queryClient },
   defaultPreload: 'intent',

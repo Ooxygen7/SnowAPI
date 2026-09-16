@@ -104,6 +104,11 @@ export function mapStatusDataToConfig(
 
 // Fetch system config from API
 async function fetchSystemConfig(): Promise<Partial<SystemConfig>> {
+  if (import.meta.env.VITE_SNOWAPI_DEMO === 'true') {
+    const { api } = await import('@/lib/api')
+    const response = await api.get<StatusApiResponse>('/api/status')
+    return mapStatusDataToConfig(response.data.data)
+  }
   const response = await fetch('/api/status')
   if (!response.ok) throw new Error('Failed to fetch status')
 

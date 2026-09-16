@@ -16,6 +16,14 @@ export default defineConfig(({ envMode }) => {
     'http://localhost:3000'
 
   const isProd = envMode === 'production'
+  const isDemo =
+    (process.env.VITE_SNOWAPI_DEMO || env.rawPublicVars.VITE_SNOWAPI_DEMO) ===
+    'true'
+  const basePath = `${(
+    process.env.VITE_APP_BASE_PATH ||
+    env.rawPublicVars.VITE_APP_BASE_PATH ||
+    '/'
+  ).replace(/\/+$/, '')}/`
   const devProxy = Object.fromEntries(
     (['/api', '/mj', '/pg'] as const).map((key) => [
       key,
@@ -53,6 +61,10 @@ export default defineConfig(({ envMode }) => {
       },
     },
     source: {
+      define: {
+        'import.meta.env.VITE_SNOWAPI_DEMO': JSON.stringify(String(isDemo)),
+        'import.meta.env.VITE_APP_BASE_PATH': JSON.stringify(basePath),
+      },
       entry: {
         index: './src/main.tsx',
       },
@@ -64,13 +76,28 @@ export default defineConfig(({ envMode }) => {
     },
     html: {
       template: './index.html',
+      templateParameters: {
+        faviconUrl: isDemo
+          ? `${basePath}snowapi-logo.png`
+          : '/snowapi-theme/unsnow-favicon.png?v=20260717-1',
+      },
     },
     server: {
       host: '0.0.0.0',
       strictPort: false,
-      proxy: devProxy,
+      proxy: isDemo ? {} : devProxy,
+      base: basePath,
     },
     output: {
+      assetPrefix: basePath,
+      copy: isDemo
+        ? [
+            {
+              from: './src/features/subscriptions/animation/assets/snowapi-logo.png',
+              to: 'snowapi-logo.png',
+            },
+          ]
+        : [],
       // Production optimizations
       minify: isProd,
       target: 'web',

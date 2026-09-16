@@ -27,6 +27,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { useApiInfo, useFAQ } from '@/features/dashboard/hooks/use-status-data'
+import { appPath } from '@/lib/deployment-mode'
 
 export function ApiAccessPanel() {
   const { t } = useTranslation()
@@ -104,7 +105,7 @@ export function ApiAccessPanel() {
         {links.map((link) => (
           <a
             key={link.href}
-            href={link.href}
+            href={appPath(link.href)}
             className='hover:text-foreground inline-flex items-center gap-1'
           >
             {link.label}

@@ -49,6 +49,7 @@ import { beginPasskeyLogin, finishPasskeyLogin } from '@/features/auth/passkey'
 import type { AuthFormProps } from '@/features/auth/types'
 import snowApiLogo from '@/features/subscriptions/animation/assets/snowapi-logo.png'
 import { useStatus } from '@/hooks/use-status'
+import { IS_DEMO } from '@/lib/deployment-mode'
 import {
   buildAssertionResult,
   prepareCredentialRequestOptions,
@@ -69,7 +70,7 @@ export function UserAuthForm({
   const [isPasskeyLoading, setIsPasskeyLoading] = useState(false)
   const [isWeChatDialogOpen, setIsWeChatDialogOpen] = useState(false)
   const [isWeChatSubmitting, setIsWeChatSubmitting] = useState(false)
-  const [showPasswordLogin, setShowPasswordLogin] = useState(false)
+  const [showPasswordLogin, setShowPasswordLogin] = useState(IS_DEMO)
   const [linuxDOInvitationCode, setLinuxDOInvitationCode] = useState('')
   const legalConsentErrorMessage = t('Please agree to the legal terms first')
   const loginFailedMessage = t('Login failed')
@@ -144,8 +145,8 @@ export function UserAuthForm({
   const form = useForm<z.infer<typeof loginFormSchema>>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
-      username: '',
-      password: '',
+      username: IS_DEMO ? 'snowapidemo' : '',
+      password: IS_DEMO ? '1234567890' : '',
     },
   })
 
@@ -381,7 +382,7 @@ export function UserAuthForm({
             aria-hidden='true'
             className='size-4 object-contain invert'
           />
-          {t('Sign in with username and password')}
+          {t('Continue with SnowAuth')}
           <ChevronDown
             className={cn(
               'h-4 w-4 transition-transform',

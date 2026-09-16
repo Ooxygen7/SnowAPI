@@ -50,6 +50,15 @@ export const api = axios.create({
   },
 })
 
+// The demo transport has no network fallback, including for unknown endpoints.
+// A compile-time flag keeps fixtures out of the normal production bundle.
+if (import.meta.env.VITE_SNOWAPI_DEMO === 'true') {
+  api.defaults.adapter = async (config) => {
+    const { demoAdapter } = await import('@/demo/adapter')
+    return demoAdapter(config)
+  }
+}
+
 // ============================================================================
 // Request Deduplication
 // ============================================================================

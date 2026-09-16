@@ -19,6 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
+import { appPath } from '@/lib/deployment-mode'
 
 import type { SystemStatus } from '../types'
 
@@ -70,7 +71,7 @@ export function TermsFooter({
       {text}{' '}
       {firstLink && (
         <a
-          href={firstLink.href}
+          href={appPath(firstLink.href)}
           className='hover:text-primary underline underline-offset-4'
         >
           {firstLink.label}
@@ -81,7 +82,7 @@ export function TermsFooter({
           {' '}
           {t('and')}{' '}
           <a
-            href={secondLink.href}
+            href={appPath(secondLink.href)}
             className='hover:text-primary underline underline-offset-4'
           >
             {secondLink.label}

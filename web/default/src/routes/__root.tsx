@@ -28,11 +28,13 @@ import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { NavigationProgress } from '@/components/navigation-progress'
 import { Toaster } from '@/components/ui/sonner'
 import { ThemeCustomizationProvider } from '@/context/theme-customization-provider'
+import { DemoNotice } from '@/demo/notice'
 import { LoginWelcomeBoundary } from '@/features/auth/components/login-welcome'
 import { GeneralError } from '@/features/errors/general-error'
 import { NotFoundError } from '@/features/errors/not-found-error'
 import { getSetupStatus } from '@/features/setup/api'
 import { useSystemConfig } from '@/hooks/use-system-config'
+import { IS_DEMO } from '@/lib/deployment-mode'
 
 function RootComponent() {
   // Load system configuration (logo, system name, etc.) from backend
@@ -40,6 +42,7 @@ function RootComponent() {
 
   return (
     <ThemeCustomizationProvider>
+      {IS_DEMO && <DemoNotice />}
       <NavigationProgress />
       <LoginWelcomeBoundary>
         <Outlet />

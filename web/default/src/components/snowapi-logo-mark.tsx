@@ -18,9 +18,12 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import type { ComponentProps } from 'react'
 
+import { IS_DEMO, appPath } from '@/lib/deployment-mode'
 import { cn } from '@/lib/utils'
 
-const fallbackLogo = '/snowapi-theme/unsnow-favicon.png?v=20260717-1'
+const fallbackLogo = IS_DEMO
+  ? appPath('/snowapi-logo.png')
+  : '/snowapi-theme/unsnow-favicon.png?v=20260717-1'
 
 type SnowApiLogoMarkProps = Omit<ComponentProps<'img'>, 'alt' | 'src'>
 

@@ -29,6 +29,7 @@ import { RichContent } from '@/components/rich-content'
 import { Button } from '@/components/ui/button'
 import { useMediaQuery } from '@/hooks'
 import { isHttpUrl, isLikelyHtml } from '@/lib/content-format'
+import { appPath } from '@/lib/deployment-mode'
 import { cn } from '@/lib/utils'
 
 import { LegalChapterWheel } from './legal-chapter-wheel'
@@ -170,7 +171,7 @@ export function LegalDocument(props: LegalDocumentProps) {
       history.go(-1)
       return
     }
-    window.location.assign('/')
+    window.location.assign(appPath('/'))
   }, [history])
 
   const selectSection = useCallback((index: number) => {
