@@ -435,7 +435,7 @@ For commercial licensing, please contact support@quantumnous.com
   white-space: nowrap;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 768px) {
   .snowapi-event-card {
     position: fixed;
     right: 1.25rem;
