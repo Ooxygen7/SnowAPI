@@ -520,6 +520,12 @@ func getSessionUser(c *gin.Context) (*model.User, error) {
 	if !ok {
 		return nil, errors.New("无效的会话信息")
 	}
+	nonce, _ := session.Get("identity").(string)
+	if _, err := model.ValidateSessionUser(id, nonce); err != nil {
+		session.Clear()
+		_ = session.Save()
+		return nil, err
+	}
 	user := &model.User{Id: id}
 	if err := user.FillUserById(); err != nil {
 		return nil, err

@@ -135,9 +135,15 @@ func recordLoginAudit(user *model.User, c *gin.Context) {
 
 // setup session & cookies and then return user info
 func setupLogin(user *model.User, c *gin.Context) {
+	var identity model.User
+	if err := model.DB.Select("id", "status", "session_nonce").First(&identity, user.Id).Error; err != nil || identity.Status != common.UserStatusEnabled || identity.SessionNonce == "" {
+		common.ApiErrorI18n(c, i18n.MsgAuthNotLoggedIn)
+		return
+	}
 	model.UpdateUserLastLoginAt(user.Id)
 	session := sessions.Default(c)
 	session.Set("id", user.Id)
+	session.Set("identity", identity.SessionNonce)
 	session.Set("username", user.Username)
 	session.Set("role", user.Role)
 	session.Set("status", user.Status)
@@ -1164,6 +1170,11 @@ type emailBindRequest struct {
 }
 
 func EmailBind(c *gin.Context) {
+	user, err := getSessionUser(c)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"success": false, "message": i18n.T(c, i18n.MsgAuthNotLoggedIn)})
+		return
+	}
 	var req emailBindRequest
 	if err := common.DecodeJson(c.Request.Body, &req); err != nil {
 		common.ApiError(c, errors.New("invalid request body"))
@@ -1176,17 +1187,7 @@ func EmailBind(c *gin.Context) {
 		common.ApiErrorI18n(c, i18n.MsgUserVerificationCodeError)
 		return
 	}
-	session := sessions.Default(c)
-	id := session.Get("id")
-	user := model.User{
-		Id: id.(int),
-	}
-	err := user.FillUserById()
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
-	if err := model.BindEmailToUser(&user, email); err != nil {
+	if err := model.BindEmailToUser(user, email); err != nil {
 		if errors.Is(err, model.ErrEmailAlreadyTaken) {
 			common.ApiErrorI18n(c, i18n.MsgUserEmailAlreadyTaken)
 			return

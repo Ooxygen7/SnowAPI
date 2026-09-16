@@ -35,7 +35,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -103,14 +102,15 @@ export function BillingHistoryDialog({
         description={t(
           'View your topup transaction records and payment history'
         )}
-        contentClassName='flex max-h-[calc(100dvh-2rem)] flex-col max-sm:w-screen max-sm:max-w-none max-sm:rounded-none max-sm:p-4 sm:max-w-4xl'
+        contentClassName='flex max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] min-w-0 flex-col rounded-2xl p-4 sm:max-w-4xl'
+        headerClassName='pr-8'
         contentHeight='auto'
-        bodyClassName='space-y-3'
+        bodyClassName='flex min-w-0 flex-col gap-3'
       >
-        <div className='min-h-0 space-y-3'>
+        <div className='flex min-h-0 min-w-0 flex-col gap-3'>
           {/* Search and Filter Bar */}
           <div className='flex items-center gap-2'>
-            <div className='relative flex-1'>
+            <div className='relative min-w-0 flex-1'>
               <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
               <Input
                 placeholder={t('Search by order number...')}
@@ -146,7 +146,7 @@ export function BillingHistoryDialog({
           </div>
 
           {/* Records List */}
-          <div className='max-h-[min(54vh,520px)] overflow-y-auto pr-1'>
+          <div className='min-w-0'>
             {loading ? <ContentLoading className='min-h-40' /> : null}
             {!loading && records.length === 0 ? (
               <div className='text-muted-foreground flex min-h-40 flex-col items-center justify-center py-10 text-center'>
@@ -161,85 +161,88 @@ export function BillingHistoryDialog({
               </div>
             ) : null}
             {!loading && records.length > 0 ? (
-              <div className='space-y-3'>
+              <div className='flex min-w-0 flex-col gap-3'>
                 {records.map((record) => {
                   const statusConfig = getStatusConfig(record.status)
                   return (
                     <div
                       key={record.id}
-                      className='rounded-lg border p-3 sm:p-4'
+                      className='min-w-0 rounded-xl border p-3 sm:p-4'
                     >
                       {/* Header Row */}
-                      <div className='flex items-start justify-between gap-2'>
-                        <div className='flex-1 space-y-1'>
-                          <div className='flex min-w-0 items-center gap-2'>
-                            <code className='text-foreground truncate font-mono text-sm'>
-                              {record.trade_no}
-                            </code>
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              className='h-5 w-5 p-0'
-                              onClick={() => copyToClipboard(record.trade_no)}
-                            >
-                              {copiedText === record.trade_no ? (
-                                <Check className='h-3 w-3' />
-                              ) : (
-                                <Copy className='h-3 w-3' />
-                              )}
-                            </Button>
-                            {isAdmin && record.user_id != null && (
-                              <StatusBadge
-                                label={`${t('User ID')}: ${record.user_id}`}
-                                variant='neutral'
-                                size='sm'
-                                copyText={String(record.user_id)}
-                              />
-                            )}
-                          </div>
-                          <div className='text-muted-foreground text-xs'>
-                            {formatTimestamp(record.create_time)}
-                          </div>
+                      <div className='flex flex-wrap items-start justify-between gap-2'>
+                        <div className='text-muted-foreground text-xs'>
+                          {formatTimestamp(record.create_time)}
                         </div>
                         <StatusBadge
-                          label={statusConfig.label}
+                          label={t(statusConfig.label)}
                           variant={statusConfig.variant}
                           showDot
                           copyable={false}
                         />
                       </div>
+                      <div className='mt-2 flex min-w-0 flex-col gap-2'>
+                        <div className='flex min-w-0 items-start gap-2'>
+                          <code className='text-foreground min-w-0 flex-1 font-mono text-xs leading-5 break-all sm:text-sm'>
+                            {record.trade_no}
+                          </code>
+                          <Button
+                            variant='ghost'
+                            size='icon-sm'
+                            className='shrink-0'
+                            aria-label={t('Copy')}
+                            onClick={() => copyToClipboard(record.trade_no)}
+                          >
+                            {copiedText === record.trade_no ? (
+                              <Check className='h-3 w-3' />
+                            ) : (
+                              <Copy className='h-3 w-3' />
+                            )}
+                          </Button>
+                        </div>
+                        {isAdmin && record.user_id != null && (
+                          <div>
+                            <StatusBadge
+                              label={`${t('User ID')}: ${record.user_id}`}
+                              variant='neutral'
+                              size='sm'
+                              copyText={String(record.user_id)}
+                            />
+                          </div>
+                        )}
+                      </div>
 
                       {/* Details Grid */}
-                      <div className='mt-3 grid grid-cols-2 gap-3 sm:mt-4 sm:grid-cols-3 sm:gap-4'>
-                        <div className='space-y-1'>
-                          <Label className='text-muted-foreground text-xs'>
+                      <dl className='mt-3 grid min-w-0 grid-cols-1 gap-2 sm:mt-4 sm:grid-cols-3 sm:gap-4'>
+                        <div className='flex min-w-0 items-baseline justify-between gap-3 sm:flex-col sm:gap-1'>
+                          <dt className='text-muted-foreground shrink-0 text-xs'>
                             {t('Payment Method')}
-                          </Label>
-                          <div className='text-sm font-medium'>
+                          </dt>
+                          <dd className='min-w-0 text-right text-sm font-medium break-words sm:text-left'>
                             {getPaymentMethodName(record.payment_method, t)}
-                          </div>
+                          </dd>
                         </div>
-                        <div className='space-y-1'>
-                          <Label className='text-muted-foreground text-xs'>
+                        <div className='flex min-w-0 items-baseline justify-between gap-3 sm:flex-col sm:gap-1'>
+                          <dt className='text-muted-foreground shrink-0 text-xs'>
                             {t('Amount')}
-                          </Label>
-                          <div className='text-sm font-semibold'>
+                          </dt>
+                          <dd className='min-w-0 text-right text-sm font-semibold break-all tabular-nums sm:text-left'>
                             {formatCurrencyFromUSD(record.amount, {
                               digitsLarge: 2,
                               digitsSmall: 2,
                               abbreviate: false,
                             })}
-                          </div>
+                          </dd>
                         </div>
-                        <div className='space-y-1'>
-                          <Label className='text-muted-foreground text-xs'>
+                        <div className='flex min-w-0 items-baseline justify-between gap-3 sm:flex-col sm:gap-1'>
+                          <dt className='text-muted-foreground shrink-0 text-xs'>
                             {t('Payment')}
-                          </Label>
-                          <div className='text-sm font-semibold text-red-600'>
+                          </dt>
+                          <dd className='min-w-0 text-right text-sm font-semibold break-all tabular-nums sm:text-left'>
                             {formatNumber(record.money)}
-                          </div>
+                          </dd>
                         </div>
-                      </div>
+                      </dl>
 
                       {/* Admin Actions */}
                       {isAdmin && record.status === 'pending' && (
@@ -274,6 +277,7 @@ export function BillingHistoryDialog({
                   size='sm'
                   onClick={() => handlePageChange(page - 1)}
                   disabled={page <= 1}
+                  aria-label={t('Previous')}
                   className='h-8 w-8 p-0'
                 >
                   <ChevronLeft className='h-4 w-4' />
@@ -288,6 +292,7 @@ export function BillingHistoryDialog({
                   size='sm'
                   onClick={() => handlePageChange(page + 1)}
                   disabled={page >= totalPages}
+                  aria-label={t('Next')}
                   className='h-8 w-8 p-0'
                 >
                   <ChevronRight className='h-4 w-4' />

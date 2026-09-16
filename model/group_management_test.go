@@ -31,7 +31,7 @@ func setupGroupManagementTest(t *testing.T) {
 	sqlDB.SetMaxOpenConns(1)
 	DB = testDB
 	common.MemoryCacheEnabled, common.RedisEnabled = false, false
-	require.NoError(t, DB.AutoMigrate(&Option{}, &User{}, &Token{}, &Channel{}, &Ability{}, &SubscriptionPlan{}, &UserSubscription{}, &Redemption{}, &Model{}, &Vendor{}, &MinimalModeSource{}, &MinimalModeModel{}, &Task{}))
+	require.NoError(t, DB.AutoMigrate(&Option{}, &User{}, &UserIDSequence{}, &Token{}, &Channel{}, &Ability{}, &SubscriptionPlan{}, &UserSubscription{}, &Redemption{}, &Model{}, &Vendor{}, &MinimalModeSource{}, &MinimalModeModel{}, &Task{}))
 	require.NoError(t, ApplyOptionsRuntime(map[string]string{
 		"DefaultUserGroup": "Free", "GroupRatio": `{"Free":1,"Light":0.5,"svip":1}`, "group_ratio_setting.group_ratio": `{"Free":1,"Light":0.5,"svip":1}`,
 		"UserUsableGroups": `{"Free":"Free","Light":"Light label"}`, "GroupPolicies": `{"Free":{"period_minutes":1},"Light":{"period_minutes":5,"tpm_limit":9000}}`,

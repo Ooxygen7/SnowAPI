@@ -68,7 +68,7 @@ import {
   subscriptionOverviewQueryKey,
   useSubscriptionOverview,
 } from '@/features/subscriptions/use-subscription-overview'
-import { useIsMobile } from '@/hooks/use-mobile'
+import { useMediaQuery } from '@/hooks/use-media-query'
 import { getSelf } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
@@ -160,7 +160,7 @@ function getSnowEventFeatures(
 
 export function SnowEventUpgradeDialog(props: SnowEventUpgradeDialogProps) {
   const { t } = useTranslation()
-  const isMobile = useIsMobile()
+  const isMobile = useMediaQuery('(max-width: 1023px)')
   const queryClient = useQueryClient()
   const overviewQuery = useSubscriptionOverview(props.open)
   const [selectedPlan, setSelectedPlan] = useState<PlanRecord | null>(null)
@@ -266,7 +266,7 @@ export function SnowEventUpgradeDialog(props: SnowEventUpgradeDialogProps) {
 
           <main className='snowapi-upgrade-main relative z-10 mx-auto flex min-h-full w-full max-w-[92rem] flex-col justify-center px-0 py-8 sm:px-8 sm:py-16 lg:px-12 lg:py-10'>
             <div className='snowapi-upgrade-layout flex w-full flex-col'>
-              <header className='flex shrink-0 flex-col items-center px-5 text-center sm:px-0'>
+              <header className='snowapi-upgrade-heading flex shrink-0 flex-col items-center px-5 text-center sm:px-0'>
                 <div className='flex items-center gap-3'>
                   <SnowApiLogoMark className='snowapi-upgrade-logo' />
                   <h1 className='text-3xl font-semibold tracking-[-0.045em] sm:text-4xl'>
@@ -370,10 +370,10 @@ export function SnowEventUpgradeDialog(props: SnowEventUpgradeDialogProps) {
                                   }
                                   className='snowapi-upgrade-plan-card flex min-h-[29rem] w-full max-w-[22rem] flex-col rounded-[1.25rem] p-5 sm:p-6 md:max-w-none'
                                 >
-                                  <h2 className='text-base font-semibold'>
+                                  <h2 className='snowapi-upgrade-plan-title text-base font-semibold'>
                                     {plan.title}
                                   </h2>
-                                  <div className='mt-3 flex items-end gap-1.5'>
+                                  <div className='snowapi-upgrade-price mt-3 flex items-end gap-1.5'>
                                     <span className='text-3xl font-semibold tracking-tight'>
                                       {plan.currency === 'USD' ? '$' : ''}
                                       {Number(plan.price_amount || 0).toFixed(
@@ -386,7 +386,7 @@ export function SnowEventUpgradeDialog(props: SnowEventUpgradeDialogProps) {
                                   </div>
                                   <Button
                                     className={cn(
-                                      'mt-6 w-full rounded-full',
+                                      'snowapi-upgrade-action mt-6 w-full rounded-full',
                                       disabled && 'disabled:opacity-55'
                                     )}
                                     disabled={
@@ -400,7 +400,7 @@ export function SnowEventUpgradeDialog(props: SnowEventUpgradeDialogProps) {
                                   >
                                     {actionLabel}
                                   </Button>
-                                  <ul className='mt-5 flex flex-col gap-3.5 border-t pt-5'>
+                                  <ul className='snowapi-upgrade-benefits mt-5 flex flex-col gap-3.5 border-t pt-5'>
                                     {features.map((feature) => (
                                       <li
                                         key={feature.label}

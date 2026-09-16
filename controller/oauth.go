@@ -161,6 +161,11 @@ func HandleOAuth(c *gin.Context) {
 
 // handleOAuthBind handles binding OAuth account to existing user
 func handleOAuthBind(c *gin.Context, provider oauth.Provider) {
+	currentUser, err := getSessionUser(c)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"success": false, "message": i18n.T(c, i18n.MsgAuthNotLoggedIn)})
+		return
+	}
 	if !provider.IsEnabled() {
 		common.ApiErrorI18n(c, i18n.MsgOAuthNotEnabled, providerParams(provider.GetName()))
 		return
@@ -195,14 +200,7 @@ func handleOAuthBind(c *gin.Context, provider oauth.Provider) {
 	}
 
 	// Get current user from session
-	session := sessions.Default(c)
-	id := session.Get("id")
-	user := model.User{Id: id.(int)}
-	err = user.FillUserById()
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
+	user := *currentUser
 
 	// Handle binding based on provider type
 	if genericProvider, ok := provider.(*oauth.GenericOAuthProvider); ok {

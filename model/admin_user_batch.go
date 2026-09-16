@@ -47,22 +47,17 @@ func BatchHardDeleteUsers(operatorID int, userIDs []int) ([]int, error) {
 			}
 		}
 		for _, id := range ids {
-			if err := deleteUserOAuthBindingsByUserId(tx, id); err != nil {
+			if err := retireUserAccountTx(tx, id, true); err != nil {
 				return err
 			}
 		}
-		return tx.Unscoped().Where("id IN ?", ids).Delete(&User{}).Error
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 	for _, id := range ids {
-		if err := InvalidateUserCache(id); err != nil {
-			common.SysError(err.Error())
-		}
-		if err := InvalidateUserTokensCache(id); err != nil {
-			common.SysError(err.Error())
-		}
+		invalidateDeletedUserCredentials(id)
 	}
 	return ids, nil
 }

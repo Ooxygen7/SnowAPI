@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/model"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
@@ -45,6 +46,9 @@ func performHeaderNavRequest(t *testing.T, handler gin.HandlerFunc, authenticate
 		session.Set("username", "tester")
 		session.Set("role", common.RoleCommonUser)
 		session.Set("id", 1)
+		var user model.User
+		require.NoError(t, model.DB.First(&user, 1).Error)
+		session.Set("identity", user.SessionNonce)
 		session.Set("status", common.UserStatusEnabled)
 		session.Set("group", "default")
 		if err := session.Save(); err != nil {

@@ -24,7 +24,7 @@ func TestGroupRateMiddlewareReleasesFailedAdmission(t *testing.T) {
 	sqlDB, err := db.DB()
 	require.NoError(t, err)
 	sqlDB.SetMaxOpenConns(1)
-	require.NoError(t, db.AutoMigrate(&model.User{}, &model.GroupRateLease{}))
+	require.NoError(t, db.AutoMigrate(&model.User{}, &model.UserIDSequence{}, &model.GroupRateLease{}))
 	model.DB = db
 	t.Cleanup(func() {
 		model.DB = previousDB

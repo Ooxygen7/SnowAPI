@@ -25,7 +25,7 @@ func TestGetSelfReportsPasswordAvailabilityWithoutExposingCredentials(t *testing
 		require.NoError(t, closeErr)
 		require.NoError(t, sqlDB.Close())
 	})
-	require.NoError(t, db.AutoMigrate(&model.User{}, &model.TopUp{}))
+	require.NoError(t, db.AutoMigrate(&model.User{}, &model.UserIDSequence{}, &model.TopUp{}))
 	gin.SetMode(gin.TestMode)
 
 	for index, tc := range []struct {

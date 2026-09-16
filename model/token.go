@@ -198,6 +198,12 @@ func ValidateUserToken(key string) (token *Token, err error) {
 	}
 	token, err = GetTokenByKey(key, false)
 	if err == nil {
+		err = ValidateTokenOwner(token)
+		if errors.Is(err, ErrTokenInvalid) {
+			return nil, ErrTokenInvalid
+		}
+	}
+	if err == nil {
 		if token.Status == common.TokenStatusExhausted ||
 			token.Status == common.TokenStatusExpired ||
 			token.Status != common.TokenStatusEnabled {

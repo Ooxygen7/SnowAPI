@@ -125,10 +125,10 @@ func authHelper(c *gin.Context, minRole int) {
 	// Session claims must not keep deleted, disabled or demoted accounts alive.
 	// Only fetch public authorization fields, never password/token credentials.
 	if !useAccessToken {
-		var current model.User
-		err := model.DB.Select("id", "username", "role", "status", "group").First(&current, apiUserId).Error
+		nonce, _ := session.Get("identity").(string)
+		current, err := model.ValidateSessionUser(apiUserId, nonce)
 		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
+			if errors.Is(err, model.ErrSessionIdentityInvalid) {
 				session.Clear()
 				_ = session.Save()
 				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"success": false, "message": common.TranslateMessage(c, i18n.MsgAuthNotLoggedIn)})
@@ -189,9 +189,10 @@ func authHelper(c *gin.Context, minRole int) {
 func TryUserAuth() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		session := sessions.Default(c)
-		id := session.Get("id")
-		if id != nil {
-			c.Set("id", id)
+		id, _ := session.Get("id").(int)
+		nonce, _ := session.Get("identity").(string)
+		if user, err := model.ValidateSessionUser(id, nonce); err == nil {
+			c.Set("id", user.Id)
 		}
 		c.Next()
 	}
@@ -241,9 +242,10 @@ func TokenOrUserAuth() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		// Try session auth first (dashboard users)
 		session := sessions.Default(c)
-		if id := session.Get("id"); id != nil {
-			if status, ok := session.Get("status").(int); ok && status == common.UserStatusEnabled {
-				c.Set("id", id)
+		if id, ok := session.Get("id").(int); ok {
+			nonce, _ := session.Get("identity").(string)
+			if user, err := model.ValidateSessionUser(id, nonce); err == nil {
+				c.Set("id", user.Id)
 				c.Next()
 				return
 			}
@@ -276,8 +278,11 @@ func TokenAuthReadOnly() func(c *gin.Context) {
 		key = parts[0]
 
 		token, err := model.GetTokenByKey(key, false)
+		if err == nil {
+			err = model.ValidateTokenOwner(token)
+		}
 		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
+			if errors.Is(err, gorm.ErrRecordNotFound) || errors.Is(err, model.ErrTokenInvalid) {
 				c.JSON(http.StatusUnauthorized, gin.H{
 					"success": false,
 					"message": common.TranslateMessage(c, i18n.MsgTokenInvalid),

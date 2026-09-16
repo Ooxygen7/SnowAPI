@@ -360,6 +360,9 @@ func InitResources() error {
 	if err != nil {
 		return err
 	}
+	if err = model.InitializeUserIdentities(); err != nil {
+		return fmt.Errorf("initialize account identities: %w", err)
+	}
 
 	// Initialize Redis
 	err = common.InitRedisClient()

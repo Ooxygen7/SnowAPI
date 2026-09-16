@@ -19,7 +19,11 @@ import (
 
 const UserNameMaxLength = 20
 
-func (user *User) BeforeCreate(_ *gorm.DB) error {
+func (user *User) BeforeCreate(tx *gorm.DB) error {
+	user.SessionNonce = common.GetUUID()
+	if err := reserveUserIdentity(tx, user); err != nil {
+		return err
+	}
 	if user.Group == "" || (user.Group == "Free" && !ratio_setting.ContainsGroupRatio("Free")) {
 		user.Group = setting.GetDefaultGroup()
 	}
@@ -30,6 +34,7 @@ func (user *User) BeforeCreate(_ *gorm.DB) error {
 // Otherwise, the sensitive information will be saved on local storage in plain text!
 type User struct {
 	Id               int                        `json:"id"`
+	SessionNonce     string                     `json:"-" gorm:"type:char(32)"`
 	Username         string                     `json:"username" gorm:"unique;index" validate:"max=20"`
 	Password         string                     `json:"password" gorm:"not null;" validate:"min=8,max=20"`
 	OriginalPassword string                     `json:"original_password" gorm:"-:all"` // this field is only for Password change verification, don't save it to database!
@@ -427,12 +432,11 @@ func HardDeleteUserById(id int) error {
 	if id == 0 {
 		return errors.New("id 为空！")
 	}
-	return DB.Transaction(func(tx *gorm.DB) error {
-		if err := deleteUserOAuthBindingsByUserId(tx, id); err != nil {
-			return err
-		}
-		return tx.Unscoped().Delete(&User{}, "id = ?", id).Error
-	})
+	if err := DB.Transaction(func(tx *gorm.DB) error { return retireUserAccountTx(tx, id, true) }); err != nil {
+		return err
+	}
+	invalidateDeletedUserCredentials(id)
+	return nil
 }
 
 func (user *User) prepareForInsert(tx *gorm.DB) error {
@@ -677,24 +681,20 @@ func (user *User) Delete() error {
 	if user.Id == 0 {
 		return errors.New("id 为空！")
 	}
-	if err := DB.Delete(user).Error; err != nil {
+	if err := DB.Transaction(func(tx *gorm.DB) error { return retireUserAccountTx(tx, user.Id, false) }); err != nil {
 		return err
 	}
 
 	// 清除缓存
-	return invalidateUserCache(user.Id)
+	invalidateDeletedUserCredentials(user.Id)
+	return nil
 }
 
 func (user *User) HardDelete() error {
 	if user.Id == 0 {
 		return errors.New("id 为空！")
 	}
-	return DB.Transaction(func(tx *gorm.DB) error {
-		if err := deleteUserOAuthBindingsByUserId(tx, user.Id); err != nil {
-			return err
-		}
-		return tx.Unscoped().Delete(user).Error
-	})
+	return HardDeleteUserById(user.Id)
 }
 
 // ValidateAndFill check password & user status
