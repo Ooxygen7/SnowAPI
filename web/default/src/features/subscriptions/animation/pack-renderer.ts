@@ -18,6 +18,8 @@ For commercial licensing, please contact support@quantumnous.com
 */
 /* Dependency-free WebGL renderer. Paper, metal and geometry are procedural;
    the card artwork uses the locally embedded SnowAPI browser-tab logo. */
+import type { SnowEventTier } from '../snow-event-plans'
+
 const PI = Math.PI,
   rad = (a: number) => (a * PI) / 180
 const clamp = (n: number, a = 0, b = 1) => Math.max(a, Math.min(b, n))
@@ -206,10 +208,14 @@ function paper(variant: string, logo: HTMLImageElement) {
   }
   return c
 }
-function metal(logo: HTMLImageElement, planTitle: string) {
+function metal(logo: HTMLImageElement, planTitle: string, tier: SnowEventTier) {
+  const steel = tier === 'moderate'
+  const silver = tier === 'heavy'
+  const blackGold = tier === 'storm'
   const [c, g] = canvas(1024, 640),
     data = g.createImageData(1024, 640)
   for (let y = 0; y < 640; y++) {
+    const brushed = steel ? (random() - 0.5) * 12 : 0
     for (let x = 0; x < 1024; x++) {
       const i = (y * 1024 + x) * 4,
         n = (random() - 0.5) * 7,
@@ -217,6 +223,19 @@ function metal(logo: HTMLImageElement, planTitle: string) {
       data.data[i] = v
       data.data[i + 1] = v
       data.data[i + 2] = v
+      if (steel) {
+        data.data[i] = v + 22 + brushed
+        data.data[i + 1] = v + 29 + brushed
+        data.data[i + 2] = v + 35 + brushed
+      } else if (silver) {
+        data.data[i] = v + 75 - n * 0.8
+        data.data[i + 1] = v + 76 - n * 0.8
+        data.data[i + 2] = v + 78 - n * 0.8
+      } else if (blackGold) {
+        data.data[i] = 25 + n * 0.3
+        data.data[i + 1] = 25 + n * 0.3
+        data.data[i + 2] = 27 + n * 0.3
+      }
       data.data[i + 3] = 255
     }
   }
@@ -228,6 +247,17 @@ function metal(logo: HTMLImageElement, planTitle: string) {
   shine.addColorStop(1, '#ffffff12')
   g.fillStyle = shine
   g.fillRect(0, 0, 1024, 640)
+  if (steel || silver || blackGold) {
+    const reflection = g.createLinearGradient(0, 640, 1024, 0)
+    reflection.addColorStop(0, '#00000020')
+    reflection.addColorStop(0.32, '#ffffff00')
+    reflection.addColorStop(0.46, silver ? '#ffffffa0' : '#ffffff35')
+    reflection.addColorStop(0.55, '#ffffff08')
+    reflection.addColorStop(0.72, '#00000024')
+    reflection.addColorStop(1, '#ffffff25')
+    g.fillStyle = reflection
+    g.fillRect(0, 0, 1024, 640)
+  }
   g.strokeStyle = 'rgba(255,255,255,.035)'
   g.lineWidth = 0.4
   for (let y = 0; y < 640; y += 2) {
@@ -241,18 +271,18 @@ function metal(logo: HTMLImageElement, planTitle: string) {
     chipY = 215,
     chipW = 151,
     chipH = 139
-  g.fillStyle = '#c0c0be'
+  g.fillStyle = blackGold ? '#c9a65c' : '#c0c0be'
   g.beginPath()
   g.roundRect(chipX, chipY, chipW, chipH, 19)
   g.fill()
-  g.strokeStyle = '#aeaeac'
+  g.strokeStyle = blackGold ? '#8c6b31' : '#aeaeac'
   g.lineWidth = 2
   g.stroke()
   g.save()
   g.beginPath()
   g.roundRect(chipX, chipY, chipW, chipH, 19)
   g.clip()
-  g.strokeStyle = '#adadab'
+  g.strokeStyle = blackGold ? '#8c6b31' : '#adadab'
   g.lineWidth = 2
   g.beginPath()
   g.roundRect(141, 231, 64, 107, 12)
@@ -276,12 +306,25 @@ function metal(logo: HTMLImageElement, planTitle: string) {
   g.restore()
   // Preserve the site's actual favicon silhouette. No remote image requests
   // are made by the animation, including when opened directly from disk.
-  g.drawImage(logo, 538, 100, 370, 370)
+  if (blackGold) {
+    const [stamp, ink] = canvas(370, 370)
+    ink.drawImage(logo, 0, 0, 370, 370)
+    ink.globalCompositeOperation = 'source-in'
+    const gold = ink.createLinearGradient(0, 0, 370, 370)
+    gold.addColorStop(0, '#e6cd8f')
+    gold.addColorStop(0.5, '#a5803c')
+    gold.addColorStop(1, '#f0d899')
+    ink.fillStyle = gold
+    ink.fillRect(0, 0, 370, 370)
+    g.drawImage(stamp, 538, 100)
+  } else {
+    g.drawImage(logo, 538, 100, 370, 370)
+  }
   g.font = '500 88px Arial, Helvetica, sans-serif'
   g.textBaseline = 'alphabetic'
-  g.fillStyle = '#282828'
+  g.fillStyle = blackGold ? '#dfc484' : '#282828'
   g.fillText(planTitle, 91, 542, 842)
-  g.strokeStyle = 'rgba(255,255,255,.1)'
+  g.strokeStyle = blackGold ? '#b58e49' : 'rgba(255,255,255,.1)'
   g.lineWidth = 3
   g.strokeRect(1, 1, 1022, 638)
   return c
@@ -367,12 +410,21 @@ export class PackRenderer {
   private opacity = 1
   private paperLight = 0
   private foldLight = 0
+  private reflectivity: number
   constructor(
     canvas: HTMLCanvasElement,
     logo: HTMLImageElement,
-    planTitle: string
+    planTitle: string,
+    tier: SnowEventTier
   ) {
     this.canvas = canvas
+    this.reflectivity = {
+      light: 1,
+      moderate: 2.8,
+      heavy: 4.5,
+      storm: 1.8,
+      other: 1,
+    }[tier]
     const gl = canvas.getContext('webgl', {
       alpha: true,
       antialias: true,
@@ -443,7 +495,7 @@ export class PackRenderer {
         lid: paper('lid', logo),
         tray: paper('tray', logo),
         plain: paper('plain', logo),
-        card: metal(logo, planTitle),
+        card: metal(logo, planTitle, tier),
         shadow: shadowTexture(),
       })) {
         const t = gl.createTexture()
@@ -745,7 +797,7 @@ export class PackRenderer {
       ),
       'card',
       'card',
-      1
+      this.reflectivity
     )
   }
 }

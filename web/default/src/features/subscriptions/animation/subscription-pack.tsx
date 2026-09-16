@@ -20,13 +20,17 @@ For commercial licensing, please contact support@quantumnous.com
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import type { SnowEventTier } from '../snow-event-plans'
 import logoUrl from './assets/snowapi-logo.png'
 import type { PackRenderer } from './pack-renderer'
 
 const START_TIME = 1.46
 const END_TIME = 371 / 60
 
-export function SubscriptionPack(props: { planTitle: string }) {
+export function SubscriptionPack(props: {
+  planTitle: string
+  tier: SnowEventTier
+}) {
   const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const replayRef = useRef<(() => void) | null>(null)
@@ -108,7 +112,12 @@ export function SubscriptionPack(props: { planTitle: string }) {
           frame = 0
           if (disposed) return
           try {
-            renderer = new module.PackRenderer(canvas, logo, props.planTitle)
+            renderer = new module.PackRenderer(
+              canvas,
+              logo,
+              props.planTitle,
+              props.tier
+            )
             replayRef.current = replay
             render()
             if (!reducedMotion.matches) replay()
@@ -133,11 +142,14 @@ export function SubscriptionPack(props: { planTitle: string }) {
       reducedMotion.removeEventListener('change', motionChanged)
       renderer?.dispose()
     }
-  }, [props.planTitle])
+  }, [props.planTitle, props.tier])
 
   if (failed) {
     return (
-      <div className='snowapi-subscription-pack-fallback'>
+      <div
+        className='snowapi-subscription-pack-fallback'
+        data-tier={props.tier}
+      >
         <img src={logoUrl} alt='' aria-hidden='true' />
         <span>{props.planTitle}</span>
       </div>
@@ -147,6 +159,7 @@ export function SubscriptionPack(props: { planTitle: string }) {
   return (
     <canvas
       ref={canvasRef}
+      data-tier={props.tier}
       className='snowapi-subscription-pack'
       role='button'
       tabIndex={0}

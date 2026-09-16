@@ -158,6 +158,23 @@ For commercial licensing, please contact support@quantumnous.com
   object-fit: contain;
 }
 
+.snowapi-subscription-pack-fallback[data-tier='moderate'] {
+  background:
+    repeating-linear-gradient(0deg, #00000006 0 1px, transparent 1px 3px),
+    linear-gradient(125deg, #8a959f, #d2d9df 45%, #75818a);
+}
+.snowapi-subscription-pack-fallback[data-tier='heavy'] {
+  background: linear-gradient(125deg, #b3b5b8, #f5f5f6 42%, #cacdd1 65%, #eee);
+}
+.snowapi-subscription-pack-fallback[data-tier='storm'] {
+  color: #dfc484;
+  border: 1px solid #b58e49;
+  background: linear-gradient(125deg, #141416, #353438, #151517);
+}
+.snowapi-subscription-pack-fallback[data-tier='storm'] img {
+  filter: invert(80%) sepia(30%) saturate(600%);
+}
+
 @keyframes snowapi-subscription-reveal-in {
   from {
     opacity: 0;

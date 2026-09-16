@@ -966,7 +966,9 @@ body[data-snowapi-console='true'] [data-slot='dropdown-menu-content'] {
 }
 
 body[data-snowapi-console='true']
-  :is(h1, h2, h3, h4, h5, h6, [data-slot='card-title']) {
+  :is(h1, h2, h3, h4, h5, h6, [data-slot='card-title']):not(
+    .snowapi-login-welcome-heading
+  ) {
   font-family: var(--font-sans) !important;
   letter-spacing: -0.015em;
 }

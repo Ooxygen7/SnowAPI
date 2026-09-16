@@ -66,21 +66,6 @@ export async function logout(): Promise<ApiResponse> {
 }
 
 // ----------------------------------------------------------------------------
-// Password Management
-// ----------------------------------------------------------------------------
-
-// Send password reset email
-export async function sendPasswordResetEmail(
-  email: string,
-  turnstile?: string
-): Promise<ApiResponse> {
-  const res = await api.get('/api/reset_password', {
-    params: { email, turnstile },
-  })
-  return res.data
-}
-
-// ----------------------------------------------------------------------------
 // OAuth
 // ----------------------------------------------------------------------------
 

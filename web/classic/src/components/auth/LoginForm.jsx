@@ -96,7 +96,6 @@ const LoginForm = () => {
   const [linuxdoLoading, setLinuxdoLoading] = useState(false);
   const [emailLoginLoading, setEmailLoginLoading] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
-  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
   const [otherLoginOptionsLoading, setOtherLoginOptionsLoading] =
     useState(false);
   const [wechatCodeSubmitLoading, setWechatCodeSubmitLoading] = useState(false);
@@ -457,13 +456,6 @@ const LoginForm = () => {
     }
   };
 
-  // 包装的重置密码点击处理
-  const handleResetPasswordClick = () => {
-    setResetPasswordLoading(true);
-    navigate('/reset');
-    setResetPasswordLoading(false);
-  };
-
   // 包装的其他登录选项点击处理
   const handleOtherLoginOptionsClick = () => {
     setOtherLoginOptionsLoading(true);
@@ -788,15 +780,6 @@ const LoginForm = () => {
                     {t('继续')}
                   </Button>
 
-                  <Button
-                    theme='borderless'
-                    type='tertiary'
-                    className='w-full !rounded-full'
-                    onClick={handleResetPasswordClick}
-                    loading={resetPasswordLoading}
-                  >
-                    {t('忘记密码？')}
-                  </Button>
                 </div>
               </Form>
 

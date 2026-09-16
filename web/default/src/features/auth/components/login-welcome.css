@@ -8,10 +8,22 @@
   padding: 2rem;
   background: var(--background);
   color: var(--foreground);
+  /* Keep the same face while the lazy console styles and theme mount. */
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'PingFang SC',
+    'Hiragino Sans GB',
+    'Microsoft YaHei',
+    sans-serif;
   animation: snowapi-welcome-colors 1200ms ease-in-out both;
 }
 
 .snowapi-login-welcome-heading {
+  font-family: inherit;
   max-width: 100%;
   font-size: clamp(2rem, 5vw, 4rem);
   font-weight: 500;

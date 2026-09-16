@@ -61,12 +61,6 @@ export const invitationRegisterFormSchema = z
     path: ['confirmPassword'],
   })
 
-export const forgotPasswordFormSchema = z.object({
-  email: z.string().email({
-    message: 'Please enter a valid email address',
-  }),
-})
-
 // ============================================================================
 // Validation Constants
 // ============================================================================
@@ -78,7 +72,6 @@ export const PASSWORD_MAX_LENGTH = 20
 // ============================================================================
 
 export const EMAIL_VERIFICATION_COUNTDOWN = 30 // seconds
-export const PASSWORD_RESET_COUNTDOWN = 30 // seconds
 
 // ============================================================================
 // OAuth Constants

@@ -33,6 +33,7 @@ import { formatQuota } from '@/lib/format'
 
 import { getSubscriptionBalanceQuote, paySubscriptionBalance } from '../../api'
 import { formatDuration, formatResetPeriod } from '../../lib'
+import { getSnowEventTier } from '../../snow-event-plans'
 import { useSubscriptionRevealStore } from '../../subscription-reveal-store'
 import type { PlanRecord } from '../../types'
 
@@ -90,7 +91,9 @@ export function SubscriptionPurchaseDialog(props: Props) {
       const res = await paySubscriptionBalance({ plan_id: plan.id })
       if (res.success) {
         props.onOpenChange(false)
-        useSubscriptionRevealStore.getState().show(plan.title)
+        useSubscriptionRevealStore
+          .getState()
+          .show(plan.title, getSnowEventTier({ plan }))
         // A refresh failure does not undo a successful purchase.
         try {
           await props.onPurchaseSuccess?.()

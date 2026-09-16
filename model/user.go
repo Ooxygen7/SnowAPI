@@ -836,22 +836,6 @@ func IsTelegramIdAlreadyTaken(telegramId string) bool {
 	return DB.Unscoped().Where("telegram_id = ?", telegramId).Find(&User{}).RowsAffected == 1
 }
 
-func ResetUserPasswordByEmail(email string, password string) error {
-	if email == "" || password == "" {
-		return errors.New("邮箱地址或密码为空！")
-	}
-	user, err := GetUniqueUserByEmail(email)
-	if err != nil {
-		return err
-	}
-	hashedPassword, err := common.Password2Hash(password)
-	if err != nil {
-		return err
-	}
-	err = DB.Model(&User{}).Where("id = ?", user.Id).Update("password", hashedPassword).Error
-	return err
-}
-
 func IsAdmin(userId int) bool {
 	if userId == 0 {
 		return false

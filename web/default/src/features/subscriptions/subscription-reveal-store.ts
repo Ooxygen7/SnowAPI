@@ -19,10 +19,13 @@ For commercial licensing, please contact support@quantumnous.com
 
 import { create } from 'zustand'
 
+import type { SnowEventTier } from './snow-event-plans'
+
 interface SubscriptionRevealState {
   planTitle: string | null
   open: boolean
-  show: (planTitle: string) => void
+  tier: SnowEventTier
+  show: (planTitle: string, tier: SnowEventTier) => void
   close: () => void
 }
 
@@ -31,7 +34,8 @@ export const useSubscriptionRevealStore = create<SubscriptionRevealState>(
   (set) => ({
     planTitle: null,
     open: false,
-    show: (planTitle) => set({ planTitle, open: true }),
+    tier: 'light',
+    show: (planTitle, tier) => set({ planTitle, tier, open: true }),
     close: () => set({ open: false }),
   })
 )

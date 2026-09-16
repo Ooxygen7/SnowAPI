@@ -47,6 +47,7 @@ import { useAuthRedirect } from '@/features/auth/hooks/use-auth-redirect'
 import { useTurnstile } from '@/features/auth/hooks/use-turnstile'
 import { beginPasskeyLogin, finishPasskeyLogin } from '@/features/auth/passkey'
 import type { AuthFormProps } from '@/features/auth/types'
+import snowApiLogo from '@/features/subscriptions/animation/assets/snowapi-logo.png'
 import { useStatus } from '@/hooks/use-status'
 import {
   buildAssertionResult,
@@ -368,12 +369,18 @@ export function UserAuthForm({
       >
         <Button
           type='button'
-          variant='outline'
+          variant='default'
           className='h-11 w-full justify-center gap-2 rounded-lg'
           onClick={() => setShowPasswordLogin((current) => !current)}
           aria-expanded={showPasswordLogin}
           aria-controls='password-login-fields'
         >
+          <img
+            src={snowApiLogo}
+            alt=''
+            aria-hidden='true'
+            className='size-4 object-contain invert'
+          />
           {t('Sign in with username and password')}
           <ChevronDown
             className={cn(
@@ -422,14 +429,6 @@ export function UserAuthForm({
                     />
                   </FormControl>
                   <FormMessage />
-                  {passwordLoginEnabled && (
-                    <Link
-                      to='/forgot-password'
-                      className='text-muted-foreground absolute end-0 -top-0.5 z-10 text-sm font-medium hover:opacity-75'
-                    >
-                      {t('Forgot password?')}
-                    </Link>
-                  )}
                 </FormItem>
               )}
             />

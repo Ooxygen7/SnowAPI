@@ -16,12 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import {
-  ArrowLeft01Icon,
-  ArrowRight01Icon,
-  Cancel01Icon,
-  PackageIcon,
-} from '@hugeicons/core-free-icons'
+import { Cancel01Icon, PackageIcon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
@@ -56,6 +51,7 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import { Spinner } from '@/components/ui/spinner'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { SubscriptionPurchaseDialog } from '@/features/subscriptions/components/dialogs/subscription-purchase-dialog'
 import {
   compareSnowEventPlans,
@@ -323,6 +319,28 @@ export function SnowEventUpgradeDialog(props: SnowEventUpgradeDialogProps) {
 
                 {overviewQuery.data && orderedPlans.length > 0 ? (
                   <div className='flex w-full flex-col items-center gap-4'>
+                    {isMobile ? (
+                      <ToggleGroup
+                        className='snowapi-upgrade-tier-selector'
+                        aria-label='SnowEvent'
+                        value={[String(mobilePlanIndex)]}
+                        onValueChange={(value) => {
+                          if (value[0] !== undefined) {
+                            selectMobilePlan(Number(value[0]))
+                          }
+                        }}
+                        spacing={1}
+                      >
+                        {orderedPlans.map((record, index) => (
+                          <ToggleGroupItem
+                            key={record.plan.id}
+                            value={String(index)}
+                          >
+                            {record.plan.title}
+                          </ToggleGroupItem>
+                        ))}
+                      </ToggleGroup>
+                    ) : null}
                     <div className='snowapi-upgrade-plan-viewport w-full'>
                       <div className='snowapi-upgrade-plan-clip w-full overflow-hidden md:overflow-visible'>
                         <div
@@ -383,6 +401,11 @@ export function SnowEventUpgradeDialog(props: SnowEventUpgradeDialogProps) {
                                     <span className='text-muted-foreground pb-1 text-xs'>
                                       {plan.currency}
                                     </span>
+                                    {isMobile ? (
+                                      <span className='snowapi-upgrade-billing-period'>
+                                        {t('Monthly')}
+                                      </span>
+                                    ) : null}
                                   </div>
                                   <Button
                                     className={cn(
@@ -423,61 +446,6 @@ export function SnowEventUpgradeDialog(props: SnowEventUpgradeDialogProps) {
                         </div>
                       </div>
                     </div>
-
-                    {isMobile && orderedPlans.length > 1 ? (
-                      <nav
-                        className='snowapi-upgrade-mobile-pager'
-                        aria-label='SnowEvent'
-                      >
-                        <Button
-                          type='button'
-                          variant='outline'
-                          size='icon-lg'
-                          className='rounded-full'
-                          aria-label={t('Previous')}
-                          disabled={mobilePlanIndex === 0}
-                          onClick={() => selectMobilePlan(mobilePlanIndex - 1)}
-                        >
-                          <HugeiconsIcon
-                            icon={ArrowLeft01Icon}
-                            strokeWidth={2}
-                            data-icon='inline-start'
-                          />
-                        </Button>
-
-                        <div className='snowapi-upgrade-page-dots'>
-                          {orderedPlans.map((record, index) => (
-                            <button
-                              key={record.plan.id}
-                              type='button'
-                              className='snowapi-upgrade-page-dot'
-                              data-active={mobilePlanIndex === index}
-                              aria-current={
-                                mobilePlanIndex === index ? 'page' : undefined
-                              }
-                              aria-label={record.plan.title}
-                              onClick={() => selectMobilePlan(index)}
-                            />
-                          ))}
-                        </div>
-
-                        <Button
-                          type='button'
-                          variant='outline'
-                          size='icon-lg'
-                          className='rounded-full'
-                          aria-label={t('Next')}
-                          disabled={mobilePlanIndex === orderedPlans.length - 1}
-                          onClick={() => selectMobilePlan(mobilePlanIndex + 1)}
-                        >
-                          <HugeiconsIcon
-                            icon={ArrowRight01Icon}
-                            strokeWidth={2}
-                            data-icon='inline-end'
-                          />
-                        </Button>
-                      </nav>
-                    ) : null}
                   </div>
                 ) : null}
               </section>

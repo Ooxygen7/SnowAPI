@@ -41,11 +41,6 @@ export interface InvitationRegisterPayload {
   turnstile?: string
 }
 
-export interface PasswordResetPayload {
-  email: string
-  turnstile?: string
-}
-
 export interface EmailVerificationPayload {
   email: string
   turnstile?: string

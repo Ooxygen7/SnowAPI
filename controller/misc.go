@@ -1,8 +1,6 @@
 package controller
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -10,7 +8,6 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/i18n"
-	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/middleware"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/oauth"
@@ -247,74 +244,6 @@ func SendEmailVerification(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-	})
-	return
-}
-
-func SendPasswordResetEmail(c *gin.Context) {
-	email := model.NormalizeEmail(c.Query("email"))
-	if err := common.Validate.Var(email, "required,email"); err != nil {
-		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
-		return
-	}
-	if _, err := model.GetUniqueUserByEmail(email); err == nil {
-		code := common.GenerateVerificationCode(0)
-		common.RegisterVerificationCodeWithKey(email, code, common.PasswordResetPurpose)
-		link := fmt.Sprintf("%s/user/reset?email=%s&token=%s", system_setting.ServerAddress, email, code)
-		subject := fmt.Sprintf("%s密码重置", common.SystemName)
-		content := fmt.Sprintf("<p>您好，你正在进行%s密码重置。</p>"+
-			"<p>点击 <a href='%s'>此处</a> 进行密码重置。</p>"+
-			"<p>如果链接无法点击，请尝试点击下面的链接或将其复制到浏览器中打开：<br> %s </p>"+
-			"<p>重置链接 %d 分钟内有效，如果不是本人操作，请忽略。</p>", common.SystemName, link, link, common.VerificationValidMinutes)
-		err := common.SendEmail(subject, email, content)
-		if err != nil {
-			logger.LogError(c.Request.Context(), fmt.Sprintf("failed to send password reset email to %s: %s", email, err.Error()))
-		}
-	} else if err != nil && !errors.Is(err, model.ErrEmailNotFound) {
-		logger.LogWarn(c.Request.Context(), fmt.Sprintf("skip password reset email for %s: %s", email, err.Error()))
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-	})
-}
-
-type PasswordResetRequest struct {
-	Email string `json:"email"`
-	Token string `json:"token"`
-}
-
-func ResetPassword(c *gin.Context) {
-	var req PasswordResetRequest
-	err := json.NewDecoder(c.Request.Body).Decode(&req)
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
-	req.Email = model.NormalizeEmail(req.Email)
-	if req.Email == "" || req.Token == "" {
-		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
-		return
-	}
-	if !common.VerifyCodeWithKey(req.Email, req.Token, common.PasswordResetPurpose) {
-		common.ApiErrorI18n(c, i18n.MsgUserPasswordResetLinkInvalid)
-		return
-	}
-	password := common.GenerateVerificationCode(12)
-	err = model.ResetUserPasswordByEmail(req.Email, password)
-	if err != nil {
-		if errors.Is(err, model.ErrEmailNotFound) || errors.Is(err, model.ErrEmailAmbiguous) {
-			common.ApiErrorI18n(c, i18n.MsgUserPasswordResetLinkInvalid)
-			return
-		}
-		common.ApiError(c, err)
-		return
-	}
-	common.DeleteKey(req.Email, common.PasswordResetPurpose)
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-		"data":    password,
 	})
 	return
 }

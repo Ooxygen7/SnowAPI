@@ -24,7 +24,6 @@ export {
   login,
   logout,
   register,
-  sendPasswordResetEmail,
   sendEmailVerification,
   bindEmail,
   getOAuthState,
@@ -40,7 +39,6 @@ export type {
   LoginPayload,
   LoginResponse,
   RegisterPayload,
-  PasswordResetPayload,
   EmailVerificationPayload,
   BindEmailPayload,
   ApiResponse,
@@ -56,11 +54,9 @@ export type {
 export {
   loginFormSchema,
   registerFormSchema,
-  forgotPasswordFormSchema,
   PASSWORD_MIN_LENGTH,
   PASSWORD_MAX_LENGTH,
   EMAIL_VERIFICATION_COUNTDOWN,
-  PASSWORD_RESET_COUNTDOWN,
 } from './constants'
 
 // ============================================================================
@@ -99,4 +95,3 @@ export { TermsFooter } from './components/terms-footer'
 export { LegalConsent } from './components/legal-consent'
 export { SignIn } from './sign-in'
 export { SignUp } from './sign-up'
-export { ForgotPassword } from './forgot-password'

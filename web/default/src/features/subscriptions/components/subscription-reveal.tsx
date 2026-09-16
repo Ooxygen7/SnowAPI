@@ -40,6 +40,7 @@ export function SubscriptionReveal() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const planTitle = useSubscriptionRevealStore((state) => state.planTitle)
+  const tier = useSubscriptionRevealStore((state) => state.tier)
   const open = useSubscriptionRevealStore((state) => state.open)
   const close = useSubscriptionRevealStore((state) => state.close)
 
@@ -73,7 +74,11 @@ export function SubscriptionReveal() {
             </DialogTitle>
           </header>
           <div className='snowapi-subscription-reveal-stage'>
-            <SubscriptionPack key={planTitle} planTitle={planTitle} />
+            <SubscriptionPack
+              key={planTitle}
+              planTitle={planTitle}
+              tier={tier}
+            />
           </div>
           <footer className='snowapi-subscription-reveal-footer'>
             <DialogDescription>

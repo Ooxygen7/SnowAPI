@@ -770,26 +770,44 @@ For commercial licensing, please contact support@quantumnous.com
   display: none;
 }
 
-.snowapi-upgrade-mobile-pager {
-  position: sticky;
-  bottom: 1rem;
-  z-index: 2;
+.snowapi-upgrade-tier-selector {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.8rem;
-  border: 1px solid oklch(0.3 0 0 / 86%);
+  flex-shrink: 0;
+  width: calc(100% - 2rem);
+  max-width: 26rem;
+  overflow-x: auto;
+  scrollbar-width: none;
   border-radius: 999px;
-  padding: 0.35rem 0.5rem;
-  background: oklch(0.12 0 0 / 86%);
-  box-shadow: 0 0.8rem 2rem oklch(0 0 0 / 28%);
-  backdrop-filter: blur(14px);
+  padding: 0.3rem;
+  background: var(--secondary);
+}
+.snowapi-upgrade-tier-selector [data-slot='toggle-group-item'] {
+  flex: 1 0 auto;
+  min-height: 2.6rem;
+  border-radius: 999px;
+  padding-inline: 0.7rem;
+  color: var(--muted-foreground);
+  font-size: clamp(0.75rem, 3.3vw, 0.9rem);
+}
+.snowapi-upgrade-tier-selector [data-pressed] {
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.snowapi-upgrade-billing-period {
+  flex-basis: 100%;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
 }
 
 /* One viewport on phones; only the benefits may scroll at enlarged text sizes. */
 @media (max-width: 1023px) {
   .snowapi-upgrade-dialog {
     overflow: hidden !important;
+  }
+  .snowapi-upgrade-aurora {
+    opacity: 0.28;
   }
   .snowapi-upgrade-dialog .snowapi-upgrade-main {
     height: 100dvh;
@@ -801,7 +819,7 @@ For commercial licensing, please contact support@quantumnous.com
   .snowapi-upgrade-layout {
     min-height: 0;
     height: 100%;
-    max-height: 48rem;
+    max-height: 50rem;
   }
   .snowapi-upgrade-heading {
     padding-inline: 3.75rem;
@@ -840,6 +858,23 @@ For commercial licensing, please contact support@quantumnous.com
     max-width: 26rem;
     padding: clamp(1rem, 4.5vw, 1.5rem);
     overflow: hidden;
+    border-radius: 1.75rem;
+    background: var(--secondary);
+  }
+  .snowapi-upgrade-plan-title {
+    font-size: 1.5rem;
+    letter-spacing: -0.035em;
+  }
+  .snowapi-upgrade-price {
+    flex-wrap: wrap;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: var(--background);
+  }
+  .snowapi-upgrade-action {
+    min-height: 2.75rem;
+    margin-top: 1rem;
   }
   .snowapi-upgrade-plan-title,
   .snowapi-upgrade-price,
@@ -852,13 +887,22 @@ For commercial licensing, please contact support@quantumnous.com
     overscroll-behavior: contain;
     scrollbar-width: none;
     gap: clamp(0.5rem, 1.8dvh, 1rem);
+    border: 0;
+    padding-top: 0;
+  }
+  .snowapi-upgrade-benefits li {
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  .snowapi-upgrade-benefits li > span:first-child {
+    background: none;
+  }
+  .snowapi-upgrade-benefits svg {
+    width: 1rem;
+    height: 1rem;
   }
   .snowapi-upgrade-benefits::-webkit-scrollbar {
     display: none;
-  }
-  .snowapi-upgrade-mobile-pager {
-    position: static;
-    flex-shrink: 0;
   }
 }
 
@@ -880,6 +924,7 @@ For commercial licensing, please contact support@quantumnous.com
   }
   .snowapi-upgrade-price {
     margin-top: 0.4rem;
+    padding: 0.5rem 0.75rem;
   }
   .snowapi-upgrade-action {
     margin-top: 0.75rem;
@@ -892,6 +937,7 @@ For commercial licensing, please contact support@quantumnous.com
   .snowapi-upgrade-benefits li {
     gap: 0.5rem;
     line-height: 1.15rem;
+    font-size: 0.75rem;
   }
 }
 
@@ -914,36 +960,6 @@ For commercial licensing, please contact support@quantumnous.com
   .snowapi-upgrade-action {
     align-self: end;
   }
-}
-
-.snowapi-upgrade-page-dots {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  min-width: 4.5rem;
-}
-
-.snowapi-upgrade-page-dot {
-  width: 0.42rem;
-  height: 0.42rem;
-  border: 0;
-  border-radius: 999px;
-  padding: 0;
-  background: oklch(0.52 0 0);
-  transition:
-    width 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    background-color 180ms ease;
-}
-
-.snowapi-upgrade-page-dot[data-active='true'] {
-  width: 1.15rem;
-  background: oklch(0.96 0 0);
-}
-
-.snowapi-upgrade-page-dot:focus-visible {
-  outline: 2px solid oklch(0.96 0 0);
-  outline-offset: 0.2rem;
 }
 
 .snowapi-my-subscription {
