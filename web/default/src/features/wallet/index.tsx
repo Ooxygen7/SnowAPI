@@ -28,6 +28,7 @@ import { Button } from '@/components/ui/button'
 import { subscriptionOverviewQueryKey } from '@/features/subscriptions/use-subscription-overview'
 import { useSystemConfig } from '@/hooks/use-system-config'
 import { getSelf } from '@/lib/api'
+import { useAuthStore } from '@/stores/auth-store'
 
 import { BillingHistoryDialog } from './components/dialogs/billing-history-dialog'
 import { PaymentConfirmDialog } from './components/dialogs/payment-confirm-dialog'
@@ -47,6 +48,7 @@ interface WalletProps {
 export function Wallet(props: WalletProps) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const accountQuota = useAuthStore((state) => state.auth.user?.quota)
   const [user, setUser] = useState<UserWalletData | null>(null)
   const [userLoading, setUserLoading] = useState(true)
   const [topupAmount, setTopupAmount] = useState(0)
@@ -100,7 +102,7 @@ export function Wallet(props: WalletProps) {
 
   useEffect(() => {
     fetchUser()
-  }, [fetchUser])
+  }, [fetchUser, accountQuota])
 
   useEffect(() => {
     if (props.initialShowHistory) {
