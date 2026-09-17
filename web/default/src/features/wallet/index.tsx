@@ -38,7 +38,11 @@ import { RedemptionCodeCard } from './components/redemption-code-card'
 import { WalletBalanceCard } from './components/wallet-balance-card'
 import { DEFAULT_DISCOUNT_RATE } from './constants'
 import { useTopupInfo, usePayment, useRedemption } from './hooks'
-import { getDefaultPaymentType, getMinTopupAmount } from './lib'
+import {
+  getDefaultPaymentType,
+  getMinTopupAmount,
+  parseTopupAmount,
+} from './lib'
 import type { UserWalletData, PaymentMethod, PresetAmount } from './types'
 
 interface WalletProps {
@@ -51,7 +55,7 @@ export function Wallet(props: WalletProps) {
   const accountQuota = useAuthStore((state) => state.auth.user?.quota)
   const [user, setUser] = useState<UserWalletData | null>(null)
   const [userLoading, setUserLoading] = useState(true)
-  const [topupAmount, setTopupAmount] = useState(0)
+  const [topupAmountInput, setTopupAmountInput] = useState<string | null>(null)
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null)
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<PaymentMethod>()
@@ -62,6 +66,9 @@ export function Wallet(props: WalletProps) {
 
   const { currency } = useSystemConfig()
   const { topupInfo, presetAmounts, loading: topupLoading } = useTopupInfo()
+  const minTopup = getMinTopupAmount(topupInfo)
+  const amountInput = topupAmountInput ?? String(minTopup)
+  const topupAmount = parseTopupAmount(amountInput, minTopup) ?? 0
 
   // Calculate effective exchange rate - when display type is USD, use rate of 1
   const effectiveUsdExchangeRate = useMemo(() => {
@@ -113,15 +120,14 @@ export function Wallet(props: WalletProps) {
 
   // Initialize topup amount when topup info is loaded
   useEffect(() => {
-    if (topupInfo && topupAmount === 0) {
-      const minTopup = getMinTopupAmount(topupInfo)
-      setTopupAmount(minTopup)
+    if (topupInfo && topupAmountInput === null) {
+      setTopupAmountInput(String(minTopup))
 
       // Calculate initial payment amount with default payment type
       const defaultPaymentType = getDefaultPaymentType(topupInfo)
       calculatePaymentAmount(minTopup, defaultPaymentType)
     }
-  }, [topupInfo, topupAmount, calculatePaymentAmount])
+  }, [topupInfo, topupAmountInput, minTopup, calculatePaymentAmount])
 
   // Get current payment type (selected or default)
   const getCurrentPaymentType = useCallback(() => {
@@ -130,16 +136,19 @@ export function Wallet(props: WalletProps) {
 
   // Handle preset selection
   const handleSelectPreset = (preset: PresetAmount) => {
-    setTopupAmount(preset.value)
+    setTopupAmountInput(String(preset.value))
     setSelectedPreset(preset.value)
     calculatePaymentAmount(preset.value, getCurrentPaymentType())
   }
 
   // Handle topup amount change
-  const handleTopupAmountChange = (amount: number) => {
-    setTopupAmount(amount)
+  const handleTopupAmountChange = (value: string) => {
+    setTopupAmountInput(value)
     setSelectedPreset(null)
-    calculatePaymentAmount(amount, getCurrentPaymentType())
+    calculatePaymentAmount(
+      parseTopupAmount(value, minTopup) ?? 0,
+      getCurrentPaymentType()
+    )
   }
 
   // Handle payment method selection
@@ -154,7 +163,7 @@ export function Wallet(props: WalletProps) {
     try {
       // Validate minimum topup
       const minTopup = getMinTopupAmount(topupInfo)
-      if (topupAmount < minTopup) {
+      if (topupAmount < Math.max(1, minTopup, method.min_topup || 0)) {
         return
       }
 
@@ -168,7 +177,7 @@ export function Wallet(props: WalletProps) {
 
   // Handle payment confirmation
   const handlePaymentConfirm = async () => {
-    if (!selectedPaymentMethod) return
+    if (!selectedPaymentMethod || topupAmount <= 0) return
 
     const success = await processPayment(
       topupAmount,
@@ -240,7 +249,7 @@ export function Wallet(props: WalletProps) {
                       presetAmounts={presetAmounts}
                       selectedPreset={selectedPreset}
                       onSelectPreset={handleSelectPreset}
-                      topupAmount={topupAmount}
+                      topupAmount={amountInput}
                       onTopupAmountChange={handleTopupAmountChange}
                       paymentAmount={paymentAmount}
                       calculating={calculating}

@@ -17,7 +17,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { Loader2 } from 'lucide-react'
-import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -35,7 +34,12 @@ import { useSystemConfig } from '@/hooks/use-system-config'
 import { formatCurrencyFromUSD, getCurrencyLabel } from '@/lib/currency'
 import { cn } from '@/lib/utils'
 
-import { formatCurrency, getPaymentIcon, getMinTopupAmount } from '../lib'
+import {
+  formatCurrency,
+  getPaymentIcon,
+  getMinTopupAmount,
+  parseTopupAmount,
+} from '../lib'
 import type { PaymentMethod, PresetAmount, TopupInfo } from '../types'
 
 interface RechargeFormCardProps {
@@ -43,8 +47,8 @@ interface RechargeFormCardProps {
   presetAmounts: PresetAmount[]
   selectedPreset: number | null
   onSelectPreset: (preset: PresetAmount) => void
-  topupAmount: number
-  onTopupAmountChange: (amount: number) => void
+  topupAmount: string
+  onTopupAmountChange: (amount: string) => void
   paymentAmount: number
   calculating: boolean
   onPaymentMethodSelect: (method: PaymentMethod) => void
@@ -67,20 +71,6 @@ export function RechargeFormCard({
   const { currency } = useSystemConfig()
   const currencyLabel =
     currency.quotaDisplayType === 'TOKENS' ? t('Tokens') : getCurrencyLabel()
-  const [localAmount, setLocalAmount] = useState(topupAmount.toString())
-
-  useEffect(() => {
-    setLocalAmount(topupAmount.toString())
-  }, [topupAmount])
-
-  const handleAmountChange = (value: string) => {
-    setLocalAmount(value)
-    const numValue = Number.parseInt(value) || 0
-    if (numValue >= 0) {
-      onTopupAmountChange(numValue)
-    }
-  }
-
   const hasAnyTopup = topupInfo?.enable_online_topup
   const hasStandardPaymentMethods =
     Array.isArray(topupInfo?.pay_methods) && topupInfo.pay_methods.length > 0
@@ -141,8 +131,8 @@ export function RechargeFormCard({
                   <Input
                     id='topup-amount'
                     type='number'
-                    value={localAmount}
-                    onChange={(e) => handleAmountChange(e.target.value)}
+                    value={topupAmount}
+                    onChange={(e) => onTopupAmountChange(e.target.value)}
                     min={minTopup}
                     placeholder={`Minimum ${minTopup}`}
                     className='h-9 text-base sm:h-10 sm:text-lg'
@@ -172,15 +162,19 @@ export function RechargeFormCard({
                 {hasStandardPaymentMethods ? (
                   <div className='grid grid-cols-2 gap-1.5 sm:gap-3 lg:grid-cols-3'>
                     {topupInfo?.pay_methods?.map((method) => {
-                      const minTopup = method.min_topup || 0
-                      const disabled = minTopup > topupAmount
+                      const methodMinimum = Math.max(
+                        minTopup,
+                        method.min_topup || 0
+                      )
+                      const disabled =
+                        parseTopupAmount(topupAmount, methodMinimum) === null
                       const disabledReason = disabled
                         ? t('Minimum topup amount: {{amount}}', {
-                            amount: minTopup,
+                            amount: methodMinimum,
                           })
                         : undefined
                       const disabledLabel = disabled
-                        ? `${t('Minimum:')} ${minTopup}`
+                        ? `${t('Minimum:')} ${methodMinimum}`
                         : undefined
 
                       const button = (

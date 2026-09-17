@@ -52,6 +52,7 @@ export function usePayment() {
   const [processing, setProcessing] = useState(false)
   const [channelClosed, setChannelClosed] = useState(false)
   const activeMonitorRef = useRef<ActivePaymentMonitor | null>(null)
+  const quoteRequestRef = useRef(0)
 
   const stopActiveMonitor = useCallback((closePopup: boolean) => {
     const activeMonitor = activeMonitorRef.current
@@ -73,10 +74,17 @@ export function usePayment() {
   // Calculate payment amount
   const calculatePaymentAmount = useCallback(
     async (topupAmount: number, _paymentType: string) => {
+      const requestId = ++quoteRequestRef.current
+      if (!Number.isSafeInteger(topupAmount) || topupAmount <= 0) {
+        setAmount(0)
+        setCalculating(false)
+        return 0
+      }
       try {
         setCalculating(true)
 
         const response = await calculateAmount({ amount: topupAmount })
+        if (requestId !== quoteRequestRef.current) return 0
 
         if (isApiSuccess(response) && response.data) {
           const calculatedAmount = Number.parseFloat(response.data)
@@ -88,10 +96,10 @@ export function usePayment() {
         setAmount(0)
         return 0
       } catch {
-        setAmount(0)
+        if (requestId === quoteRequestRef.current) setAmount(0)
         return 0
       } finally {
-        setCalculating(false)
+        if (requestId === quoteRequestRef.current) setCalculating(false)
       }
     },
     []

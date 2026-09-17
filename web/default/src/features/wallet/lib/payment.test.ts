@@ -23,10 +23,37 @@ import type { TopupStatus } from '../types'
 import {
   getPaymentTradeNo,
   monitorPaymentWindow,
+  parseTopupAmount,
   type PaymentPopup,
 } from './payment.ts'
 
 const waitImmediately = async () => {}
+
+describe('recharge amount drafts', () => {
+  test('allows clearing a one-digit amount before entering its replacement', () => {
+    assert.equal(parseTopupAmount('1'), 1)
+    assert.equal(parseTopupAmount(''), null)
+    assert.equal(parseTopupAmount('3'), 3)
+  })
+
+  test('only accepts whole positive amounts meeting the configured minimum', () => {
+    for (const value of [
+      ' ',
+      '0',
+      '-1',
+      '1.5',
+      'NaN',
+      'Infinity',
+      '1e309',
+      '9007199254740992',
+    ]) {
+      assert.equal(parseTopupAmount(value), null, value)
+    }
+    assert.equal(parseTopupAmount('3', 5), null)
+    assert.equal(parseTopupAmount('5', 5), 5)
+    assert.equal(parseTopupAmount('50'), 50)
+  })
+})
 
 describe('payment window monitoring', () => {
   test('timeout and unavailable order status remain unconfirmed', async () => {

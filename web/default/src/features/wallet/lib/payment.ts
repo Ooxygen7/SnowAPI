@@ -32,6 +32,15 @@ import type {
 // Payment Processing Functions
 // ============================================================================
 
+// An empty draft is an editing state, not a request to restore the minimum.
+export function parseTopupAmount(value: string, minimum = 1): number | null {
+  if (!value.trim()) return null
+  const amount = Number(value)
+  return Number.isSafeInteger(amount) && amount >= Math.max(1, minimum)
+    ? amount
+    : null
+}
+
 export interface PaymentPopup {
   readonly closed: boolean
   close: () => void
