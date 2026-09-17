@@ -143,6 +143,8 @@ export function Wallet(props: WalletProps) {
 
   // Handle topup amount change
   const handleTopupAmountChange = (value: string) => {
+    // Reject invalid edits instead of turning a pasted decimal into a larger amount.
+    if (/[^0-9]/.test(value)) return
     setTopupAmountInput(value)
     setSelectedPreset(null)
     calculatePaymentAmount(
