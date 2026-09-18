@@ -1,8 +1,8 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -29,7 +29,8 @@ func GetSnowShield(c *gin.Context) {
 		return
 	}
 	ticket, ok := service.ReadSnowShieldTicket(c.Request, service.SnowShieldChallengeCookie, "challenge")
-	if !ok {
+	// Do not recycle a nearly expired challenge from a background tab.
+	if !ok || ticket.Expires-time.Now().Unix() < 60 {
 		var value string
 		value, ticket = service.IssueSnowShieldTicket(c.Request, "challenge", service.SnowShieldChallengeTTL, "")
 		service.SetSnowShieldCookie(c.Writer, service.SnowShieldChallengeCookie, value, int(service.SnowShieldChallengeTTL.Seconds()))
@@ -43,7 +44,8 @@ func VerifySnowShield(c *gin.Context) {
 		c.AbortWithStatus(http.StatusNotFound)
 		return
 	}
-	if c.GetHeader("Origin") != "https://"+os.Getenv("SNOW_SHIELD_HOSTNAME") || c.GetHeader("Sec-Fetch-Site") == "cross-site" {
+	settings := service.GetSnowShieldSettings()
+	if c.GetHeader("Origin") != "https://"+settings.Hostname || c.GetHeader("Sec-Fetch-Site") == "cross-site" {
 		c.AbortWithStatus(http.StatusForbidden)
 		return
 	}
@@ -58,11 +60,16 @@ func VerifySnowShield(c *gin.Context) {
 	}
 	if err := service.VerifySnowShieldToken(c.Request.Context(), input.Token, ticket.ID, c.ClientIP()); err != nil {
 		common.SysLog("SnowShield verification failed id=" + ticket.ID + " reason=" + err.Error())
+		if errors.Is(err, service.ErrSnowShieldUnavailable) {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"success": false, "code": "snow_shield_unavailable", "verification_id": ticket.ID})
+			return
+		}
 		c.JSON(http.StatusForbidden, gin.H{"success": false, "code": "snow_shield_failed", "verification_id": ticket.ID})
 		return
 	}
-	value, clearance := service.IssueSnowShieldTicket(c.Request, "clearance", service.SnowShieldClearanceTTL, ticket.ID)
-	service.SetSnowShieldCookie(c.Writer, service.SnowShieldClearanceCookie, value, int(service.SnowShieldClearanceTTL.Seconds()))
+	trustTTL := time.Duration(settings.TrustMinutes) * time.Minute
+	value, clearance := service.IssueSnowShieldTicket(c.Request, "clearance", trustTTL, ticket.ID)
+	service.SetSnowShieldCookie(c.Writer, service.SnowShieldClearanceCookie, value, int(trustTTL.Seconds()))
 	service.SetSnowShieldCookie(c.Writer, service.SnowShieldChallengeCookie, "", -1)
 	c.JSON(http.StatusOK, gin.H{"success": true, "expires_in": clearance.Expires - time.Now().Unix()})
 }

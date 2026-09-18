@@ -9,7 +9,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -20,7 +19,6 @@ import (
 const SnowShieldAction = "snow_shield"
 const SnowShieldClearanceCookie = "__Host-snow_shield"
 const SnowShieldChallengeCookie = "__Host-snow_challenge"
-const SnowShieldClearanceTTL = time.Hour
 const SnowShieldChallengeTTL = 5 * time.Minute
 
 type SnowShieldTicket struct {
@@ -30,23 +28,17 @@ type SnowShieldTicket struct {
 }
 
 var snowShieldHTTPClient = &http.Client{Timeout: 10 * time.Second}
+var ErrSnowShieldUnavailable = errors.New("verification service unavailable")
 
 func SnowShieldEnabled() bool {
-	return os.Getenv("SNOW_SHIELD_ENABLED") == "true"
+	return GetSnowShieldSettings().Enabled
 }
 
 func ValidateSnowShieldSettings() error {
 	if !SnowShieldEnabled() {
 		return nil
 	}
-	host := os.Getenv("SNOW_SHIELD_HOSTNAME")
-	if host == "" || strings.ContainsAny(host, "/:@?# ") || !common.SessionCookieSecure {
-		return errors.New("SnowShield requires SNOW_SHIELD_HOSTNAME and secure session cookies")
-	}
-	if common.TurnstileSiteKey == "" || common.TurnstileSecretKey == "" {
-		return errors.New("SnowShield requires configured Turnstile keys")
-	}
-	return nil
+	return ValidateSnowShieldConfiguration(GetSnowShieldSettings(), common.TurnstileSiteKey, common.TurnstileSecretKey)
 }
 
 func snowShieldAgent(request *http.Request) string {
@@ -118,20 +110,42 @@ func VerifySnowShieldToken(ctx context.Context, token, challengeID, remoteIP str
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	response, err := snowShieldHTTPClient.Do(request)
 	if err != nil {
-		return errors.New("verification service unavailable")
+		return ErrSnowShieldUnavailable
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
-		return errors.New("verification service unavailable")
+		return ErrSnowShieldUnavailable
 	}
 	var result struct {
-		Success  bool   `json:"success"`
-		Hostname string `json:"hostname"`
-		Action   string `json:"action"`
-		CData    string `json:"cdata"`
+		Success  bool     `json:"success"`
+		Hostname string   `json:"hostname"`
+		Action   string   `json:"action"`
+		CData    string   `json:"cdata"`
+		Errors   []string `json:"error-codes"`
 	}
-	if common.DecodeJson(io.LimitReader(response.Body, 16384), &result) != nil || !result.Success || !strings.EqualFold(result.Hostname, os.Getenv("SNOW_SHIELD_HOSTNAME")) || result.Action != SnowShieldAction || result.CData != challengeID {
+	if common.DecodeJson(io.LimitReader(response.Body, 16384), &result) != nil {
+		return ErrSnowShieldUnavailable
+	}
+	if !result.Success {
+		// Only log documented categories, never a token, secret or raw response.
+		for _, code := range result.Errors {
+			switch code {
+			case "internal-error":
+				return ErrSnowShieldUnavailable
+			case "invalid-input-secret", "missing-input-secret", "invalid-input-response", "missing-input-response", "bad-request", "timeout-or-duplicate":
+				return errors.New("provider: " + code)
+			}
+		}
 		return errors.New("verification rejected")
+	}
+	if !strings.EqualFold(result.Hostname, GetSnowShieldSettings().Hostname) {
+		return errors.New("verification hostname mismatch")
+	}
+	if result.Action != SnowShieldAction {
+		return errors.New("verification action mismatch")
+	}
+	if result.CData != challengeID {
+		return errors.New("verification challenge mismatch")
 	}
 	return nil
 }

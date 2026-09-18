@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -77,6 +78,12 @@ export default defineConfig(({ envMode }) => {
     html: {
       template: './index.html',
       templateParameters: {
+        // The entry shield must remain usable even if a CDN stylesheet request
+        // fails. Keep one CSS source for both critical HTML and normal/HMR CSS.
+        snowShieldCss: readFileSync(
+          path.resolve(__dirname, 'src/features/snow-shield/snow-shield.css'),
+          'utf8'
+        ),
         faviconUrl: isDemo
           ? `${basePath}snowapi-logo.png`
           : '/snowapi-theme/unsnow-favicon.png?v=20260717-1',

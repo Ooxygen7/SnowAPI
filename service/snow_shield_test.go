@@ -80,6 +80,30 @@ func TestSnowShieldRequiresAllProviderBindings(t *testing.T) {
 	require.Error(t, VerifySnowShieldToken(context.Background(), strings.Repeat("a", 2049), "request-id", ""))
 }
 
+func TestSnowShieldDistinguishesOutagesWithoutLoggingRawProviderData(t *testing.T) {
+	oldClient := snowShieldHTTPClient
+	t.Cleanup(func() { snowShieldHTTPClient = oldClient })
+	for _, tc := range []struct {
+		body, want string
+	}{
+		{`{"success":false,"error-codes":["internal-error"]}`, ErrSnowShieldUnavailable.Error()},
+		{`{"success":false,"error-codes":["timeout-or-duplicate"]}`, "provider: timeout-or-duplicate"},
+		{`{"success":false,"error-codes":["untrusted provider content"]}`, "verification rejected"},
+		{`not JSON`, ErrSnowShieldUnavailable.Error()},
+	} {
+		t.Run(tc.want+tc.body, func(t *testing.T) {
+			snowShieldHTTPClient = &http.Client{Transport: shieldTestTransport(func(r *http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(tc.body)), Header: make(http.Header)}, nil
+			})}
+			err := VerifySnowShieldToken(context.Background(), "test-token", "request-id", "127.0.0.1")
+			require.EqualError(t, err, tc.want)
+			if tc.want == ErrSnowShieldUnavailable.Error() {
+				assert.ErrorIs(t, err, ErrSnowShieldUnavailable)
+			}
+		})
+	}
+}
+
 func TestSnowShieldCookiesUseSecureBrowserScope(t *testing.T) {
 	r := httptest.NewRequest("GET", "https://example.test/", nil)
 	value, ticket := IssueSnowShieldTicket(r, "clearance", time.Hour, "")

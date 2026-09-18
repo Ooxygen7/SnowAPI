@@ -107,10 +107,14 @@ const AUTH_SECTIONS = [
     titleKey: 'Bot Protection',
     build: (settings: AuthSettings) => (
       <BotProtectionSection
+        shieldReady={settings.SnowShieldReady}
         defaultValues={{
           TurnstileCheckEnabled: settings.TurnstileCheckEnabled,
           TurnstileSiteKey: settings.TurnstileSiteKey,
           TurnstileSecretKey: settings.TurnstileSecretKey,
+          SnowShieldEnabled: settings.SnowShieldEnabled,
+          SnowShieldHostname: settings.SnowShieldHostname,
+          SnowShieldTrustMinutes: settings.SnowShieldTrustMinutes,
         }}
       />
     ),

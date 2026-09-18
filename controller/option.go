@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
@@ -70,6 +71,9 @@ func GetOptions(c *gin.Context) {
 	optionValues := make(map[string]string)
 	common.OptionMapRWMutex.Lock()
 	for k, v := range common.OptionMap {
+		if k == "SnowShieldSettings" {
+			continue
+		}
 		value := common.Interface2String(v)
 		isSensitiveKey := strings.HasSuffix(k, "Token") ||
 			strings.HasSuffix(k, "Secret") ||
@@ -91,6 +95,14 @@ func GetOptions(c *gin.Context) {
 		}
 	}
 	common.OptionMapRWMutex.Unlock()
+	shield := service.GetSnowShieldSettings()
+	options = append(options,
+		&model.Option{Key: "SnowShieldEnabled", Value: strconv.FormatBool(shield.Enabled)},
+		&model.Option{Key: "SnowShieldHostname", Value: shield.Hostname},
+		&model.Option{Key: "SnowShieldTrustMinutes", Value: strconv.Itoa(shield.TrustMinutes)},
+	)
+	shield.Enabled = true
+	options = append(options, &model.Option{Key: "SnowShieldReady", Value: strconv.FormatBool(service.ValidateSnowShieldConfiguration(shield, common.TurnstileSiteKey, common.TurnstileSecretKey) == nil)})
 	options = append(options, &model.Option{
 		Key:   "CompletionRatioMeta",
 		Value: buildCompletionRatioMetaValue(optionValues),
@@ -129,6 +141,10 @@ func UpdateOption(c *gin.Context) {
 	}
 	if isPaymentComplianceOptionKey(option.Key) {
 		common.ApiErrorMsg(c, "合规确认字段不允许通过通用设置接口修改")
+		return
+	}
+	if strings.HasPrefix(option.Key, "SnowShield") {
+		common.ApiErrorMsg(c, "Save SnowShield settings through Bot Protection")
 		return
 	}
 	switch option.Key {

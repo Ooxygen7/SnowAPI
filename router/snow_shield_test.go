@@ -34,12 +34,15 @@ func TestSnowShieldStatusChecksDoNotConsumeVerificationBudget(t *testing.T) {
 	})
 	engine := gin.New()
 	SetApiRouter(engine)
+	engine.GET("/test-critical-budget", middleware.CriticalRateLimit(), func(c *gin.Context) { c.Status(http.StatusOK) })
 	for _, tc := range []struct {
 		method, path string
 		status       int
 	}{
 		{http.MethodGet, "/api/security/shield", http.StatusOK},
 		{http.MethodGet, "/api/security/shield", http.StatusOK},
+		{http.MethodGet, "/test-critical-budget", http.StatusOK},
+		{http.MethodGet, "/test-critical-budget", http.StatusTooManyRequests},
 		{http.MethodPost, "/api/security/shield/verify", http.StatusNotFound},
 		{http.MethodPost, "/api/security/shield/verify", http.StatusTooManyRequests},
 		{http.MethodGet, "/api/security/shield", http.StatusOK},
@@ -95,7 +98,10 @@ func TestSnowShieldVerificationIssuesIndependentClearance(t *testing.T) {
 	t.Setenv("SNOW_SHIELD_HOSTNAME", "api.example.test")
 	oldSite, oldSecret, oldSecure := common.TurnstileSiteKey, common.TurnstileSecretKey, common.SessionCookieSecure
 	common.TurnstileSiteKey, common.TurnstileSecretKey, common.SessionCookieSecure = "site-key", "secret-key", true
+	previousOptions := common.OptionMap
+	common.OptionMap = map[string]string{"SnowShieldSettings": `{"enabled":true,"hostname":"api.example.test","trust_minutes":15}`}
 	t.Cleanup(func() {
+		common.OptionMap = previousOptions
 		common.TurnstileSiteKey, common.TurnstileSecretKey, common.SessionCookieSecure = oldSite, oldSecret, oldSecure
 	})
 	engine := gin.New()
@@ -115,6 +121,21 @@ func TestSnowShieldVerificationIssuesIndependentClearance(t *testing.T) {
 	assert.Equal(t, "site-key", data.Data.SiteKey)
 	assert.Equal(t, "no-store, private", start.Header().Get("Cache-Control"))
 	challenge := start.Result().Cookies()[0]
+	t.Run("nearly-expired-challenge-is-renewed", func(t *testing.T) {
+		r := httptest.NewRequest("GET", "https://api.example.test/api/security/shield", nil)
+		value, _ := service.IssueSnowShieldTicket(r, "challenge", 30*time.Second, "old-challenge")
+		r.AddCookie(&http.Cookie{Name: service.SnowShieldChallengeCookie, Value: value})
+		writer := httptest.NewRecorder()
+		engine.ServeHTTP(writer, r)
+		require.Equal(t, http.StatusOK, writer.Code)
+		require.Len(t, writer.Result().Cookies(), 1)
+		r2 := httptest.NewRequest("GET", "/", nil)
+		r2.AddCookie(writer.Result().Cookies()[0])
+		ticket, valid := service.ReadSnowShieldTicket(r2, service.SnowShieldChallengeCookie, "challenge")
+		require.True(t, valid)
+		assert.NotEqual(t, "old-challenge", ticket.ID)
+		assert.Greater(t, ticket.Expires-time.Now().Unix(), int64(240))
+	})
 	oldTransport := http.DefaultTransport
 	t.Cleanup(func() { http.DefaultTransport = oldTransport })
 	http.DefaultTransport = snowShieldTransport(func(r *http.Request) (*http.Response, error) {
@@ -148,6 +169,7 @@ func TestSnowShieldVerificationIssuesIndependentClearance(t *testing.T) {
 			if tc.status == 200 {
 				cookies := writer.Result().Cookies()
 				require.Len(t, cookies, 2)
+				assert.Equal(t, 900, cookies[0].MaxAge, "clearance must honor the saved trust duration")
 				r2 := httptest.NewRequest("GET", "/api/user/self", nil)
 				r2.AddCookie(cookies[0])
 				assert.True(t, service.HasSnowShieldClearance(r2))

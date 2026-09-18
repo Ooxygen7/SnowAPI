@@ -44,7 +44,9 @@ interface TurnstileProps {
   language?: string
   theme?: 'light' | 'dark' | 'auto'
   appearance?: 'always' | 'execute' | 'interaction-only'
-  onError?: () => void
+  onError?: (code: string) => void
+  manualRetry?: boolean
+  showError?: boolean
 }
 
 let scriptLoading: Promise<void> | null = null
@@ -94,6 +96,8 @@ export function Turnstile({
   theme = 'auto',
   appearance = 'always',
   onError,
+  manualRetry = false,
+  showError = true,
 }: TurnstileProps) {
   const { t, i18n } = useTranslation(undefined, { lng: languageOverride })
   const ref = useRef<HTMLDivElement | null>(null)
@@ -109,13 +113,21 @@ export function Turnstile({
   useEffect(() => {
     let cancelled = false
     let widgetId: string | undefined
+    let attemptEnded = false
+    let timeout: ReturnType<typeof setTimeout> | undefined
     callbacks.current.onVerify('')
-    const fail = () => {
-      if (cancelled) return
+    const fail = (code = 'widget_failed') => {
+      if (cancelled || (manualRetry && attemptEnded)) return
+      attemptEnded = true
+      clearTimeout(timeout)
       callbacks.current.onVerify('')
       setFailed(true)
-      callbacks.current.onError?.()
+      callbacks.current.onError?.(code)
+      return true
     }
+    // Do not leave a silent automatic challenge spinning indefinitely. Once
+    // Cloudflare asks for interaction, its own interaction timeout takes over.
+    if (manualRetry) timeout = setTimeout(() => fail('widget_timeout'), 45000)
     void loadTurnstile()
       .then(() => {
         if (cancelled || !ref.current || !window.turnstile) return
@@ -126,31 +138,51 @@ export function Turnstile({
           appearance,
           action,
           cData,
+          ...(manualRetry && {
+            retry: 'never',
+            'refresh-expired': 'manual',
+            'refresh-timeout': 'manual',
+          }),
           callback: (token: string) => {
-            if (cancelled) return
+            if (cancelled || (manualRetry && attemptEnded)) return
+            attemptEnded = true
+            clearTimeout(timeout)
             setFailed(false)
             callbacks.current.onVerify(token)
           },
           'error-callback': fail,
+          'before-interactive-callback': () => clearTimeout(timeout),
+          'unsupported-callback': () => fail('unsupported_browser'),
           'expired-callback': () => {
-            fail()
+            attemptEnded = false
+            fail('token_expired')
             if (!cancelled) callbacks.current.onExpire?.()
           },
-          'timeout-callback': fail,
+          'timeout-callback': () => fail('interaction_timeout'),
         })
-        if (widgetId === undefined) fail()
+        if (widgetId === undefined) fail('widget_render_failed')
       })
-      .catch(fail)
+      .catch(() => fail('script_load_failed'))
     return () => {
       cancelled = true
+      clearTimeout(timeout)
       if (widgetId) window.turnstile?.remove(widgetId)
     }
-  }, [siteKey, attempt, language, theme, appearance, action, cData])
+  }, [
+    siteKey,
+    attempt,
+    language,
+    theme,
+    appearance,
+    action,
+    cData,
+    manualRetry,
+  ])
 
   return (
     <div className={cn('flex w-full flex-col items-center gap-2', className)}>
       <div ref={ref} />
-      {failed && (
+      {failed && showError && (
         <div
           role='alert'
           className='flex flex-col items-center gap-2 text-center text-sm'

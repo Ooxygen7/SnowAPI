@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { isAxiosError } from 'axios'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -53,15 +54,21 @@ function BrowserShield(props: { children: ReactNode }) {
   const client = useQueryClient()
   const verified = useSnowShieldState((state) => state.verified)
   const expiresAt = useSnowShieldState((state) => state.expiresAt)
-  const [widgetFailed, setWidgetFailed] = useState(false)
+  const [widgetError, setWidgetError] = useState('')
+  const [manualAttempt, setManualAttempt] = useState(0)
   const lastToken = useRef('')
   const check = useQuery({
     queryKey: ['snow-shield-check'],
     queryFn: checkShield,
     retry: false,
+    networkMode: 'always',
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     staleTime: Infinity,
   })
   const verify = useMutation({
+    retry: false,
+    networkMode: 'always',
     mutationFn: async (token: string) => {
       const response = await api.post(
         '/api/security/shield/verify',
@@ -133,8 +140,37 @@ function BrowserShield(props: { children: ReactNode }) {
     return <div className='bg-background min-h-svh' aria-busy='true' />
   }
   if (!blocked) return props.children
-  const failed = check.isError || verify.isError || widgetFailed
-  const requestID = check.data?.verification_id
+  const failed = check.isError || verify.isError || Boolean(widgetError)
+  const requestError = check.error ?? verify.error
+  const response = isAxiosError(requestError)
+    ? requestError.response
+    : undefined
+  const errorCode =
+    widgetError ||
+    response?.data?.code ||
+    (response ? `HTTP_${response.status}` : 'network_error')
+  const requestID =
+    check.data?.verification_id ?? response?.headers['x-request-id']
+  let errorMessage = t(
+    'Verification stopped. Start a manual check to continue.'
+  )
+  if (response?.status === 429) {
+    errorMessage = t(
+      'Too many verification requests. Wait a few minutes before trying again.'
+    )
+  } else if (response?.data?.code === 'snow_shield_expired') {
+    errorMessage = t(
+      'This check expired or its cookie is missing. Start a new check and allow site cookies.'
+    )
+  } else if (
+    check.isError ||
+    response?.status === 503 ||
+    widgetError === 'script_load_failed'
+  ) {
+    errorMessage = t(
+      'Cannot reach the verification service. Check your connection and allow challenges.cloudflare.com.'
+    )
+  }
   return (
     <div className='snow-shield' lang={toIntlLocale(language)}>
       <main className='snow-shield__main'>
@@ -157,43 +193,52 @@ function BrowserShield(props: { children: ReactNode }) {
             {check.data?.site_key &&
               requestID &&
               !check.isFetching &&
-              !verify.isError && (
+              !failed && (
                 <Turnstile
-                  key={requestID}
+                  key={`${requestID}-${manualAttempt}`}
                   siteKey={check.data.site_key}
                   action='snow_shield'
                   cData={requestID}
                   language={language}
                   theme='light'
-                  appearance='interaction-only'
-                  onError={() => setWidgetFailed(true)}
+                  appearance={manualAttempt > 0 ? 'always' : 'interaction-only'}
+                  manualRetry
+                  showError={false}
+                  onError={setWidgetError}
                   onVerify={(token) => {
-                    if (!token) {
-                      setWidgetFailed(false)
-                      return
-                    }
+                    if (!token) return
                     if (token === lastToken.current || verify.isPending) return
                     lastToken.current = token
-                    setWidgetFailed(false)
                     verify.mutate(token)
                   }}
                 />
               )}
-            {(check.isError || verify.isError) && (
+            {failed && (
               <div className='snow-shield__error' role='alert'>
-                <p>{t('Security verification failed. Please try again.')}</p>
+                <p>{errorMessage}</p>
+                <code>{String(errorCode).slice(0, 80)}</code>
                 <Button
                   variant='outline'
-                  onClick={() => {
+                  className='snow-shield__retry'
+                  disabled={check.isFetching}
+                  onClick={async () => {
                     lastToken.current = ''
                     verify.reset()
-                    setWidgetFailed(false)
-                    void check.refetch()
+                    setWidgetError('')
+                    setManualAttempt((attempt) => attempt + 1)
+                    await check.refetch()
                   }}
                 >
-                  {t('Retry verification')}
+                  {t('Start manual verification')}
                 </Button>
               </div>
+            )}
+            {manualAttempt > 0 && !failed && !verify.isPending && (
+              <p className='snow-shield__hint' role='status'>
+                {t(
+                  'Complete the verification below. If a checkbox appears, select it to continue.'
+                )}
+              </p>
             )}
           </div>
         </div>

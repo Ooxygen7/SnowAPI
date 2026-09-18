@@ -25,7 +25,7 @@ func SetApiRouter(router *gin.Engine) {
 		// A page-load status check must not consume the login/verification budget.
 		// The API group's normal rate limit still applies.
 		apiRouter.GET("/security/shield", controller.GetSnowShield)
-		apiRouter.POST("/security/shield/verify", middleware.CriticalRateLimit(), anonymousRequestBodyLimit, controller.VerifySnowShield)
+		apiRouter.POST("/security/shield/verify", middleware.SnowShieldRateLimit(), anonymousRequestBodyLimit, controller.VerifySnowShield)
 		apiRouter.GET("/models", middleware.UserAuth(), controller.DashboardListModels)
 		apiRouter.GET("/status/test", middleware.AdminAuth(), controller.TestStatus)
 		apiRouter.GET("/user-agreement", controller.GetUserAgreement)
@@ -164,6 +164,7 @@ func SetApiRouter(router *gin.Engine) {
 		{
 			optionRoute.GET("/", controller.GetOptions)
 			optionRoute.PUT("/", controller.UpdateOption)
+			optionRoute.PUT("/bot_protection", controller.UpdateBotProtection)
 			optionRoute.POST("/payment_compliance", controller.ConfirmPaymentCompliance)
 			optionRoute.GET("/channel_affinity_cache", controller.GetChannelAffinityCacheStats)
 			optionRoute.DELETE("/channel_affinity_cache", controller.ClearChannelAffinityCache)
