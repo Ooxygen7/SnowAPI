@@ -90,14 +90,20 @@ export default defineConfig(({ envMode }) => {
     },
     output: {
       assetPrefix: basePath,
-      copy: isDemo
-        ? [
-            {
-              from: './src/features/subscriptions/animation/assets/snowapi-logo.png',
-              to: 'snowapi-logo.png',
-            },
-          ]
-        : [],
+      copy: [
+        {
+          from: './src/features/snow-shield/REACT-BITS-LICENSE.txt',
+          to: 'snow-shield-react-bits-license.txt',
+        },
+        ...(isDemo
+          ? [
+              {
+                from: './src/features/subscriptions/animation/assets/snowapi-logo.png',
+                to: 'snowapi-logo.png',
+              },
+            ]
+          : []),
+      ],
       // Production optimizations
       minify: isProd,
       target: 'web',

@@ -1,0 +1,174 @@
+.snow-shield {
+  --background: #fff;
+  --foreground: #111;
+  --primary: #111;
+  --primary-foreground: #fff;
+  --accent: #f4f4f4;
+  --accent-foreground: #111;
+  --border: #ddd;
+  --ring: #777;
+  --shield-muted: #6b6b6b;
+  --shield-error: #c33b2b;
+  color-scheme: light;
+  min-height: 100svh;
+  background: var(--background);
+  color: var(--foreground);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-sans, Inter, system-ui, sans-serif);
+}
+
+.snow-shield__main {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 64px 24px 24px;
+}
+.snow-shield__content {
+  width: min(100%, 640px);
+}
+.snow-shield__title {
+  font-size: clamp(20px, 3vw, 26px);
+  font-weight: 500;
+  line-height: 1.5;
+  margin: 0;
+}
+.snow-shield__description {
+  margin: 24px 0 0 44px;
+  max-width: 530px;
+  font-size: 14px;
+  line-height: 1.9;
+  color: var(--shield-muted);
+  text-wrap: pretty;
+}
+.snow-shield__verification {
+  margin: 24px 0 0 44px;
+  min-height: 80px;
+}
+.snow-shield__verification > div {
+  align-items: flex-start;
+}
+.snow-shield__error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  font-size: 13px;
+  color: var(--shield-error);
+}
+.snow-shield__footer {
+  padding: 32px 20px max(28px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--shield-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.snow-shield__footer p {
+  margin: 0;
+}
+.snow-shield__footer strong {
+  font-weight: 600;
+}
+.snow-shield__id {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.snow-shield__id span {
+  font-family: ui-monospace, monospace;
+}
+
+/* React Bits LatticeLoader orbit animation; see REACT-BITS-LICENSE.txt. */
+.lattice-loader {
+  --ll-idle: 0.15;
+  --ll-peak: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 20px;
+}
+.lattice-loader__grid {
+  display: grid;
+  flex: none;
+}
+.lattice-loader__layer {
+  grid-area: 1 / 1;
+  display: grid;
+  grid-template-columns: repeat(3, 6px);
+  gap: 2px;
+}
+.lattice-loader__cell {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: var(--ll-idle);
+}
+.lattice-loader__run {
+  transition: opacity 200ms ease;
+}
+.lattice-loader__run .lattice-loader__cell {
+  animation: snow-lattice-on 864ms cubic-bezier(0.77, 0, 0.175, 1) infinite;
+}
+.lattice-loader__run .lattice-loader__cell[data-hole] {
+  animation: none;
+  opacity: calc(var(--ll-idle) * 0.47);
+}
+.lattice-loader__mark {
+  opacity: 0;
+  transform: scale(0.9);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+.lattice-loader__mark .lattice-loader__cell[data-on] {
+  opacity: 1;
+}
+.lattice-loader:not([data-status='working']) .lattice-loader__run {
+  opacity: 0;
+}
+.lattice-loader:not([data-status='working'])
+  .lattice-loader__run
+  .lattice-loader__cell {
+  animation-play-state: paused;
+}
+.lattice-loader:not([data-status='working']) .lattice-loader__mark {
+  opacity: 1;
+  transform: none;
+}
+@keyframes snow-lattice-on {
+  0%,
+  100%,
+  62% {
+    opacity: var(--ll-idle);
+  }
+  18%,
+  42% {
+    opacity: var(--ll-peak);
+  }
+}
+@media (max-width: 480px) {
+  .snow-shield__main {
+    padding-inline: 24px;
+  }
+  .snow-shield__description,
+  .snow-shield__verification {
+    margin-left: 0;
+  }
+  .lattice-loader {
+    gap: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lattice-loader__run .lattice-loader__cell {
+    animation: none;
+    opacity: 0.65;
+  }
+  .lattice-loader__mark,
+  .lattice-loader__run {
+    transition: none;
+    transform: none;
+  }
+}

@@ -39,6 +39,12 @@ interface TurnstileProps {
   onVerify: (token: string) => void
   onExpire?: () => void
   className?: string
+  action?: string
+  cData?: string
+  language?: string
+  theme?: 'light' | 'dark' | 'auto'
+  appearance?: 'always' | 'execute' | 'interaction-only'
+  onError?: () => void
 }
 
 let scriptLoading: Promise<void> | null = null
@@ -82,14 +88,23 @@ export function Turnstile({
   onVerify,
   onExpire,
   className,
+  action,
+  cData,
+  language: languageOverride,
+  theme = 'auto',
+  appearance = 'always',
+  onError,
 }: TurnstileProps) {
-  const { t, i18n } = useTranslation()
+  const { t, i18n } = useTranslation(undefined, { lng: languageOverride })
   const ref = useRef<HTMLDivElement | null>(null)
-  const callbacks = useRef({ onVerify, onExpire })
-  callbacks.current = { onVerify, onExpire }
+  const callbacks = useRef({ onVerify, onExpire, onError })
+  callbacks.current = { onVerify, onExpire, onError }
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
-  const language = i18n.language.startsWith('zh') ? 'zh-cn' : i18n.language
+  const requestedLanguage = languageOverride ?? i18n.language
+  const language = requestedLanguage.startsWith('zh')
+    ? 'zh-cn'
+    : requestedLanguage
 
   useEffect(() => {
     let cancelled = false
@@ -99,6 +114,7 @@ export function Turnstile({
       if (cancelled) return
       callbacks.current.onVerify('')
       setFailed(true)
+      callbacks.current.onError?.()
     }
     void loadTurnstile()
       .then(() => {
@@ -106,6 +122,10 @@ export function Turnstile({
         widgetId = window.turnstile.render(ref.current, {
           sitekey: siteKey,
           language,
+          theme,
+          appearance,
+          action,
+          cData,
           callback: (token: string) => {
             if (cancelled) return
             setFailed(false)
@@ -125,7 +145,7 @@ export function Turnstile({
       cancelled = true
       if (widgetId) window.turnstile?.remove(widgetId)
     }
-  }, [siteKey, attempt, language])
+  }, [siteKey, attempt, language, theme, appearance, action, cData])
 
   return (
     <div className={cn('flex w-full flex-col items-center gap-2', className)}>

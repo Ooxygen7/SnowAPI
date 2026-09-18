@@ -6,6 +6,7 @@ import (
 	"net/url"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/service"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
@@ -16,6 +17,10 @@ type turnstileCheckResponse struct {
 
 func TurnstileCheck() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if service.HasSnowShieldClearance(c.Request) {
+			c.Next()
+			return
+		}
 		if common.TurnstileCheckEnabled {
 			session := sessions.Default(c)
 			turnstileChecked := session.Get("turnstile")

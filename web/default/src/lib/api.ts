@@ -20,6 +20,7 @@ import axios, { type AxiosRequestConfig } from 'axios'
 import i18next, { t } from 'i18next'
 import { toast } from 'sonner'
 
+import { SNOW_SHIELD_REQUIRED_EVENT } from '@/features/snow-shield/state'
 import { localizeApiMessage } from '@/i18n/api-messages'
 import { toIntlLocale } from '@/i18n/languages'
 import { useAuthStore } from '@/stores/auth-store'
@@ -113,6 +114,10 @@ api.interceptors.response.use(
     return response
   },
   (error) => {
+    if (error?.response?.data?.code === 'snow_shield_required') {
+      window.dispatchEvent(new Event(SNOW_SHIELD_REQUIRED_EVENT))
+      return Promise.reject(error)
+    }
     if (typeof error?.response?.data?.message === 'string') {
       error.response.data.message = localizeApiMessage(
         error.response.data.message

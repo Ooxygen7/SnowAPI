@@ -16,6 +16,8 @@ services:
       CRYPTO_SECRET: "${CRYPTO_SECRET:?Set CRYPTO_SECRET in deploy/.env}"
       ERROR_LOG_ENABLED: "${ERROR_LOG_ENABLED:-true}"
       CHANNEL_UPSTREAM_MODEL_UPDATE_TASK_ENABLED: "${CHANNEL_UPSTREAM_MODEL_UPDATE_TASK_ENABLED:-false}"
+      SNOW_SHIELD_ENABLED: "${SNOW_SHIELD_ENABLED:-false}"
+      SNOW_SHIELD_HOSTNAME: "${SNOW_SHIELD_HOSTNAME:-}"
     volumes:
       - snowapi_data:/data
     healthcheck:

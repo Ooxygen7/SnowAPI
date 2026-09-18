@@ -20,6 +20,7 @@ import i18next from 'i18next'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { useSnowShieldState } from '@/features/snow-shield/state'
 import { useStatus } from '@/hooks/use-status'
 
 /**
@@ -29,8 +30,9 @@ export function useTurnstile() {
   const { status, loading } = useStatus()
   const [turnstileToken, setTurnstileToken] = useState('')
   const [turnstileAttempt, setTurnstileAttempt] = useState(0)
+  const shieldVerified = useSnowShieldState((state) => state.verified)
 
-  const isTurnstileEnabled = Boolean(status?.turnstile_check)
+  const isTurnstileEnabled = Boolean(status?.turnstile_check) && !shieldVerified
   const turnstileSiteKey = status?.turnstile_site_key || ''
 
   /**

@@ -216,6 +216,11 @@ func main() {
 		SameSite: http.SameSiteStrictMode,
 	})
 	server.Use(sessions.Sessions("session", store))
+	if err := service.ValidateSnowShieldSettings(); err != nil {
+		common.FatalLog(err.Error())
+		return
+	}
+	server.Use(middleware.SnowShield())
 
 	InjectUmamiAnalytics()
 	InjectGoogleAnalytics()
