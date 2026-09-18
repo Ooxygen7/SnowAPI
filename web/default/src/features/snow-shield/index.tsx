@@ -126,6 +126,12 @@ function BrowserShield(props: { children: ReactNode }) {
     }
   }, [blocked, language])
 
+  // An unknown clearance is not a failed clearance. Keep the normal page
+  // background until the server answers, without mounting protected content
+  // or briefly showing a challenge to an already-trusted browser.
+  if (check.isPending) {
+    return <div className='bg-background min-h-svh' aria-busy='true' />
+  }
   if (!blocked) return props.children
   const failed = check.isError || verify.isError || widgetFailed
   const requestID = check.data?.verification_id

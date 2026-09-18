@@ -29,6 +29,9 @@ verification and application authentication remain unchanged.
 - Logged-in users are challenged again when trust expires. The entry gate checks
   on each full load, expires its in-memory state, and checks again when a suspended
   tab resumes. No login identity is created, changed, or refreshed by SnowShield.
+- Initial clearance checks keep the normal page background, with neither protected
+  content nor a challenge mounted until the server responds. A valid clearance
+  therefore does not briefly flash the verification page on reload.
 - A five-minute challenge cookie binds the provider response to the verification
   ID. The server checks the provider verdict, hostname, action, and challenge ID.
 - A timed-out or failed provider request does not grant clearance. The page offers
