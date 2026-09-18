@@ -140,8 +140,10 @@ export function Turnstile({
           cData,
           ...(manualRetry && {
             retry: 'never',
-            'refresh-expired': 'manual',
-            'refresh-timeout': 'manual',
+            // The page remounts the widget after an explicit retry. "never"
+            // also works with legacy Invisible keys, unlike "manual".
+            'refresh-expired': 'never',
+            'refresh-timeout': 'never',
           }),
           callback: (token: string) => {
             if (cancelled || (manualRetry && attemptEnded)) return
