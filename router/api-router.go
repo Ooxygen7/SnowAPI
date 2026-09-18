@@ -22,7 +22,9 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/setup", controller.GetSetup)
 		apiRouter.POST("/setup", anonymousRequestBodyLimit, controller.PostSetup)
 		apiRouter.GET("/status", controller.GetStatus)
-		apiRouter.GET("/security/shield", middleware.CriticalRateLimit(), controller.GetSnowShield)
+		// A page-load status check must not consume the login/verification budget.
+		// The API group's normal rate limit still applies.
+		apiRouter.GET("/security/shield", controller.GetSnowShield)
 		apiRouter.POST("/security/shield/verify", middleware.CriticalRateLimit(), anonymousRequestBodyLimit, controller.VerifySnowShield)
 		apiRouter.GET("/models", middleware.UserAuth(), controller.DashboardListModels)
 		apiRouter.GET("/status/test", middleware.AdminAuth(), controller.TestStatus)

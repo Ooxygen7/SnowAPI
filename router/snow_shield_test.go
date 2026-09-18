@@ -22,6 +22,36 @@ type snowShieldTransport func(*http.Request) (*http.Response, error)
 
 func (f snowShieldTransport) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 
+func TestSnowShieldStatusChecksDoNotConsumeVerificationBudget(t *testing.T) {
+	t.Setenv("SNOW_SHIELD_ENABLED", "false")
+	oldCritical, oldGlobal, oldRedis := common.CriticalRateLimitEnable, common.GlobalApiRateLimitEnable, common.RedisEnabled
+	oldNum, oldDuration := common.CriticalRateLimitNum, common.CriticalRateLimitDuration
+	common.CriticalRateLimitEnable, common.GlobalApiRateLimitEnable, common.RedisEnabled = true, false, false
+	common.CriticalRateLimitNum, common.CriticalRateLimitDuration = 1, 1200
+	t.Cleanup(func() {
+		common.CriticalRateLimitEnable, common.GlobalApiRateLimitEnable, common.RedisEnabled = oldCritical, oldGlobal, oldRedis
+		common.CriticalRateLimitNum, common.CriticalRateLimitDuration = oldNum, oldDuration
+	})
+	engine := gin.New()
+	SetApiRouter(engine)
+	for _, tc := range []struct {
+		method, path string
+		status       int
+	}{
+		{http.MethodGet, "/api/security/shield", http.StatusOK},
+		{http.MethodGet, "/api/security/shield", http.StatusOK},
+		{http.MethodPost, "/api/security/shield/verify", http.StatusNotFound},
+		{http.MethodPost, "/api/security/shield/verify", http.StatusTooManyRequests},
+		{http.MethodGet, "/api/security/shield", http.StatusOK},
+	} {
+		r := httptest.NewRequest(tc.method, tc.path, nil)
+		r.RemoteAddr = "198.51.100.149:12345"
+		writer := httptest.NewRecorder()
+		engine.ServeHTTP(writer, r)
+		assert.Equal(t, tc.status, writer.Code, "%s %s", tc.method, tc.path)
+	}
+}
+
 func TestSnowShieldProtectsDashboardWithoutBreakingRelayAndCallbacks(t *testing.T) {
 	t.Setenv("SNOW_SHIELD_ENABLED", "true")
 	engine := gin.New()
