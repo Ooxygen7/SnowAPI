@@ -344,6 +344,15 @@ body .snowapi-checkout.snowapi-dialog-content {
     opacity: 0;
   }
 }
+@media (min-width: 701px) {
+  .snowapi-checkout-header,
+  .snowapi-checkout-body {
+    width: 100%;
+    max-width: 1120px;
+    margin-inline: auto;
+    padding-inline: 48px;
+  }
+}
 @media (max-width: 700px) {
   .snowapi-checkout-header {
     min-height: 72px;
