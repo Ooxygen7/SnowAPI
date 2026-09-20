@@ -102,6 +102,7 @@ export interface PlanPayload {
 
 export interface SubscriptionPayRequest {
   plan_id: number
+  expected_quota?: number
   payment_method?: string
 }
 

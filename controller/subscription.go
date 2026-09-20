@@ -24,7 +24,8 @@ type BillingPreferenceRequest struct {
 }
 
 type SubscriptionBalancePayRequest struct {
-	PlanId int `json:"plan_id"`
+	PlanId        int  `json:"plan_id"`
+	ExpectedQuota *int `json:"expected_quota"`
 }
 
 // ---- User APIs ----
@@ -109,7 +110,7 @@ func SubscriptionRequestBalancePay(c *gin.Context) {
 		return
 	}
 
-	quote, err := model.PurchaseSubscriptionWithBalance(userId, req.PlanId)
+	quote, err := model.PurchaseSubscriptionWithBalance(userId, req.PlanId, req.ExpectedQuota)
 	if err != nil {
 		common.ApiError(c, err)
 		return

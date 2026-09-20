@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
-	"time"
 
 	"github.com/Calcium-Ion/go-epay/epay"
 	"github.com/QuantumNous/new-api/common"
@@ -17,9 +17,13 @@ import (
 )
 
 type SubscriptionEpayPayRequest struct {
-	PlanId        int    `json:"plan_id"`
-	PaymentMethod string `json:"payment_method"`
+	PlanId        int     `json:"plan_id"`
+	PaymentMethod string  `json:"payment_method"`
+	ExpectedMoney float64 `json:"expected_money"`
+	RequestId     string  `json:"request_id"`
 }
+
+var subscriptionCheckoutRequestId = regexp.MustCompile(`^[a-f0-9-]{36}$`)
 
 func SubscriptionRequestEpay(c *gin.Context) {
 	if !requirePaymentChannelOpen(c) {
@@ -30,7 +34,7 @@ func SubscriptionRequestEpay(c *gin.Context) {
 	}
 
 	var req SubscriptionEpayPayRequest
-	if err := c.ShouldBindJSON(&req); err != nil || req.PlanId <= 0 {
+	if err := c.ShouldBindJSON(&req); err != nil || req.PlanId <= 0 || !subscriptionCheckoutRequestId.MatchString(req.RequestId) {
 		common.ApiErrorMsg(c, "参数错误")
 		return
 	}
@@ -42,10 +46,6 @@ func SubscriptionRequestEpay(c *gin.Context) {
 	}
 	if !plan.Enabled {
 		common.ApiErrorMsg(c, "套餐未启用")
-		return
-	}
-	if plan.PriceAmount < 0.01 {
-		common.ApiErrorMsg(c, "套餐金额过低")
 		return
 	}
 	if !operation_setting.ContainsPayMethod(req.PaymentMethod) {
@@ -78,8 +78,7 @@ func SubscriptionRequestEpay(c *gin.Context) {
 		return
 	}
 
-	tradeNo := fmt.Sprintf("%s%d", common.GetRandomString(6), time.Now().Unix())
-	tradeNo = fmt.Sprintf("SUBUSR%dNO%s", userId, tradeNo)
+	tradeNo := fmt.Sprintf("SUBUSR%dNO%s", userId, req.RequestId)
 
 	client := GetEpayClient()
 	if client == nil {
@@ -87,25 +86,16 @@ func SubscriptionRequestEpay(c *gin.Context) {
 		return
 	}
 
-	order := &model.SubscriptionOrder{
-		UserId:          userId,
-		PlanId:          plan.Id,
-		Money:           plan.PriceAmount,
-		TradeNo:         tradeNo,
-		PaymentMethod:   req.PaymentMethod,
-		PaymentProvider: model.PaymentProviderEpay,
-		CreateTime:      time.Now().Unix(),
-		Status:          common.TopUpStatusPending,
-	}
-	if err := order.Insert(); err != nil {
-		common.ApiErrorMsg(c, "创建订单失败")
+	order, err := model.CreateSubscriptionCheckoutOrder(userId, plan.Id, req.PaymentMethod, tradeNo, operation_setting.Price, req.ExpectedMoney)
+	if err != nil {
+		common.ApiError(c, err)
 		return
 	}
 	uri, params, err := client.Purchase(&epay.PurchaseArgs{
 		Type:           req.PaymentMethod,
 		ServiceTradeNo: tradeNo,
-		Name:           fmt.Sprintf("SUB:%s", plan.Title),
-		Money:          strconv.FormatFloat(plan.PriceAmount, 'f', 2, 64),
+		Name:           fmt.Sprintf("SnowAPI %s Subscription", plan.Title),
+		Money:          strconv.FormatFloat(order.Money, 'f', 2, 64),
 		Device:         epay.PC,
 		NotifyUrl:      notifyUrl,
 		ReturnUrl:      returnUrl,
@@ -156,6 +146,10 @@ func SubscriptionEpayNotify(c *gin.Context) {
 	}
 
 	if verifyInfo.TradeStatus != epay.StatusTradeSuccess {
+		_, _ = c.Writer.Write([]byte("fail"))
+		return
+	}
+	if err := model.ValidateSubscriptionPaymentAmount(verifyInfo.ServiceTradeNo, params["money"]); err != nil {
 		_, _ = c.Writer.Write([]byte("fail"))
 		return
 	}
@@ -210,6 +204,10 @@ func SubscriptionEpayReturn(c *gin.Context) {
 		return
 	}
 	if verifyInfo.TradeStatus == epay.StatusTradeSuccess {
+		if err := model.ValidateSubscriptionPaymentAmount(verifyInfo.ServiceTradeNo, params["money"]); err != nil {
+			c.Redirect(http.StatusFound, paymentReturnPath("/console/topup?pay=fail"))
+			return
+		}
 		LockOrder(verifyInfo.ServiceTradeNo)
 		defer UnlockOrder(verifyInfo.ServiceTradeNo)
 		if err := model.CompleteSubscriptionOrder(verifyInfo.ServiceTradeNo, common.GetJsonString(verifyInfo), model.PaymentProviderEpay, verifyInfo.Type); err != nil {

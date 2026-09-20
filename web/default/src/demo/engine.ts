@@ -484,6 +484,10 @@ export class DemoEngine {
       const quote = this.quote(Number(params.get('plan_id')))
       return quote ? ok(quote) : fail('This plan cannot be purchased', 400)
     }
+    if (path === '/api/subscription/checkout') {
+      const quote = this.quote(Number(params.get('plan_id')))
+      return quote ? ok({ quote, payment_methods: [] }) : fail('This plan cannot be purchased', 400)
+    }
     if (path === '/api/user/model-catalog') {
       return ok(demoModels, {
         vendors: demoModels.map((model) => ({

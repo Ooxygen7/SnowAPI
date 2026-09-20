@@ -21,8 +21,8 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { StaticDataTable } from '@/components/data-table'
-import { Dialog } from '@/components/dialog'
 import { StatusBadge, StatusBadgeList } from '@/components/status-badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -85,35 +85,8 @@ function ChannelAffinityConfirmDialog(props: {
   handleConfirm: () => void
   destructive?: boolean
 }) {
-  const { t } = useTranslation()
-
-  return (
-    <Dialog
-      open={props.open}
-      onOpenChange={props.onOpenChange}
-      title={props.title}
-      contentClassName='sm:max-w-md'
-      contentHeight='auto'
-      bodyClassName='flex items-start'
-      footer={
-        <>
-          <Button variant='outline' onClick={() => props.onOpenChange(false)}>
-            {t('Cancel')}
-          </Button>
-          <Button
-            variant={props.destructive ? 'destructive' : 'default'}
-            onClick={props.handleConfirm}
-          >
-            {t('Continue')}
-          </Button>
-        </>
-      }
-    >
-      <div className='text-muted-foreground text-sm'>{props.desc}</div>
-    </Dialog>
-  )
+  return <ConfirmDialog {...props} desc={<div>{props.desc}</div>} />
 }
-
 function serializeRules(rules: AffinityRule[]): string {
   return JSON.stringify(rules.map(({ id: _, ...rest }) => rest))
 }

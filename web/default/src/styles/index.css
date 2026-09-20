@@ -34,6 +34,43 @@ For commercial licensing, please contact support@quantumnous.com
 @import './theme-presets.css';
 @import './astryx-app-shell.css';
 
+.snowapi-confirm-content {
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  color: var(--snowapi-floating-ink);
+  background: var(--snowapi-floating-surface);
+  border: 1px solid var(--snowapi-floating-border);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 16%);
+  font-family: var(--font-sans);
+}
+.snowapi-confirm-content [data-slot='alert-dialog-title'] {
+  font-family: var(--font-sans);
+}
+.snowapi-confirm-content [data-slot='alert-dialog-description'] {
+  color: var(--snowapi-floating-muted);
+}
+.snowapi-confirm-content [data-slot='alert-dialog-footer'] > button {
+  min-width: 88px;
+  min-height: 44px;
+  padding-inline: 22px;
+  border-radius: 999px;
+  box-shadow: none;
+}
+.snowapi-confirm-content
+  [data-slot='alert-dialog-footer']
+  > button[data-variant='outline'] {
+  border-color: transparent;
+  background: var(--snowapi-floating-hover);
+  color: var(--snowapi-floating-ink);
+}
+.snowapi-confirm-content
+  [data-slot='alert-dialog-footer']
+  > button:is([data-variant='default'], [data-variant='destructive']) {
+  border-color: transparent;
+  background: var(--snowapi-floating-ink);
+  color: var(--snowapi-floating-surface);
+}
+
 /* Shared SnowAPI surfaces also apply to portals outside the console shell. */
 :root {
   --snowapi-floating-surface: #ffffff;

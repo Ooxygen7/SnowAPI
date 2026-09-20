@@ -18,24 +18,32 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import { useQuery } from '@tanstack/react-query'
-import { CalendarClock, Crown, Package } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowLeft, Check, CreditCard, LockKeyhole, Wallet } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
 
-import { Dialog } from '@/components/dialog'
-import { GroupBadge } from '@/components/group-badge'
+import { SlideCommit } from '@/components/slide-commit'
 import { SnowApiLogoMark } from '@/components/snowapi-logo-mark'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { toIntlLocale } from '@/i18n/languages'
+import { appPath } from '@/lib/deployment-mode'
 import { formatQuota } from '@/lib/format'
+import { useAuthStore } from '@/stores/auth-store'
 
-import { getSubscriptionBalanceQuote, paySubscriptionBalance } from '../../api'
-import { formatDuration, formatResetPeriod } from '../../lib'
+import { getSubscriptionCheckout } from '../../checkout-api'
+import { formatDuration } from '../../lib'
 import { getSnowEventTier } from '../../snow-event-plans'
 import { useSubscriptionRevealStore } from '../../subscription-reveal-store'
 import type { PlanRecord } from '../../types'
+import { useSubscriptionCheckoutPayment } from './subscription-checkout-payment'
+
+import '@/styles/subscription-checkout.css'
 
 interface Props {
   appearance?: 'default' | 'snow-event'
@@ -49,193 +57,304 @@ interface Props {
 }
 
 export function SubscriptionPurchaseDialog(props: Props) {
-  const { t } = useTranslation()
-  const [paying, setPaying] = useState(false)
-  const planId = props.plan?.plan.id ?? 0
-  const quoteQuery = useQuery({
-    queryKey: ['subscription-balance-quote', planId],
-    enabled: props.open && planId > 0,
-    staleTime: 0,
-    queryFn: async () => {
-      const response = await getSubscriptionBalanceQuote(planId)
-      if (!response.success || !response.data) {
-        throw new Error(response.message)
-      }
-      return response.data
+  const userId = useAuthStore((state) => state.auth.user?.id)
+  if (!props.open || !props.plan || !userId) return null
+  return (
+    <SubscriptionCheckout
+      key={`${userId}:${props.plan.plan.id}`}
+      {...props}
+      plan={props.plan}
+      userId={userId}
+    />
+  )
+}
+
+function SubscriptionCheckout(
+  props: Props & { plan: PlanRecord; userId: number }
+) {
+  const { t, i18n } = useTranslation()
+  const username = useAuthStore((state) => state.auth.user?.username)
+  const plan = props.plan.plan
+  const [selected, setSelected] = useState('balance')
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current)
     },
+    []
+  )
+  const checkout = useQuery({
+    queryKey: ['subscription-checkout', props.userId, plan.id],
+    queryFn: () => getSubscriptionCheckout(plan.id),
+    staleTime: 0,
+    retry: false,
+    refetchOnWindowFocus: false,
   })
-
-  const plan = props.plan?.plan
-  if (!plan) return null
-
-  const isSnowEvent = props.appearance === 'snow-event'
-  const price = quoteQuery.data
-    ? Number(quoteQuery.data.amount_due || 0).toFixed(2)
-    : '—'
-  const balanceCost = Math.max(0, Number(quoteQuery.data?.required_quota || 0))
-  const userQuota = Math.max(0, Number(props.userQuota || 0))
-  const allowBalancePay = plan.allow_balance_pay !== false
-  const quoteUnavailable = !quoteQuery.isSuccess || !quoteQuery.data
-  const insufficientBalance = !quoteUnavailable && userQuota < balanceCost
+  const payment = useSubscriptionCheckoutPayment(plan.id, props.userId)
+  const methods = checkout.data?.payment_methods ?? []
+  const method = methods.find((item) => item.type === selected) ?? null
+  const quote = checkout.data?.quote
+  const balance = Math.max(0, props.userQuota ?? 0)
+  const usingBalance = selected === 'balance'
+  const insufficient = usingBalance && !!quote && balance < quote.required_quota
   const limitReached =
-    (props.purchaseLimit || 0) > 0 &&
-    (props.purchaseCount || 0) >= (props.purchaseLimit || 0)
-
-  const handlePayBalance = async () => {
-    if (!allowBalancePay) {
-      toast.error(t('This plan does not allow balance redemption'))
-      return
-    }
-    setPaying(true)
-    try {
-      const res = await paySubscriptionBalance({ plan_id: plan.id })
-      if (res.success) {
-        props.onOpenChange(false)
-        useSubscriptionRevealStore
-          .getState()
-          .show(plan.title, getSnowEventTier({ plan }))
-        // A refresh failure does not undo a successful purchase.
-        try {
-          await props.onPurchaseSuccess?.()
-        } catch {
-          // The purchase is final even if refreshing the local view fails.
-        }
-      } else {
-        toast.error(
-          res.message && res.message !== 'success'
-            ? res.message
-            : t('Payment request failed')
-        )
-      }
-    } catch {
-      toast.error(t('Payment request failed'))
-    } finally {
-      setPaying(false)
-    }
+    (props.purchaseLimit ?? 0) > 0 &&
+    (props.purchaseCount ?? 0) >= (props.purchaseLimit ?? 0)
+  const locked = payment.busy || payment.paid
+  const blocked =
+    !quote ||
+    checkout.isFetching ||
+    limitReached ||
+    payment.review ||
+    (usingBalance && (plan.allow_balance_pay === false || insufficient)) ||
+    (!usingBalance && !method)
+  const amount = usingBalance ? quote?.amount_due : method?.amount
+  const formattedAmount =
+    amount === undefined
+      ? '—'
+      : new Intl.NumberFormat(toIntlLocale(i18n.language), {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }).format(amount)
+  const currency = usingBalance ? 'USD' : (method?.name ?? '')
+  const showReveal = () => {
+    timer.current = setTimeout(() => {
+      if (useAuthStore.getState().auth.user?.id !== props.userId) return
+      props.onOpenChange(false)
+      useSubscriptionRevealStore
+        .getState()
+        .show(plan.title, getSnowEventTier({ plan }))
+      // A refresh error cannot undo a confirmed payment.
+      void Promise.resolve(props.onPurchaseSuccess?.()).catch(() => {})
+    }, 1000)
   }
-
   return (
     <Dialog
-      open={props.open}
-      onOpenChange={props.onOpenChange}
-      title={
-        <>
-          {isSnowEvent ? (
-            <SnowApiLogoMark className='size-5 dark:invert' />
-          ) : (
-            <Crown className='size-5' />
-          )}
-          {t('Purchase Subscription')}
-        </>
-      }
-      contentClassName='max-sm:w-[calc(100vw-1.5rem)] sm:max-w-md'
-      titleClassName='flex items-center gap-2'
-      contentHeight='auto'
-      bodyClassName='space-y-4'
+      open
+      onOpenChange={(open) => {
+        if (!locked) props.onOpenChange(open)
+      }}
     >
-      <div className='space-y-3 sm:space-y-4'>
-        <div className='bg-muted/50 space-y-2.5 rounded-lg border p-3 sm:space-y-3 sm:p-4'>
-          <div className='flex justify-between'>
-            <span className='text-muted-foreground text-sm'>
-              {t('Plan Name')}
+      <DialogContent
+        className='snowapi-checkout inset-0 translate-x-0 translate-y-0'
+        showCloseButton={false}
+      >
+        <div className='snowapi-checkout-sheet'>
+          <header className='snowapi-checkout-header'>
+            <Button
+              variant='ghost'
+              className='snowapi-checkout-back'
+              disabled={locked}
+              onClick={() => props.onOpenChange(false)}
+              aria-label={t('Back')}
+            >
+              <ArrowLeft aria-hidden='true' />
+            </Button>
+            <SnowApiLogoMark className='size-7 dark:invert' />
+            <span>SnowAPI</span>
+            <span className='snowapi-checkout-secure'>
+              <LockKeyhole aria-hidden='true' />
+              {t('Checkout')}
             </span>
-            <span className='max-w-[200px] truncate text-sm font-medium'>
-              {plan.title}
-            </span>
-          </div>
-          <div className='flex items-center justify-between'>
-            <span className='text-muted-foreground text-sm'>
-              {t('Validity Period')}
-            </span>
-            <span className='flex items-center gap-1 text-sm'>
-              <CalendarClock className='h-3.5 w-3.5' />
-              {formatDuration(plan, t)}
-            </span>
-          </div>
-          {formatResetPeriod(plan, t) !== t('No Reset') && (
-            <div className='flex justify-between'>
-              <span className='text-muted-foreground text-sm'>
-                {t('Reset Period')}
-              </span>
-              <span className='text-sm'>{formatResetPeriod(plan, t)}</span>
-            </div>
-          )}
-          {!isSnowEvent ? (
-            <>
-              <div className='flex items-center justify-between'>
-                <span className='text-muted-foreground text-sm'>
-                  {t('Plan Quota')}
-                </span>
-                <span className='flex items-center gap-1 text-sm'>
-                  <Package className='h-3.5 w-3.5' />
-                  {Number(plan.total_amount || 0) > 0
-                    ? formatQuota(Number(plan.total_amount))
-                    : t('Unlimited')}
-                </span>
-              </div>
-              {plan.upgrade_group ? (
-                <div className='flex items-center justify-between'>
-                  <span className='text-muted-foreground text-sm'>
-                    {t('Upgrade Group')}
-                  </span>
-                  <GroupBadge group={plan.upgrade_group} />
+          </header>
+          <div className='snowapi-checkout-body'>
+            <div className='snowapi-checkout-details'>
+              <DialogTitle className='snowapi-checkout-title mb-9 text-3xl leading-tight font-semibold'>
+                {t('Checkout')}
+              </DialogTitle>
+              <DialogDescription className='sr-only'>
+                {t('Review your subscription and choose a payment method.')}
+              </DialogDescription>
+              <section aria-labelledby='checkout-account'>
+                <h2 id='checkout-account'>{t('Account info')}</h2>
+                <div className='snowapi-checkout-account'>
+                  <span>{t('Username')}</span>
+                  <strong>{username}</strong>
                 </div>
-              ) : null}
-            </>
-          ) : null}
-          <Separator />
-          <div className='flex items-center justify-between'>
-            <span className='text-sm font-medium'>{t('Amount Due')}</span>
-            <span className='text-primary text-lg font-bold'>${price}</span>
+              </section>
+              <section aria-labelledby='checkout-method'>
+                <h2 id='checkout-method'>{t('Payment')}</h2>
+                <fieldset
+                  className='snowapi-checkout-methods'
+                  disabled={locked || !!payment.pendingOrder}
+                >
+                  <legend className='sr-only'>{t('Payment Method')}</legend>
+                  <label
+                    className='snowapi-checkout-method'
+                    data-selected={usingBalance}
+                  >
+                    <input
+                      type='radio'
+                      name='subscription-payment'
+                      value='balance'
+                      checked={usingBalance}
+                      onChange={() => setSelected('balance')}
+                    />
+                    <Wallet aria-hidden='true' />
+                    <span>{t('Account balance')}</span>
+                    <Check
+                      className='snowapi-method-check'
+                      aria-hidden='true'
+                    />
+                  </label>
+                  {methods.map((item) => (
+                    <label
+                      key={item.type}
+                      className='snowapi-checkout-method'
+                      data-selected={selected === item.type}
+                    >
+                      <input
+                        type='radio'
+                        name='subscription-payment'
+                        value={item.type}
+                        checked={selected === item.type}
+                        onChange={() => setSelected(item.type)}
+                      />
+                      <CreditCard aria-hidden='true' />
+                      <span>{item.name}</span>
+                      <Check
+                        className='snowapi-method-check'
+                        aria-hidden='true'
+                      />
+                    </label>
+                  ))}
+                </fieldset>
+                {usingBalance ? (
+                  <div className='snowapi-checkout-balance'>
+                    <span>{t('Available balance')}</span>
+                    <strong>{formatQuota(balance)}</strong>
+                  </div>
+                ) : (
+                  <p className='snowapi-checkout-note'>
+                    {t(
+                      'Complete payment in the payment window. This page will update automatically.'
+                    )}
+                  </p>
+                )}
+                {usingBalance && plan.allow_balance_pay === false && (
+                  <p className='snowapi-checkout-error'>
+                    {t('This plan does not allow balance redemption')}
+                  </p>
+                )}
+                {insufficient && (
+                  <p className='snowapi-checkout-error'>
+                    {t('Insufficient balance')}
+                  </p>
+                )}
+              </section>
+            </div>
+            <aside
+              className='snowapi-checkout-summary'
+              aria-label={t('Order summary')}
+            >
+              <div className='snowapi-checkout-product'>
+                <SnowApiLogoMark className='size-8 dark:invert' />
+                <p>
+                  SnowAPI <strong>{plan.title} Subscription</strong>
+                </p>
+              </div>
+              <div className='snowapi-checkout-price' aria-live='polite'>
+                <strong>{formattedAmount}</strong>
+                <span>{currency}</span>
+              </div>
+              <dl>
+                <div>
+                  <dt>{t('Validity Period')}</dt>
+                  <dd>{formatDuration(plan, t)}</dd>
+                </div>
+                {quote?.is_upgrade && (
+                  <div>
+                    <dt>{t('Upgrade from')}</dt>
+                    <dd>{quote.current_plan_title}</dd>
+                  </div>
+                )}
+                <div className='snowapi-checkout-total'>
+                  <dt>{t('Total')}</dt>
+                  <dd>
+                    {formattedAmount} {currency}
+                  </dd>
+                </div>
+              </dl>
+              {quote?.is_upgrade && (
+                <p className='snowapi-checkout-note'>
+                  {t(
+                    'Your current billing cycle stays unchanged. Only the remaining-period upgrade difference is charged.'
+                  )}
+                </p>
+              )}
+              {checkout.isError && (
+                <div role='alert' className='snowapi-checkout-error'>
+                  {t('Unable to load the payment quote.')}
+                  <Button
+                    variant='ghost'
+                    onClick={() => void checkout.refetch()}
+                  >
+                    {t('Retry')}
+                  </Button>
+                </div>
+              )}
+              {limitReached && (
+                <p className='snowapi-checkout-error'>
+                  {t('Purchase limit reached')}
+                </p>
+              )}
+              {payment.error && (
+                <p role='alert' className='snowapi-checkout-error'>
+                  <span>{payment.error}</span>
+                  {!payment.pendingOrder && (
+                    <Button
+                      variant='ghost'
+                      onClick={() => void checkout.refetch()}
+                    >
+                      {t('Retry')}
+                    </Button>
+                  )}
+                </p>
+              )}
+              <SlideCommit
+                disabled={blocked}
+                awaitingConfirmation={!!payment.pendingOrder}
+                onConfirm={() =>
+                  payment
+                    .confirm(method, quote?.required_quota ?? 0)
+                    .catch((error: unknown) => {
+                      if (usingBalance) void checkout.refetch()
+                      throw error
+                    })
+                }
+                onDone={showReveal}
+              />
+              <p
+                className='snowapi-checkout-note snowapi-checkout-status'
+                role='status'
+              >
+                {payment.paid && t('Payment successful')}
+                {payment.busy && t('Processing payment…')}
+                {!payment.paid &&
+                  !payment.busy &&
+                  t('Slide to confirm your purchase.')}
+              </p>
+            </aside>
           </div>
+          <footer className='snowapi-checkout-footer'>
+            <span>SnowAPI</span>
+            <a
+              href={appPath('/user-agreement')}
+              target='_blank'
+              rel='noreferrer'
+            >
+              {t('Terms of Service')}
+            </a>
+            <a
+              href={appPath('/privacy-policy')}
+              target='_blank'
+              rel='noreferrer'
+            >
+              {t('Privacy Policy')}
+            </a>
+          </footer>
         </div>
-
-        {limitReached && (
-          <Alert variant='destructive'>
-            <AlertDescription>
-              {t('Purchase limit reached')} ({props.purchaseCount}/
-              {props.purchaseLimit})
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <div className='flex flex-col gap-2 rounded-md border p-3'>
-          <div className='flex items-center justify-between gap-2 text-xs'>
-            <span className='text-muted-foreground'>{t('Required')}</span>
-            <span>{quoteUnavailable ? '—' : formatQuota(balanceCost)}</span>
-          </div>
-          <div className='flex items-center justify-between gap-2 text-xs'>
-            <span className='text-muted-foreground'>{t('Available')}</span>
-            <span>{formatQuota(userQuota)}</span>
-          </div>
-          {!allowBalancePay ? (
-            <Alert variant='destructive'>
-              <AlertDescription>
-                {t('This plan does not allow balance redemption')}
-              </AlertDescription>
-            </Alert>
-          ) : (
-            insufficientBalance && (
-              <Alert variant='destructive'>
-                <AlertDescription>{t('Insufficient balance')}</AlertDescription>
-              </Alert>
-            )
-          )}
-          <Button
-            variant='outline'
-            onClick={handlePayBalance}
-            disabled={
-              paying ||
-              limitReached ||
-              !allowBalancePay ||
-              quoteUnavailable ||
-              insufficientBalance
-            }
-          >
-            {t('Pay with Balance')}
-          </Button>
-        </div>
-      </div>
+      </DialogContent>
     </Dialog>
   )
 }

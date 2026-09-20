@@ -235,7 +235,8 @@ type SubscriptionOrder struct {
 	CreateTime      int64  `json:"create_time"`
 	CompleteTime    int64  `json:"complete_time"`
 
-	ProviderPayload string `json:"provider_payload" gorm:"type:text"`
+	ProviderPayload  string `json:"provider_payload" gorm:"type:text"`
+	CheckoutSnapshot string `json:"-" gorm:"type:text"`
 }
 
 func (o *SubscriptionOrder) Insert() error {
@@ -917,6 +918,7 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 	var logMoney float64
 	var logPaymentMethod string
 	var upgradeGroup string
+	var reviewOrder string
 	err := DB.Transaction(func(tx *gorm.DB) error {
 		var order SubscriptionOrder
 		if err := lockForUpdate(tx).Where(refCol+" = ?", tradeNo).First(&order).Error; err != nil {
@@ -925,7 +927,7 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 		if expectedPaymentProvider != "" && order.PaymentProvider != expectedPaymentProvider {
 			return ErrPaymentMethodMismatch
 		}
-		if order.Status == common.TopUpStatusSuccess {
+		if order.Status == common.TopUpStatusSuccess || order.Status == SubscriptionOrderPaidReview {
 			return nil
 		}
 		if order.Status != common.TopUpStatusPending {
@@ -934,6 +936,34 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 		plan, err := GetSubscriptionPlanById(order.PlanId)
 		if err != nil {
 			return err
+		}
+		if order.CheckoutSnapshot != "" {
+			var snapshot subscriptionCheckoutSnapshot
+			if err := common.UnmarshalJsonStr(order.CheckoutSnapshot, &snapshot); err != nil {
+				return err
+			}
+			var user User
+			if err := lockForUpdate(tx).Where("id = ?", order.UserId).First(&user).Error; err != nil {
+				return err
+			}
+			selection, err := loadActiveSubscriptionSelectionTx(tx, order.UserId, getSubscriptionDBTimestampTx(tx), true)
+			if err != nil {
+				return err
+			}
+			currentId := 0
+			if selection.Current != nil {
+				currentId = selection.Current.Id
+			}
+			// Never apply a stale upgrade to a different subscription or account.
+			if user.SessionNonce != snapshot.UserNonce || currentId != snapshot.CurrentSubscriptionId ||
+				(selection.Current != nil && selection.Current.EndTime != snapshot.CurrentEndTime) {
+				order.Status = SubscriptionOrderPaidReview
+				order.CompleteTime = common.GetTimestamp()
+				order.ProviderPayload = providerPayload
+				reviewOrder = order.TradeNo
+				return tx.Save(&order).Error
+			}
+			plan = &snapshot.Plan
 		}
 		if !plan.Enabled {
 			// still allow completion for already purchased orders
@@ -965,6 +995,9 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 	})
 	if err != nil {
 		return err
+	}
+	if reviewOrder != "" {
+		common.SysError("subscription payment requires manual review: " + reviewOrder)
 	}
 	if upgradeGroup != "" && logUserId > 0 {
 		_ = invalidateUserCache(logUserId)
@@ -1033,7 +1066,11 @@ func ExpireSubscriptionOrder(tradeNo string, expectedPaymentProvider string) err
 		}
 		order.Status = common.TopUpStatusExpired
 		order.CompleteTime = common.GetTimestamp()
-		return tx.Save(&order).Error
+		if err := tx.Save(&order).Error; err != nil {
+			return err
+		}
+		return tx.Model(&TopUp{}).Where("trade_no = ? AND status = ?", tradeNo, common.TopUpStatusPending).
+			Updates(map[string]interface{}{"status": common.TopUpStatusExpired, "complete_time": order.CompleteTime}).Error
 	})
 }
 
@@ -1101,7 +1138,7 @@ func GetSubscriptionBalanceQuote(userId int, planId int) (*SubscriptionBalanceQu
 }
 
 // PurchaseSubscriptionWithBalance creates a subscription by deducting the user's wallet quota.
-func PurchaseSubscriptionWithBalance(userId int, planId int) (*SubscriptionBalanceQuote, error) {
+func PurchaseSubscriptionWithBalance(userId int, planId int, expectedQuota ...*int) (*SubscriptionBalanceQuote, error) {
 	if userId <= 0 || planId <= 0 {
 		return nil, errors.New("invalid userId or planId")
 	}
@@ -1135,6 +1172,9 @@ func PurchaseSubscriptionWithBalance(userId int, planId int) (*SubscriptionBalan
 			return err
 		}
 		requiredQuota := quote.RequiredQuota
+		if len(expectedQuota) > 0 && expectedQuota[0] != nil && requiredQuota > *expectedQuota[0] {
+			return errors.New("payment price changed; refresh the quote")
+		}
 		if requiredQuota > 0 && user.Quota < requiredQuota {
 			return errors.New("余额不足")
 		}

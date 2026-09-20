@@ -137,7 +137,10 @@ export async function resetPlanSubscriptions(
 export async function paySubscriptionBalance(
   data: SubscriptionPayRequest
 ): Promise<ApiResponse<SubscriptionBalanceQuote>> {
-  const res = await api.post('/api/subscription/balance/pay', data)
+  const res = await api.post('/api/subscription/balance/pay', data, {
+    skipBusinessError: true,
+    skipErrorHandler: true,
+  })
   return res.data
 }
 
