@@ -90,7 +90,10 @@ export function MySubscriptionCard() {
 
   return (
     <>
-      <section className='snowapi-my-subscription' aria-labelledby='my-plan'>
+      <section
+        className='snowapi-my-subscription order-2 md:order-none'
+        aria-labelledby='my-plan'
+      >
         <div className='snowapi-my-subscription-header'>
           <div>
             <p className='snowapi-my-subscription-eyebrow'>

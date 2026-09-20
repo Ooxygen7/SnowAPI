@@ -241,10 +241,10 @@ export function Wallet(props: WalletProps) {
           ) : (
             <ContentReveal className='mx-auto flex w-full max-w-7xl flex-col gap-4 sm:gap-5'>
               {onlineTopupEnabled ? (
-                <div className='grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]'>
+                <div className='contents gap-4 md:grid xl:grid-cols-[minmax(0,1fr)_20rem]'>
                   <div
                     id='wallet-add-funds'
-                    className='order-2 min-w-0 scroll-mt-4 xl:order-1'
+                    className='order-3 min-w-0 scroll-mt-4 md:order-2 xl:order-1'
                   >
                     <RechargeFormCard
                       topupInfo={topupInfo}
@@ -263,7 +263,7 @@ export function Wallet(props: WalletProps) {
                     <div className='order-1 min-w-0'>
                       <WalletBalanceCard balance={user?.quota ?? 0} />
                     </div>
-                    <div className='order-3 min-w-0 xl:flex-1'>
+                    <div className='order-4 min-w-0 md:order-3 xl:flex-1'>
                       <RedemptionCodeCard
                         topupInfo={topupInfo}
                         code={redemptionCode}
