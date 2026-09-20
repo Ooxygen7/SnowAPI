@@ -300,6 +300,7 @@
     "Advanced text editing": "高级文本编辑",
     "Aesthetic style": "画风",
     "Affected windows:": "影响窗口：",
+    "After changing a managed channel here, adopt its current state in Minimal Mode before editing the model source again.": "在此修改托管渠道后，请先在极简模式中「采用当前状态」，再继续编辑该模型源。",
     "After clicking the button, you'll be asked to authorize the bot": "点击按钮后，您将被要求授权机器人",
     "After disabling, it will no longer be shown to users, but historical orders are not affected. Continue?": "禁用后用户端不再展示，但历史订单不受影响。是否继续？",
     "After enabling, the plan will be shown to users. Continue?": "启用后套餐将在用户端展示。是否继续？",

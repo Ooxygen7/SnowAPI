@@ -300,6 +300,7 @@
     "Advanced text editing": "Chỉnh sửa văn bản nâng cao",
     "Aesthetic style": "Phong cách",
     "Affected windows:": "Cửa sổ bị ảnh hưởng:",
+    "After changing a managed channel here, adopt its current state in Minimal Mode before editing the model source again.": "Sau khi thay đổi kênh được quản lý tại đây, hãy tiếp nhận trạng thái hiện tại trong chế độ tối giản trước khi chỉnh sửa lại nguồn mô hình.",
     "After clicking the button, you'll be asked to authorize the bot": "Sau khi nhấp vào nút, bạn sẽ được yêu cầu ủy quyền cho bot",
     "After disabling, it will no longer be shown to users, but historical orders are not affected. Continue?": "Sau khi vô hiệu hóa, sẽ không hiển thị cho người dùng nữa, nhưng đơn hàng lịch sử không bị ảnh hưởng. Tiếp tục?",
     "After enabling, the plan will be shown to users. Continue?": "Sau khi kích hoạt, gói sẽ được hiển thị cho người dùng. Tiếp tục?",

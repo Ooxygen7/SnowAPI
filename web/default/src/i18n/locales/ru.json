@@ -300,6 +300,7 @@
     "Advanced text editing": "Расширенное редактирование текста",
     "Aesthetic style": "Стиль",
     "Affected windows:": "Затронутые окна:",
+    "After changing a managed channel here, adopt its current state in Minimal Mode before editing the model source again.": "После изменения управляемого канала примите его текущее состояние в минимальном режиме, прежде чем снова редактировать источник моделей.",
     "After clicking the button, you'll be asked to authorize the bot": "После нажатия кнопки вам будет предложено авторизовать бота",
     "After disabling, it will no longer be shown to users, but historical orders are not affected. Continue?": "После отключения план не будет отображаться пользователям, но исторические заказы не затронуты. Продолжить?",
     "After enabling, the plan will be shown to users. Continue?": "После включения план будет отображаться пользователям. Продолжить?",

@@ -300,6 +300,7 @@
     "Advanced text editing": "高度なテキスト編集",
     "Aesthetic style": "スタイル",
     "Affected windows:": "対象ウィンドウ:",
+    "After changing a managed channel here, adopt its current state in Minimal Mode before editing the model source again.": "ここで管理対象チャネルを変更した後は、ミニマルモードで現在の状態を採用してから、モデルソースを再編集してください。",
     "After clicking the button, you'll be asked to authorize the bot": "ボタンをクリックすると、ボットの認証を求められます",
     "After disabling, it will no longer be shown to users, but historical orders are not affected. Continue?": "無効化するとユーザーに表示されなくなりますが、過去の注文には影響しません。続行しますか？",
     "After enabling, the plan will be shown to users. Continue?": "有効化するとユーザーに表示されます。続行しますか？",

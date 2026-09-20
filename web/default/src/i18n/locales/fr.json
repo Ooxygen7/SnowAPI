@@ -300,6 +300,7 @@
     "Advanced text editing": "Édition de texte avancée",
     "Aesthetic style": "Style esthétique",
     "Affected windows:": "Fenêtres affectées :",
+    "After changing a managed channel here, adopt its current state in Minimal Mode before editing the model source again.": "Après avoir modifié un canal géré ici, adoptez son état actuel en mode minimal avant de modifier à nouveau sa source de modèles.",
     "After clicking the button, you'll be asked to authorize the bot": "Après avoir cliqué sur le bouton, il vous sera demandé d'autoriser le bot",
     "After disabling, it will no longer be shown to users, but historical orders are not affected. Continue?": "Après désactivation, il ne sera plus affiché aux utilisateurs, mais les commandes historiques ne sont pas affectées. Continuer ?",
     "After enabling, the plan will be shown to users. Continue?": "Après activation, le plan sera affiché aux utilisateurs. Continuer ?",

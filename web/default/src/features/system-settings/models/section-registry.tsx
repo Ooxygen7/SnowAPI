@@ -16,6 +16,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { lazy, Suspense } from 'react'
+
+import { Skeleton } from '@/components/ui/skeleton'
+
 import { ChannelAffinitySection } from '../general/channel-affinity'
 import type { ModelSettings } from '../types'
 import { createSectionRegistry } from '../utils/section-registry'
@@ -24,6 +28,12 @@ import { GeminiSettingsCard } from './gemini-settings-card'
 import { GlobalSettingsCard } from './global-settings-card'
 import { GrokSettingsCard } from './grok-settings-card'
 import { RoutingReliabilitySection } from './routing-reliability-section'
+
+const ParameterOverrideSection = lazy(() =>
+  import('./parameter-override-section').then((module) => ({
+    default: module.ParameterOverrideSection,
+  }))
+)
 
 function formatJsonForEditor(value: string, fallback: string) {
   const raw = (value ?? '').toString().trim()
@@ -36,6 +46,15 @@ function formatJsonForEditor(value: string, fallback: string) {
 }
 
 const MODELS_SECTIONS = [
+  {
+    id: 'parameter-override',
+    titleKey: 'Parameter Override',
+    build: () => (
+      <Suspense fallback={<Skeleton className='h-48 w-full' />}>
+        <ParameterOverrideSection />
+      </Suspense>
+    ),
+  },
   {
     id: 'global',
     titleKey: 'Global Model Configuration',
