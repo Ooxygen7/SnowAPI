@@ -11,8 +11,8 @@ body .snowapi-checkout.snowapi-dialog-content {
   overscroll-behavior: contain;
   border: 0;
   border-radius: 0;
-  padding: clamp(20px, 5vh, 64px) 24px;
-  background: var(--muted) !important;
+  padding: 0;
+  background: var(--snowapi-floating-surface) !important;
   color: var(--snowapi-floating-ink) !important;
   box-shadow: none !important;
   font-family: var(--font-sans);
@@ -24,20 +24,18 @@ body .snowapi-checkout.snowapi-dialog-content {
   animation: snowapi-checkout-exit 180ms ease-in both;
 }
 .snowapi-checkout-sheet {
-  width: min(1120px, 100%);
-  min-height: min(700px, calc(100dvh - 100px));
-  margin: auto;
-  border-radius: 22px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100dvh;
   background: var(--snowapi-floating-surface);
-  box-shadow: 0 4px 30px rgb(0 0 0 / 4%);
 }
 .snowapi-checkout-header {
   display: flex;
   align-items: center;
   gap: 12px;
   min-height: 88px;
-  padding: 20px 48px;
-  border-bottom: 1px solid var(--snowapi-floating-border);
+  padding: 20px clamp(32px, 6vw, 120px);
   font-size: 18px;
   font-weight: 600;
 }
@@ -47,25 +45,13 @@ body .snowapi-checkout.snowapi-dialog-content {
   border-radius: 50%;
   margin-left: -12px;
 }
-.snowapi-checkout-secure {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--snowapi-floating-muted);
-}
-.snowapi-checkout-secure svg {
-  width: 14px;
-  height: 14px;
-}
 .snowapi-checkout-body {
   display: grid;
+  flex: 1;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
   align-items: start;
   gap: clamp(32px, 5vw, 72px);
-  padding: 44px 60px 56px;
+  padding: 44px clamp(32px, 6vw, 120px) 56px;
 }
 .snowapi-checkout-title {
   font-size: 30px;
@@ -359,21 +345,9 @@ body .snowapi-checkout.snowapi-dialog-content {
   }
 }
 @media (max-width: 700px) {
-  .snowapi-checkout.snowapi-dialog-content {
-    padding: 0;
-    background: var(--snowapi-floating-surface) !important;
-  }
-  .snowapi-checkout-sheet {
-    min-height: 100dvh;
-    border-radius: 0;
-    box-shadow: none;
-  }
   .snowapi-checkout-header {
     min-height: 72px;
     padding: 12px 24px;
-  }
-  .snowapi-checkout-secure {
-    font-size: 0;
   }
   .snowapi-checkout-body {
     display: flex;

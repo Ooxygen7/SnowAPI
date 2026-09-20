@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Check, CreditCard, LockKeyhole, Wallet } from 'lucide-react'
+import { ArrowLeft, Check, CreditCard, Wallet } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -152,10 +152,6 @@ function SubscriptionCheckout(
             </Button>
             <SnowApiLogoMark className='size-7 dark:invert' />
             <span>SnowAPI</span>
-            <span className='snowapi-checkout-secure'>
-              <LockKeyhole aria-hidden='true' />
-              {t('Checkout')}
-            </span>
           </header>
           <div className='snowapi-checkout-body'>
             <div className='snowapi-checkout-details'>
