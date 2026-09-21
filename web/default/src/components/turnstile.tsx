@@ -45,7 +45,7 @@ interface TurnstileProps {
   theme?: 'light' | 'dark' | 'auto'
   appearance?: 'always' | 'execute' | 'interaction-only'
   onError?: (code: string) => void
-  manualRetry?: boolean
+  singleAttempt?: boolean
   showError?: boolean
 }
 
@@ -96,7 +96,7 @@ export function Turnstile({
   theme = 'auto',
   appearance = 'always',
   onError,
-  manualRetry = false,
+  singleAttempt = false,
   showError = true,
 }: TurnstileProps) {
   const { t, i18n } = useTranslation(undefined, { lng: languageOverride })
@@ -117,7 +117,7 @@ export function Turnstile({
     let timeout: ReturnType<typeof setTimeout> | undefined
     callbacks.current.onVerify('')
     const fail = (code = 'widget_failed') => {
-      if (cancelled || (manualRetry && attemptEnded)) return
+      if (cancelled || (singleAttempt && attemptEnded)) return
       attemptEnded = true
       clearTimeout(timeout)
       callbacks.current.onVerify('')
@@ -127,7 +127,7 @@ export function Turnstile({
     }
     // Do not leave a silent automatic challenge spinning indefinitely. Once
     // Cloudflare asks for interaction, its own interaction timeout takes over.
-    if (manualRetry) timeout = setTimeout(() => fail('widget_timeout'), 45000)
+    if (singleAttempt) timeout = setTimeout(() => fail('widget_timeout'), 45000)
     void loadTurnstile()
       .then(() => {
         if (cancelled || !ref.current || !window.turnstile) return
@@ -138,15 +138,15 @@ export function Turnstile({
           appearance,
           action,
           cData,
-          ...(manualRetry && {
+          ...(singleAttempt && {
             retry: 'never',
-            // The page remounts the widget after an explicit retry. "never"
-            // also works with legacy Invisible keys, unlike "manual".
+            // End this attempt on failure or expiry instead of retrying.
+            // "never" also works with legacy Invisible keys.
             'refresh-expired': 'never',
             'refresh-timeout': 'never',
           }),
           callback: (token: string) => {
-            if (cancelled || (manualRetry && attemptEnded)) return
+            if (cancelled || (singleAttempt && attemptEnded)) return
             attemptEnded = true
             clearTimeout(timeout)
             setFailed(false)
@@ -178,7 +178,7 @@ export function Turnstile({
     appearance,
     action,
     cData,
-    manualRetry,
+    singleAttempt,
   ])
 
   return (

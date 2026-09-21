@@ -5867,6 +5867,7 @@
     "You will be redirected to Telegram to complete the binding process.": "バインドプロセスを完了するためにTelegramにリダイレクトされます。",
     "You'll be redirected automatically. You can return to the previous page if nothing happens after a few seconds.": "自動的にリダイレクトされます。数秒経っても何も起こらない場合は、前のページに戻ることができます。",
     "Your {{plan}} is ready.": "{{plan}} の準備ができました。",
+    "Your access has been blocked due to suspicious activity.": "不審な動作が検出されたため、アクセスがブロックされました。",
     "Your account can edit sensitive channel settings.": "あなたのアカウントは機密チャネル設定を編集できます。",
     "Your account cannot edit sensitive channel settings.": "あなたのアカウントは機密チャネル設定を編集できません。",
     "your AI integration?": "AIインテグレーションを？",

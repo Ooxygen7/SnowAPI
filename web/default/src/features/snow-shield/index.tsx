@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Turnstile } from '@/components/turnstile'
-import { Button } from '@/components/ui/button'
 import { normalizeInterfaceLanguage, toIntlLocale } from '@/i18n/languages'
 import { api } from '@/lib/api'
 import { IS_DEMO } from '@/lib/deployment-mode'
@@ -55,7 +54,6 @@ function BrowserShield(props: { children: ReactNode }) {
   const verified = useSnowShieldState((state) => state.verified)
   const expiresAt = useSnowShieldState((state) => state.expiresAt)
   const [widgetError, setWidgetError] = useState('')
-  const [manualAttempt, setManualAttempt] = useState(0)
   const lastToken = useRef('')
   const check = useQuery({
     queryKey: ['snow-shield-check'],
@@ -80,7 +78,7 @@ function BrowserShield(props: { children: ReactNode }) {
     },
     onSuccess: (expiresIn) =>
       useSnowShieldState.getState().setVerified(true, expiresIn),
-    // Render a localized, actionable error here rather than a global toast.
+    // Keep verification failures on the blocking page rather than in a toast.
     onError: () => undefined,
   })
 
@@ -145,102 +143,62 @@ function BrowserShield(props: { children: ReactNode }) {
   const response = isAxiosError(requestError)
     ? requestError.response
     : undefined
-  const errorCode =
-    widgetError ||
-    response?.data?.code ||
-    (response ? `HTTP_${response.status}` : 'network_error')
   const requestID =
     check.data?.verification_id ?? response?.headers['x-request-id']
-  let errorMessage = t(
-    'Verification stopped. Start a manual check to continue.'
-  )
-  if (response?.status === 429) {
-    errorMessage = t(
-      'Too many verification requests. Wait a few minutes before trying again.'
-    )
-  } else if (response?.data?.code === 'snow_shield_expired') {
-    errorMessage = t(
-      'This check expired or its cookie is missing. Start a new check and allow site cookies.'
-    )
-  } else if (
-    check.isError ||
-    response?.status === 503 ||
-    widgetError === 'script_load_failed'
-  ) {
-    errorMessage = t(
-      'Cannot reach the verification service. Check your connection and allow challenges.cloudflare.com.'
-    )
-  }
   return (
     <div className='snow-shield' lang={toIntlLocale(language)}>
       <main className='snow-shield__main'>
         <div className='snow-shield__content'>
-          <h1 className='snow-shield__title'>
-            <LatticeLoader
-              status={failed ? 'error' : 'working'}
-              label={t('We are verifying your access')}
-            />
-          </h1>
-          <p className='snow-shield__description'>
-            {t(
-              'SnowAPI uses safeguards against malicious automated access. This page will remain visible until your request passes verification.'
-            )}
-          </p>
-          <div
-            className='snow-shield__verification'
-            aria-busy={verify.isPending || check.isFetching}
-          >
-            {check.data?.site_key &&
-              requestID &&
-              !check.isFetching &&
-              !failed && (
-                <Turnstile
-                  key={`${requestID}-${manualAttempt}`}
-                  siteKey={check.data.site_key}
-                  action='snow_shield'
-                  cData={requestID}
-                  language={language}
-                  theme='light'
-                  appearance={manualAttempt > 0 ? 'always' : 'interaction-only'}
-                  manualRetry
-                  showError={false}
-                  onError={setWidgetError}
-                  onVerify={(token) => {
-                    if (!token) return
-                    if (token === lastToken.current || verify.isPending) return
-                    lastToken.current = token
-                    verify.mutate(token)
-                  }}
-                />
-              )}
-            {failed && (
-              <div className='snow-shield__error' role='alert'>
-                <p>{errorMessage}</p>
-                <code>{String(errorCode).slice(0, 80)}</code>
-                <Button
-                  variant='outline'
-                  className='snow-shield__retry'
-                  disabled={check.isFetching}
-                  onClick={async () => {
-                    lastToken.current = ''
-                    verify.reset()
-                    setWidgetError('')
-                    setManualAttempt((attempt) => attempt + 1)
-                    await check.refetch()
-                  }}
-                >
-                  {t('Start manual verification')}
-                </Button>
-              </div>
-            )}
-            {manualAttempt > 0 && !failed && !verify.isPending && (
-              <p className='snow-shield__hint' role='status'>
+          <div role={failed ? 'alert' : undefined}>
+            <h1 className='snow-shield__title' data-failed={failed}>
+              <LatticeLoader
+                status={failed ? 'error' : 'working'}
+                label={
+                  failed
+                    ? t(
+                        'Your access has been blocked due to suspicious activity.'
+                      )
+                    : t('We are verifying your access')
+                }
+              />
+            </h1>
+          </div>
+          {!failed && (
+            <>
+              <p className='snow-shield__description'>
                 {t(
-                  'Complete the verification below. If a checkbox appears, select it to continue.'
+                  'SnowAPI uses safeguards against malicious automated access. This page will remain visible until your request passes verification.'
                 )}
               </p>
-            )}
-          </div>
+              <div
+                className='snow-shield__verification'
+                aria-busy={verify.isPending || check.isFetching}
+              >
+                {check.data?.site_key && requestID && !check.isFetching && (
+                  <Turnstile
+                    key={requestID}
+                    siteKey={check.data.site_key}
+                    action='snow_shield'
+                    cData={requestID}
+                    language={language}
+                    theme='light'
+                    appearance='interaction-only'
+                    singleAttempt
+                    showError={false}
+                    onError={setWidgetError}
+                    onVerify={(token) => {
+                      if (!token) return
+                      if (token === lastToken.current || verify.isPending) {
+                        return
+                      }
+                      lastToken.current = token
+                      verify.mutate(token)
+                    }}
+                  />
+                )}
+              </div>
+            </>
+          )}
         </div>
       </main>
       <footer className='snow-shield__footer'>
