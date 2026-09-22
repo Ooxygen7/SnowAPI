@@ -57,11 +57,13 @@ import {
 interface BillingHistoryDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  targetUser?: { id: number; username: string }
 }
 
 export function BillingHistoryDialog({
   open,
   onOpenChange,
+  targetUser,
 }: BillingHistoryDialogProps) {
   const { t } = useTranslation()
   const {
@@ -71,13 +73,15 @@ export function BillingHistoryDialog({
     pageSize,
     keyword,
     loading,
+    error,
+    refresh,
     completing,
     isAdmin,
     handlePageChange,
     handlePageSizeChange,
     handleSearch,
     handleCompleteOrder,
-  } = useBillingHistory()
+  } = useBillingHistory({ enabled: open, userId: targetUser?.id })
 
   const [confirmTradeNo, setConfirmTradeNo] = useState<string | null>(null)
   const { copyToClipboard, copiedText } = useCopyToClipboard({ notify: false })
@@ -98,10 +102,16 @@ export function BillingHistoryDialog({
       <Dialog
         open={open}
         onOpenChange={onOpenChange}
-        title={t('Billing History')}
-        description={t(
-          'View your topup transaction records and payment history'
-        )}
+        title={
+          targetUser
+            ? `${t('Wallet')} · ${targetUser.username}`
+            : t('Billing History')
+        }
+        description={
+          targetUser
+            ? `${t('User ID')}: ${targetUser.id} · ${t('Billing History')}`
+            : t('View your topup transaction records and payment history')
+        }
         contentClassName='flex max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] min-w-0 flex-col rounded-2xl p-4 sm:max-w-4xl'
         headerClassName='pr-8'
         contentHeight='auto'
@@ -148,19 +158,34 @@ export function BillingHistoryDialog({
           {/* Records List */}
           <div className='min-w-0'>
             {loading ? <ContentLoading className='min-h-40' /> : null}
-            {!loading && records.length === 0 ? (
+            {!loading && error && (
+              <div
+                role='alert'
+                className='flex min-h-40 flex-col items-center justify-center gap-3'
+              >
+                <p className='text-destructive text-sm'>
+                  {t('Failed to load billing history')}
+                </p>
+                <Button variant='outline' onClick={() => void refresh()}>
+                  {t('Retry')}
+                </Button>
+              </div>
+            )}
+            {!loading && !error && records.length === 0 ? (
               <div className='text-muted-foreground flex min-h-40 flex-col items-center justify-center py-10 text-center'>
                 <p className='text-sm font-medium'>
                   {t('No billing records found')}
                 </p>
-                <p className='mt-1 text-xs'>
-                  {keyword
-                    ? t('Try adjusting your search')
-                    : t('Your transaction history will appear here')}
-                </p>
+                {!targetUser && (
+                  <p className='mt-1 text-xs'>
+                    {keyword
+                      ? t('Try adjusting your search')
+                      : t('Your transaction history will appear here')}
+                  </p>
+                )}
               </div>
             ) : null}
-            {!loading && records.length > 0 ? (
+            {!loading && !error && records.length > 0 ? (
               <div className='flex min-w-0 flex-col gap-3'>
                 {records.map((record) => {
                   const statusConfig = getStatusConfig(record.status)
@@ -245,18 +270,20 @@ export function BillingHistoryDialog({
                       </dl>
 
                       {/* Admin Actions */}
-                      {isAdmin && record.status === 'pending' && (
-                        <div className='mt-4 flex justify-end'>
-                          <Button
-                            size='sm'
-                            variant='outline'
-                            onClick={() => setConfirmTradeNo(record.trade_no)}
-                            disabled={completing}
-                          >
-                            {t('Complete Order')}
-                          </Button>
-                        </div>
-                      )}
+                      {isAdmin &&
+                        !targetUser &&
+                        record.status === 'pending' && (
+                          <div className='mt-4 flex justify-end'>
+                            <Button
+                              size='sm'
+                              variant='outline'
+                              onClick={() => setConfirmTradeNo(record.trade_no)}
+                              disabled={completing}
+                            >
+                              {t('Complete Order')}
+                            </Button>
+                          </div>
+                        )}
                     </div>
                   )
                 })}
@@ -265,7 +292,7 @@ export function BillingHistoryDialog({
           </div>
 
           {/* Pagination */}
-          {!loading && records.length > 0 && (
+          {!loading && !error && records.length > 0 && (
             <div className='flex flex-col items-center gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between'>
               <div className='text-muted-foreground text-xs sm:text-sm'>
                 {t('Showing')} {(page - 1) * pageSize + 1}-

@@ -486,7 +486,9 @@ export class DemoEngine {
     }
     if (path === '/api/subscription/checkout') {
       const quote = this.quote(Number(params.get('plan_id')))
-      return quote ? ok({ quote, payment_methods: [] }) : fail('This plan cannot be purchased', 400)
+      return quote
+        ? ok({ quote, payment_methods: [] })
+        : fail('This plan cannot be purchased', 400)
     }
     if (path === '/api/user/model-catalog') {
       return ok(demoModels, {
@@ -560,6 +562,14 @@ export class DemoEngine {
       })
     }
     if (path === '/api/user/topup' || path === '/api/user/topup/self') {
+      const targetUser = params.get('user_id')
+      if (
+        path === '/api/user/topup' &&
+        targetUser !== null &&
+        targetUser !== '1'
+      ) {
+        return ok(page([]))
+      }
       return ok(
         page(
           this.state.purchases.map((order) => ({

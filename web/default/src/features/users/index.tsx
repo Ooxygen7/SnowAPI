@@ -19,6 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { useTranslation } from 'react-i18next'
 
 import { SectionPageLayout } from '@/components/layout'
+import { BillingHistoryDialog } from '@/features/wallet/components/dialogs/billing-history-dialog'
 
 import { UsersDeleteDialog } from './components/users-delete-dialog'
 import { UsersMutateDrawer } from './components/users-mutate-drawer'
@@ -49,6 +50,14 @@ function UsersContent() {
         currentRow={open === 'update' ? currentRow || undefined : undefined}
       />
       <UsersDeleteDialog />
+      {open === 'wallet' && currentRow && (
+        <BillingHistoryDialog
+          key={currentRow.id}
+          open
+          targetUser={currentRow}
+          onOpenChange={(isOpen) => !isOpen && setOpen(null)}
+        />
+      )}
       {open === 'subscription' && currentRow && (
         <UsersSubscriptionDialog
           key={currentRow.id}

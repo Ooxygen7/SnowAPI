@@ -30,7 +30,7 @@ func GetTopUpInfo(c *gin.Context) {
 	}
 
 	data := gin.H{
-		"payment_enabled":                 operation_setting.GetPaymentSetting().Enabled,
+		"payment_enabled":                  operation_setting.GetPaymentSetting().Enabled,
 		"enable_online_topup":              isEpayTopUpEnabled(),
 		"enable_redemption":                complianceConfirmed,
 		"payment_compliance_confirmed":     complianceConfirmed,
@@ -390,13 +390,34 @@ func GetUserTopUps(c *gin.Context) {
 func GetAllTopUps(c *gin.Context) {
 	pageInfo := common.GetPageQuery(c)
 	keyword := c.Query("keyword")
+	userID := 0
+	if values, present := c.Request.URL.Query()["user_id"]; present {
+		if len(values) != 1 {
+			common.ApiErrorMsg(c, "参数错误")
+			return
+		}
+		parsed, err := strconv.Atoi(values[0])
+		if err != nil || parsed <= 0 {
+			common.ApiErrorMsg(c, "参数错误")
+			return
+		}
+		userID = parsed
+	}
+	if pageInfo.Page < 1 {
+		pageInfo.Page = 1
+	}
+	if pageInfo.PageSize < 1 {
+		pageInfo.PageSize = common.ItemsPerPage
+	}
 
 	var (
 		topups []*model.TopUp
 		total  int64
 		err    error
 	)
-	if keyword != "" {
+	if userID > 0 {
+		topups, total, err = model.GetAdminUserTopUps(userID, keyword, pageInfo)
+	} else if keyword != "" {
 		topups, total, err = model.SearchAllTopUps(keyword, pageInfo)
 	} else {
 		topups, total, err = model.GetAllTopUps(pageInfo)

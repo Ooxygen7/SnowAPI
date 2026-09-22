@@ -27,6 +27,7 @@ import {
   KeyRound,
   Link2,
   CreditCard,
+  Wallet,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -200,6 +201,18 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           {t('Manage Subscriptions')}
           <DropdownMenuShortcut>
             <CreditCard size={16} />
+          </DropdownMenuShortcut>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => {
+            setCurrentRow(user)
+            setOpen('wallet')
+          }}
+        >
+          {t('Wallet')}
+          <DropdownMenuShortcut>
+            <Wallet size={16} />
           </DropdownMenuShortcut>
         </DropdownMenuItem>
 

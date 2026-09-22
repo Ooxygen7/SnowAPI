@@ -124,6 +124,29 @@ func GetUserTotalTopUpAmount(userId int) (int64, error) {
 	return total, err
 }
 
+// GetAdminUserTopUps returns a single user's complete top-up history, including
+// orders outside the self-service history window. Call only from admin routes.
+func GetAdminUserTopUps(userID int, keyword string, pageInfo *common.PageInfo) (topups []*TopUp, total int64, err error) {
+	if userID <= 0 {
+		return nil, 0, errors.New("invalid user ID")
+	}
+	err = DB.Transaction(func(tx *gorm.DB) error {
+		query := tx.Model(&TopUp{}).Where("user_id = ?", userID)
+		if keyword != "" {
+			pattern, err := sanitizeLikePattern(keyword)
+			if err != nil {
+				return err
+			}
+			query = query.Where("trade_no LIKE ? ESCAPE '!'", pattern)
+		}
+		if err := query.Count(&total).Error; err != nil {
+			return err
+		}
+		return query.Order("id desc").Limit(pageInfo.GetPageSize()).Offset(pageInfo.GetStartIdx()).Find(&topups).Error
+	})
+	return topups, total, err
+}
+
 // GetAllTopUps 获取全平台的充值记录（管理员使用，不限制时间窗口）
 func GetAllTopUps(pageInfo *common.PageInfo) (topups []*TopUp, total int64, err error) {
 	tx := DB.Begin()
