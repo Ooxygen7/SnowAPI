@@ -62,6 +62,8 @@ const MODELS_SECTIONS = [
       <GlobalSettingsCard
         defaultValues={{
           global: {
+            show_actual_model_in_logs:
+              settings['global.show_actual_model_in_logs'],
             pass_through_request_enabled:
               settings['global.pass_through_request_enabled'],
             thinking_model_blacklist: formatJsonForEditor(

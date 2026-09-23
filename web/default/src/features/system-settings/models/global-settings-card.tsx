@@ -89,6 +89,7 @@ const jsonString = z.string().refine((value) => {
 
 const schema = z.object({
   global: z.object({
+    show_actual_model_in_logs: z.boolean(),
     pass_through_request_enabled: z.boolean(),
     thinking_model_blacklist: jsonString,
     chat_completions_to_responses_policy: jsonString,
@@ -103,6 +104,7 @@ type GlobalModelSettingsFormValues = z.output<typeof schema>
 type GlobalModelSettingsFormInput = z.input<typeof schema>
 
 type FlatGlobalModelSettings = {
+  'global.show_actual_model_in_logs': boolean
   'global.pass_through_request_enabled': boolean
   'global.thinking_model_blacklist': string
   'global.chat_completions_to_responses_policy': string
@@ -113,6 +115,7 @@ type FlatGlobalModelSettings = {
 const flattenGlobalValues = (
   values: GlobalModelSettingsFormValues
 ): FlatGlobalModelSettings => ({
+  'global.show_actual_model_in_logs': values.global.show_actual_model_in_logs,
   'global.pass_through_request_enabled':
     values.global.pass_through_request_enabled,
   'global.thinking_model_blacklist': normalizeJsonText(
@@ -200,6 +203,28 @@ export function GlobalSettingsCard({ defaultValues }: GlobalSettingsCardProps) {
           <SettingsPageFormActions
             onSave={form.handleSubmit(onSubmit)}
             isSaving={updateOption.isPending}
+          />
+          <FormField
+            control={form.control}
+            name='global.show_actual_model_in_logs'
+            render={({ field }) => (
+              <SettingsSwitchItem>
+                <SettingsSwitchContent>
+                  <FormLabel>{t('Show actual model in usage logs')}</FormLabel>
+                  <FormDescription>
+                    {t(
+                      'When disabled, only administrators can see the actual upstream model in usage logs.'
+                    )}
+                  </FormDescription>
+                </SettingsSwitchContent>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </SettingsSwitchItem>
+            )}
           />
           <FormField
             control={form.control}

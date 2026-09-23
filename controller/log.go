@@ -9,6 +9,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/new-api/setting/model_setting"
 
 	"github.com/gin-gonic/gin"
 )
@@ -80,6 +81,7 @@ func GetUserLogs(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
+	filterActualModelsForLogViewer(c, logs)
 	pageInfo.SetTotal(int(total))
 	pageInfo.SetItems(logs)
 	common.ApiSuccess(c, pageInfo)
@@ -135,7 +137,7 @@ func GetLogByKey(c *gin.Context) {
 		})
 		return
 	}
-	logs, err := model.GetLogByTokenId(tokenId)
+	logs, err := model.GetLogByTokenId(tokenId, c.GetInt("id"))
 	if err != nil {
 		c.JSON(200, gin.H{
 			"success": false,
@@ -143,11 +145,35 @@ func GetLogByKey(c *gin.Context) {
 		})
 		return
 	}
+	filterActualModelsForLogViewer(c, logs)
 	c.JSON(200, gin.H{
 		"success": true,
 		"message": "",
 		"data":    logs,
 	})
+}
+
+// Keep the stored mapping for administrators, but omit it from non-admin
+// responses when disabled, including the API-key log endpoint.
+func filterActualModelsForLogViewer(c *gin.Context, logs []*model.Log) {
+	if model_setting.GetGlobalSettings().ShowActualModelInLogs || len(logs) == 0 {
+		return
+	}
+	// Resolve the authenticated viewer, never a role supplied in request parameters.
+	user, err := model.GetUserById(c.GetInt("id"), false)
+	if err == nil && user.Role >= common.RoleAdminUser {
+		return
+	}
+	for _, entry := range logs {
+		other, err := common.StrToMap(entry.Other)
+		if err != nil || other == nil {
+			entry.Other = "{}"
+			continue
+		}
+		delete(other, "upstream_model_name")
+		delete(other, "is_model_mapped")
+		entry.Other = common.MapToJsonStr(other)
+	}
 }
 
 func GetLogsStat(c *gin.Context) {

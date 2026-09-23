@@ -31,7 +31,7 @@ import { useSubscriptionOverview } from '@/features/subscriptions/use-subscripti
 
 function getUsagePercentage(used: number, total: number): number {
   if (total <= 0) return 0
-  return Math.min(100, Math.max(0, Math.round((used / total) * 100)))
+  return Math.min(100, Math.max(0, (used / total) * 100))
 }
 
 function normalizeLocale(language: string): string | undefined {
@@ -119,7 +119,7 @@ export function MySubscriptionCard() {
           <div className='snowapi-my-subscription-meter'>
             <div className='flex items-center justify-between gap-4'>
               <span>{t('5-hour usage')}</span>
-              <strong>{fiveHourPercentage}%</strong>
+              <strong>{fiveHourPercentage.toFixed(3)}%</strong>
             </div>
             <Progress
               value={fiveHourPercentage}
@@ -130,7 +130,7 @@ export function MySubscriptionCard() {
           <div className='snowapi-my-subscription-meter'>
             <div className='flex items-center justify-between gap-4'>
               <span>{t('Period usage')}</span>
-              <strong>{periodPercentage}%</strong>
+              <strong>{periodPercentage.toFixed(3)}%</strong>
             </div>
             <Progress
               value={periodPercentage}

@@ -215,7 +215,7 @@ export function SubscriptionPlansCard({
     const total = Number(sub?.subscription?.amount_total || 0)
     const used = Number(sub?.subscription?.amount_used || 0)
     if (total <= 0) return 0
-    return Math.round((used / total) * 100)
+    return Math.min(100, Math.max(0, (used / total) * 100))
   }
 
   if (loading) {
@@ -476,7 +476,7 @@ export function SubscriptionPlansCard({
                         )}
                         {totalAmount > 0 && (
                           <span className='ml-2'>
-                            {t('Used')} {usagePercent}%
+                            {t('Used')} {usagePercent.toFixed(3)}%
                           </span>
                         )}
                       </div>
