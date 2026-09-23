@@ -26,7 +26,23 @@ import type {
   MinimalModeSourceInput,
 } from './minimal-mode-types'
 
-export function createMinimalModeSourceSchema(t: TFunction) {
+export function parseMinimalModeAPIKeys(value: string): string[] {
+  return [
+    ...new Set(
+      value
+        .split(/\r\n|\n|\r/)
+        .map((key) =>
+          key
+            .trim()
+            .replace(/^Bearer /i, '')
+            .trim()
+        )
+        .filter(Boolean)
+    ),
+  ]
+}
+
+export function createMinimalModeSourceSchema(t: TFunction, editing = false) {
   return z
     .object({
       name: z.string().trim().min(1, t('Enter a source name')).max(128),
@@ -40,7 +56,7 @@ export function createMinimalModeSourceSchema(t: TFunction) {
           t('Enter a valid HTTP or HTTPS base URL')
         ),
       channel_type: z.coerce.number().int().positive(),
-      api_key: z.string().max(65536),
+      api_key: z.string().max(editing ? 65536 : 7 * 1024 * 1024),
       groups: z.array(z.string()).min(1, t('Select at least one user group')),
       models: z
         .array(
@@ -56,11 +72,7 @@ export function createMinimalModeSourceSchema(t: TFunction) {
               .min(1, t('Enter or select the upstream model name'))
               .max(255),
             icon_key: z.string().min(1, t('Select a model icon')),
-            endpoint_type: z.enum([
-              'openai',
-              'openai-response',
-              'anthropic',
-            ]),
+            endpoint_type: z.enum(['openai', 'openai-response', 'anthropic']),
             billing_mode: z.enum(['token', 'request']),
             input_price: z.string(),
             output_price: z.string(),
@@ -72,6 +84,33 @@ export function createMinimalModeSourceSchema(t: TFunction) {
         .max(200),
     })
     .superRefine((values, context) => {
+      if (editing && /[\r\n]/.test(values.api_key)) {
+        context.addIssue({
+          code: 'custom',
+          message: t('Enter a single API key'),
+          path: ['api_key'],
+        })
+      }
+      if (!editing) {
+        const keys = parseMinimalModeAPIKeys(values.api_key)
+        if (keys.length === 0 || keys.length > 100) {
+          context.addIssue({
+            code: 'custom',
+            message: t('Enter between 1 and 100 API keys'),
+            path: ['api_key'],
+          })
+        } else if (
+          keys.some((key) => new TextEncoder().encode(key).length > 65536)
+        ) {
+          context.addIssue({
+            code: 'custom',
+            message: t(
+              'Each API key must be a single value of at most 65536 bytes'
+            ),
+            path: ['api_key'],
+          })
+        }
+      }
       values.models.forEach((item, index) => {
         if (item.billing_mode === 'token') {
           if (

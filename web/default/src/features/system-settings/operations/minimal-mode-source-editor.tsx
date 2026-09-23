@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useMemo, useState } from 'react'
-import { useFieldArray, useForm } from 'react-hook-form'
+import { useFieldArray, useForm, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -50,6 +50,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import {
   SecureVerificationDialog,
   useSecureVerification,
@@ -57,6 +58,7 @@ import {
 import { extractApiErrorMessage } from '@/lib/secure-verification'
 
 import {
+  createMinimalModeSources,
   discoverMinimalModeModels,
   saveMinimalModeSource,
 } from './minimal-mode-api'
@@ -64,6 +66,7 @@ import {
   appendEmptyMinimalModeModel,
   buildMinimalModeSourceDefaults,
   createMinimalModeSourceSchema,
+  parseMinimalModeAPIKeys,
   toMinimalModeSourceInput,
   type MinimalModeSourceFormValues,
 } from './minimal-mode-form'
@@ -73,6 +76,7 @@ import type { MinimalModeSource, MinimalModeState } from './minimal-mode-types'
 type MinimalModeSourceEditorProps = {
   open: boolean
   source: MinimalModeSource | null
+  template: MinimalModeSource | null
   state: MinimalModeState
   onOpenChange: (open: boolean) => void
   onSaved: () => Promise<void>
@@ -80,13 +84,21 @@ type MinimalModeSourceEditorProps = {
 
 export function MinimalModeSourceEditor(props: MinimalModeSourceEditorProps) {
   const { t } = useTranslation()
-  const schema = useMemo(() => createMinimalModeSourceSchema(t), [t])
+  const editing = Boolean(props.source)
+  const schema = useMemo(
+    () => createMinimalModeSourceSchema(t, editing),
+    [t, editing]
+  )
   const fallbackGroup = props.state.groups.includes('Free')
     ? 'Free'
     : (props.state.groups[0] ?? '')
   const defaults = useMemo(
-    () => buildMinimalModeSourceDefaults(props.source, fallbackGroup),
-    [props.source, fallbackGroup]
+    () =>
+      buildMinimalModeSourceDefaults(
+        props.source ?? props.template,
+        fallbackGroup
+      ),
+    [props.source, props.template, fallbackGroup]
   )
   const [discoveredModels, setDiscoveredModels] = useState<string[]>([])
   const [discovering, setDiscovering] = useState(false)
@@ -97,6 +109,10 @@ export function MinimalModeSourceEditor(props: MinimalModeSourceEditorProps) {
     defaultValues: defaults,
   })
   const models = useFieldArray({ control: form.control, name: 'models' })
+  const keyText = useWatch({ control: form.control, name: 'api_key' })
+  const keyCount = parseMinimalModeAPIKeys(keyText).length
+  let submitLabel = props.source ? t('Save model source') : t('Create channels')
+  if (saving) submitLabel = t('Saving...')
   const appendModel = () => {
     models.append(
       appendEmptyMinimalModeModel(props.state.icon_keys[0] ?? 'OpenAI')
@@ -104,8 +120,8 @@ export function MinimalModeSourceEditor(props: MinimalModeSourceEditorProps) {
   }
 
   useEffect(() => {
+    form.reset(defaults)
     if (props.open) {
-      form.reset(defaults)
       setDiscoveredModels([])
     }
   }, [defaults, form, props.open])
@@ -135,7 +151,7 @@ export function MinimalModeSourceEditor(props: MinimalModeSourceEditorProps) {
           source_id: props.source?.id,
           base_url: baseURL,
           channel_type: channelType,
-          api_key: form.getValues('api_key').trim(),
+          api_key: parseMinimalModeAPIKeys(form.getValues('api_key'))[0] ?? '',
         })
         setDiscoveredModels(result)
         toast.success(
@@ -158,15 +174,33 @@ export function MinimalModeSourceEditor(props: MinimalModeSourceEditorProps) {
     setSaving(true)
     try {
       await withVerification(async () => {
-        await saveMinimalModeSource(
-          toMinimalModeSourceInput(values, props.source)
-        )
+        const input = toMinimalModeSourceInput(values, props.source)
+        let createdCount = 0
+        if (props.source) {
+          await saveMinimalModeSource(input)
+        } else {
+          const created = await createMinimalModeSources({
+            name: input.name,
+            base_url: input.base_url,
+            channel_type: input.channel_type,
+            groups: input.groups,
+            models: input.models,
+            api_keys: parseMinimalModeAPIKeys(values.api_key),
+          })
+          createdCount = created.length
+        }
         await props.onSaved()
         toast.success(
-          props.source ? t('Model source updated') : t('Model source created')
+          props.source
+            ? t('Model source updated')
+            : t('Created {{count}} channels', { count: createdCount })
         )
         props.onOpenChange(false)
       })
+    } catch (error) {
+      toast.error(
+        t(extractApiErrorMessage(error, t('Failed to create channels')))
+      )
     } finally {
       setSaving(false)
     }
@@ -174,16 +208,25 @@ export function MinimalModeSourceEditor(props: MinimalModeSourceEditorProps) {
 
   return (
     <>
-      <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+      <Dialog
+        open={props.open}
+        onOpenChange={(open) => {
+          if (!saving && !discovering) props.onOpenChange(open)
+        }}
+      >
         <DialogContent className='max-h-[min(90vh,860px)] overflow-y-auto sm:max-w-3xl'>
           <DialogHeader>
             <DialogTitle>
               {props.source ? t('Edit model source') : t('Add model source')}
             </DialogTitle>
             <DialogDescription>
-              {t(
-                'One form creates the channel, model alias, routing ability, icon, and pricing together.'
-              )}
+              {props.template
+                ? t(
+                    'New channels use this configuration. The original channel is not changed.'
+                  )
+                : t(
+                    'One form creates the channel, model alias, routing ability, icon, and pricing together.'
+                  )}
             </DialogDescription>
           </DialogHeader>
 
@@ -268,25 +311,54 @@ export function MinimalModeSourceEditor(props: MinimalModeSourceEditorProps) {
                   name='api_key'
                   render={({ field }) => (
                     <FormItem className='sm:col-span-2'>
-                      <FormLabel>{t('API key')}</FormLabel>
+                      <FormLabel>
+                        {props.source ? t('API key') : t('API keys')}
+                      </FormLabel>
                       <FormControl>
-                        <Input
-                          {...field}
-                          type='password'
-                          autoComplete='new-password'
-                          spellCheck={false}
-                          placeholder={
-                            props.source
-                              ? t('Leave blank to keep the saved key')
-                              : 'sk-...'
-                          }
-                        />
+                        {props.source ? (
+                          <Input
+                            {...field}
+                            type='password'
+                            autoComplete='new-password'
+                            spellCheck={false}
+                            placeholder={
+                              props.source
+                                ? t('Leave blank to keep the saved key')
+                                : 'sk-...'
+                            }
+                          />
+                        ) : (
+                          <Textarea
+                            {...field}
+                            rows={4}
+                            autoComplete='new-password'
+                            autoCapitalize='none'
+                            spellCheck={false}
+                            className='font-mono text-xs'
+                            placeholder={t('Enter one API key per line')}
+                          />
+                        )}
                       </FormControl>
                       {props.source?.has_api_key ? (
                         <FormDescription>
                           {t('A key is already stored and is never returned.')}
                         </FormDescription>
                       ) : null}
+                      {!props.source && (
+                        <FormDescription>
+                          {t(
+                            'One key per line, up to 100. Blank lines and duplicates are ignored. All channels share this URL, models, groups, and pricing.'
+                          )}
+                          <span className='mt-1 block'>
+                            {t('{{count}} channels will be created', {
+                              count: keyCount,
+                            })}
+                          </span>
+                          <span className='mt-1 block'>
+                            {t('Model discovery uses the first key.')}
+                          </span>
+                        </FormDescription>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -347,11 +419,7 @@ export function MinimalModeSourceEditor(props: MinimalModeSourceEditorProps) {
                   >
                     {discovering ? t('Loading...') : t('Fetch models')}
                   </Button>
-                  <Button
-                    type='button'
-                    variant='outline'
-                    onClick={appendModel}
-                  >
+                  <Button type='button' variant='outline' onClick={appendModel}>
                     {t('Add model')}
                   </Button>
                 </div>
@@ -384,12 +452,13 @@ export function MinimalModeSourceEditor(props: MinimalModeSourceEditorProps) {
                 <Button
                   type='button'
                   variant='outline'
+                  disabled={saving || discovering}
                   onClick={() => props.onOpenChange(false)}
                 >
                   {t('Cancel')}
                 </Button>
-                <Button type='submit' disabled={saving}>
-                  {saving ? t('Saving...') : t('Save model source')}
+                <Button type='submit' disabled={saving || discovering}>
+                  {submitLabel}
                 </Button>
               </DialogFooter>
             </form>

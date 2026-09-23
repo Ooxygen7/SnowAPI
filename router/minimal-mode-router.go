@@ -31,6 +31,7 @@ func registerMinimalModeRoutes(apiRouter *gin.RouterGroup) {
 	)
 	writeRoute.POST("/upstream-models", controller.DiscoverMinimalModeModels)
 	writeRoute.POST("/sources", controller.CreateMinimalModeSource)
+	writeRoute.POST("/sources/batch", controller.CreateMinimalModeSources)
 	writeRoute.PUT("/sources/:id", controller.UpdateMinimalModeSource)
 	writeRoute.POST("/sources/:id/adopt", controller.AdoptMinimalModeSource)
 	writeRoute.POST("/sources/:id/detach", controller.DetachMinimalModeSource)

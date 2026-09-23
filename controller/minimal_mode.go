@@ -115,6 +115,28 @@ func CreateMinimalModeSource(c *gin.Context) {
 	})
 }
 
+func CreateMinimalModeSources(c *gin.Context) {
+	var input service.MinimalModeBatchInput
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 8<<20)
+	if err := common.DecodeJson(c.Request.Body, &input); err != nil {
+		minimalModeError(c, errors.New("invalid minimal-mode batch"))
+		return
+	}
+	views, err := service.CreateMinimalModeSources(c.Request.Context(), input)
+	if err != nil {
+		minimalModeError(c, err)
+		return
+	}
+	channelIDs := make([]int, 0, len(views))
+	for _, view := range views {
+		channelIDs = append(channelIDs, view.ChannelId)
+	}
+	recordManageAudit(c, "minimal_mode.sources_create", map[string]interface{}{
+		"channel_ids": channelIDs, "count": len(views),
+	})
+	c.JSON(http.StatusCreated, gin.H{"success": true, "message": "", "data": views})
+}
+
 func UpdateMinimalModeSource(c *gin.Context) {
 	sourceID, err := strconv.Atoi(c.Param("id"))
 	if err != nil || sourceID <= 0 {

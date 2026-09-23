@@ -93,3 +93,8 @@ export type MinimalModeResponse<T> = {
   message: string
   data: T
 }
+
+export type MinimalModeBatchInput = Omit<
+  MinimalModeSourceInput,
+  'id' | 'expected_revision' | 'api_key'
+> & { api_keys: string[] }

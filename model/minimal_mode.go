@@ -22,9 +22,10 @@ const (
 	MinimalEndpointResponses = string(constant.EndpointTypeOpenAIResponse)
 	MinimalEndpointMessages  = string(constant.EndpointTypeAnthropic)
 
-	MinimalSyncInSync  = "in_sync"
-	MinimalSyncDrifted = "drifted"
-	MinimalSyncMissing = "missing"
+	MinimalSyncInSync       = "in_sync"
+	MinimalSyncDrifted      = "drifted"
+	MinimalSyncMissing      = "missing"
+	MaxMinimalModeBatchKeys = 100
 )
 
 var (
@@ -780,444 +781,485 @@ func GetMinimalModeSourceChannel(sourceId int) (*Channel, error) {
 }
 
 func ReconcileMinimalModeSource(input MinimalModeSourceInput) (MinimalModeSourceView, map[string]string, error) {
-	GroupSettingsMutex.Lock()
-	defer GroupSettingsMutex.Unlock()
-	for index := range input.Models {
-		input.Models[index].EndpointType = minimalEndpointType(input.Models[index].EndpointType, input.ChannelType)
-	}
-	var source MinimalModeSource
-	var channel Channel
-	var committedView MinimalModeSourceView
-	var runtimeOptions map[string]string
-	now := GetDBTimestamp()
-	err := runMinimalModeTransaction(func(tx *gorm.DB) error {
-		source = MinimalModeSource{}
-		channel = Channel{}
-		runtimeOptions = nil
-		var oldManaged []MinimalModeModel
-		if input.Id != 0 {
-			if err := lockForUpdate(tx).Where("id = ?", input.Id).First(&source).Error; err != nil {
-				if errors.Is(err, gorm.ErrRecordNotFound) {
-					return ErrMinimalSourceNotFound
-				}
-				return err
-			}
-			if source.Revision != input.ExpectedRevision {
-				return ErrMinimalRevision
-			}
-			if err := lockForUpdate(tx).Where("id = ?", source.ChannelId).First(&channel).Error; err != nil {
-				return ErrMinimalDrifted
-			}
-			if err := lockForUpdate(tx).Where("source_id = ?", source.Id).Order("id ASC").Find(&oldManaged).Error; err != nil {
-				return err
-			}
-		}
-
-		pricing, err := minimalPricingOptionMaps(tx, true)
-		if err != nil {
-			return err
-		}
-		if input.Id != 0 {
-			current, _, missing, err := currentMinimalSnapshot(tx, &source, &channel, oldManaged, pricing)
-			if err != nil {
-				return err
-			}
-			digest, err := minimalDigest(current)
-			if err != nil {
-				return err
-			}
-			if missing || digest != source.LastSyncedDigest {
-				return ErrMinimalDrifted
-			}
-		}
-
-		oldByDisplay := make(map[string]MinimalModeModel, len(oldManaged))
-		for _, item := range oldManaged {
-			oldByDisplay[strings.ToLower(item.DisplayModel)] = item
-		}
-		sharedByDisplay := make(map[string]MinimalModeModel)
-		defaultPricing := defaultMinimalPricingMaps()
-		for index := range input.Models {
-			item := &input.Models[index]
-			identity := strings.ToLower(item.DisplayModel)
-			owned, ownedByCurrentSource := oldByDisplay[identity]
-			if ownedByCurrentSource {
-				item.DisplayModel = owned.DisplayModel
-			}
-
-			var sharedOwner MinimalModeModel
-			sharedQuery := lockForUpdate(tx).
-				Where("LOWER(display_model) = LOWER(?) AND source_id <> ?", item.DisplayModel, source.Id).
-				Order("id ASC")
-			hasSharedOwner := false
-			if err := sharedQuery.First(&sharedOwner).Error; err == nil {
-				hasSharedOwner = true
-				item.DisplayModel = sharedOwner.DisplayModel
-				identity = strings.ToLower(item.DisplayModel)
-				sharedByDisplay[identity] = sharedOwner
-			} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-				return err
-			}
-
-			var existing Model
-			if err := lockForUpdate(tx).Where("LOWER(model_name) = LOWER(?)", item.DisplayModel).First(&existing).Error; err == nil {
-				ownedModelMatches := ownedByCurrentSource && owned.ModelId == existing.Id
-				sharedModelMatches := hasSharedOwner && sharedOwner.ModelId == existing.Id
-				if !ownedModelMatches && !sharedModelMatches {
-					return fmt.Errorf("%w: model %s already exists outside minimal mode", ErrMinimalModelConflict, item.DisplayModel)
-				}
-				if hasSharedOwner && existing.Icon != item.IconKey {
-					return fmt.Errorf("%w: shared alias %s must use the same icon", ErrMinimalModelConflict, item.DisplayModel)
-				}
-			} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-				return err
-			} else if ownedByCurrentSource || hasSharedOwner {
-				return ErrMinimalDrifted
-			}
-			var externalAbility Ability
-			abilityQuery := lockForUpdate(tx).Where("LOWER(model) = LOWER(?)", item.DisplayModel)
-			if channel.Id != 0 {
-				abilityQuery = abilityQuery.Where("channel_id <> ?", channel.Id)
-			}
-			abilityQuery = abilityQuery.Where(
-				"channel_id NOT IN (?)",
-				tx.Model(&MinimalModeSource{}).Select("channel_id"),
-			)
-			if err := abilityQuery.First(&externalAbility).Error; err == nil {
-				return fmt.Errorf("%w: alias %s already has an unmanaged routing ability", ErrMinimalModelConflict, item.DisplayModel)
-			} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-				return err
-			}
-			if hasSharedOwner && !minimalSharedPricingMatches(pricing, *item) {
-				return fmt.Errorf("%w: shared alias %s must use the same pricing", ErrMinimalModelConflict, item.DisplayModel)
-			}
-			if !ownedByCurrentSource && !hasSharedOwner &&
-				(minimalPricingEntryConflicts(pricing.ModelRatio, defaultPricing.ModelRatio, item.DisplayModel) ||
-					minimalPricingEntryConflicts(pricing.CompletionRatio, defaultPricing.CompletionRatio, item.DisplayModel) ||
-					minimalPricingEntryConflicts(pricing.CacheRatio, defaultPricing.CacheRatio, item.DisplayModel) ||
-					minimalPricingEntryConflicts(pricing.ModelPrice, defaultPricing.ModelPrice, item.DisplayModel)) {
-				return fmt.Errorf("%w: alias %s already has manually managed pricing", ErrMinimalModelConflict, item.DisplayModel)
-			}
-		}
-
-		oldOwnedSet := make(map[string]struct{}, len(oldManaged))
-		for _, item := range oldManaged {
-			oldOwnedSet[item.DisplayModel] = struct{}{}
-		}
-		unmanagedModels := make([]string, 0)
-		if input.Id != 0 {
-			for _, name := range splitMinimalList(channel.Models) {
-				if _, owned := oldOwnedSet[name]; !owned {
-					unmanagedModels = append(unmanagedModels, name)
-				}
-			}
-		}
-		newDisplays := make([]string, 0, len(input.Models))
-		for _, item := range input.Models {
-			newDisplays = append(newDisplays, item.DisplayModel)
-		}
-		channelModels := sortedMinimalList(append(unmanagedModels, newDisplays...))
-		groups := sortedMinimalList(input.Groups)
-		mapping := make(map[string]string)
-		if input.Id != 0 {
-			mapping, err = minimalMapping(&channel)
-			if err != nil {
-				return err
-			}
-			for display := range oldOwnedSet {
-				delete(mapping, display)
-			}
-		}
-		for _, item := range input.Models {
-			if item.UpstreamModel != item.DisplayModel {
-				mapping[item.DisplayModel] = item.UpstreamModel
-			}
-		}
-		mappingJSON := ""
-		if len(mapping) > 0 {
-			encoded, err := common.Marshal(mapping)
-			if err != nil {
-				return err
-			}
-			mappingJSON = string(encoded)
-		}
-		modelsByEndpoint := map[string][]string{
-			MinimalEndpointChat:      []string{},
-			MinimalEndpointResponses: []string{},
-			MinimalEndpointMessages:  []string{},
-		}
-		for _, item := range input.Models {
-			modelsByEndpoint[item.EndpointType] = append(modelsByEndpoint[item.EndpointType], item.DisplayModel)
-		}
-		defaultEndpoint := minimalEndpointType("", input.ChannelType)
-		for _, modelName := range unmanagedModels {
-			modelsByEndpoint[defaultEndpoint] = append(modelsByEndpoint[defaultEndpoint], modelName)
-		}
-		otherSettings := dto.ChannelOtherSettings{}
-		if strings.TrimSpace(channel.OtherSettings) != "" {
-			if err := common.UnmarshalJsonStr(channel.OtherSettings, &otherSettings); err != nil {
-				return ErrMinimalDrifted
-			}
-		}
-		otherSettings.AdvancedCustom = &dto.AdvancedCustomConfig{
-			Routes: minimalEndpointRoutes(modelsByEndpoint),
-		}
-		if err := otherSettings.AdvancedCustom.Validate(); err != nil {
-			return err
-		}
-		otherSettingsJSON, err := common.Marshal(otherSettings)
-		if err != nil {
-			return err
-		}
-		baseURL := input.BaseURL
-		priority := int64(0)
-		weight := uint(0)
-		autoBan := 1
-		if input.Id == 0 {
-			channel = Channel{
-				Type:          constant.ChannelTypeAdvancedCustom,
-				Key:           input.APIKey,
-				Status:        common.ChannelStatusEnabled,
-				Name:          input.Name,
-				Weight:        &weight,
-				CreatedTime:   now,
-				BaseURL:       &baseURL,
-				Models:        strings.Join(channelModels, ","),
-				Group:         strings.Join(groups, ","),
-				ModelMapping:  &mappingJSON,
-				Priority:      &priority,
-				AutoBan:       &autoBan,
-				OtherSettings: string(otherSettingsJSON),
-			}
-			if err := tx.Create(&channel).Error; err != nil {
-				return err
-			}
-		} else {
-			updates := map[string]any{
-				"type":          constant.ChannelTypeAdvancedCustom,
-				"name":          input.Name,
-				"base_url":      baseURL,
-				"models":        strings.Join(channelModels, ","),
-				"group":         strings.Join(groups, ","),
-				"model_mapping": mappingJSON,
-				"settings":      string(otherSettingsJSON),
-			}
-			if strings.TrimSpace(input.APIKey) != "" {
-				updates["key"] = input.APIKey
-				channel.Key = input.APIKey
-			}
-			if err := tx.Model(&Channel{}).Where("id = ?", channel.Id).Updates(updates).Error; err != nil {
-				return err
-			}
-			channel.Type = constant.ChannelTypeAdvancedCustom
-			channel.Name = input.Name
-			channel.BaseURL = &baseURL
-			channel.Models = strings.Join(channelModels, ",")
-			channel.Group = strings.Join(groups, ",")
-			channel.ModelMapping = &mappingJSON
-			channel.OtherSettings = string(otherSettingsJSON)
-		}
-		if err := channel.UpdateAbilities(tx); err != nil {
-			return err
-		}
-
-		newManaged := make([]MinimalModeModel, 0, len(input.Models))
-		vendorsByName := make(map[string]Vendor)
-		for _, item := range input.Models {
-			providerName := strings.SplitN(item.IconKey, ".", 2)[0]
-			vendor, ok := vendorsByName[providerName]
-			if !ok {
-				if err := lockForUpdate(tx).Where("LOWER(name) = LOWER(?)", providerName).First(&vendor).Error; err != nil {
-					if !errors.Is(err, gorm.ErrRecordNotFound) {
-						return err
-					}
-					vendor = Vendor{
-						Name: providerName, Icon: item.IconKey, Status: 1,
-						CreatedTime: now, UpdatedTime: now,
-					}
-					if err := tx.Create(&vendor).Error; err != nil {
-						return err
-					}
-				}
-				vendorsByName[providerName] = vendor
-			}
-			identity := strings.ToLower(item.DisplayModel)
-			owned, exists := oldByDisplay[identity]
-			sharedOwner, hasSharedOwner := sharedByDisplay[identity]
-			meta := Model{}
-			if exists {
-				if err := lockForUpdate(tx).Where("id = ?", owned.ModelId).First(&meta).Error; err != nil {
-					return err
-				}
-				if err := tx.Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
-					"icon": item.IconKey, "vendor_id": vendor.Id, "updated_time": now,
-				}).Error; err != nil {
-					return err
-				}
-			} else if hasSharedOwner {
-				if err := lockForUpdate(tx).Where("id = ?", sharedOwner.ModelId).First(&meta).Error; err != nil {
-					return ErrMinimalDrifted
-				}
-			} else {
-				meta = Model{ModelName: item.DisplayModel, Icon: item.IconKey, VendorID: vendor.Id, Status: 1, SyncOfficial: 0, NameRule: NameRuleExact, CreatedTime: now, UpdatedTime: now}
-				if err := tx.Create(&meta).Error; err != nil {
-					return err
-				}
-				if err := tx.Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{"status": 1, "sync_official": 0}).Error; err != nil {
-					return err
-				}
-			}
-			managed := MinimalModeModel{
-				Id:                      owned.Id,
-				SourceId:                source.Id,
-				ModelId:                 meta.Id,
-				DisplayModel:            item.DisplayModel,
-				UpstreamModel:           item.UpstreamModel,
-				IconKey:                 item.IconKey,
-				EndpointType:            item.EndpointType,
-				BillingMode:             item.BillingMode,
-				ModelRatio:              item.ModelRatio,
-				CompletionRatio:         item.CompletionRatio,
-				CacheRatio:              item.CacheRatio,
-				RequestPriceUSD:         item.RequestPriceUSD,
-				PreviousPricingCaptured: owned.PreviousPricingCaptured,
-				PreviousModelRatio:      owned.PreviousModelRatio,
-				PreviousCompletionRatio: owned.PreviousCompletionRatio,
-				PreviousCacheRatio:      owned.PreviousCacheRatio,
-				PreviousRequestPriceUSD: owned.PreviousRequestPriceUSD,
-				CreatedTime:             owned.CreatedTime,
-				UpdatedTime:             now,
-			}
-			if !exists {
-				if hasSharedOwner {
-					managed.PreviousPricingCaptured = sharedOwner.PreviousPricingCaptured
-					managed.PreviousModelRatio = sharedOwner.PreviousModelRatio
-					managed.PreviousCompletionRatio = sharedOwner.PreviousCompletionRatio
-					managed.PreviousCacheRatio = sharedOwner.PreviousCacheRatio
-					managed.PreviousRequestPriceUSD = sharedOwner.PreviousRequestPriceUSD
-				} else {
-					managed.PreviousPricingCaptured = true
-					if value, ok := pricing.ModelRatio[item.DisplayModel]; ok {
-						valueCopy := value
-						managed.PreviousModelRatio = &valueCopy
-					}
-					if value, ok := pricing.CompletionRatio[item.DisplayModel]; ok {
-						valueCopy := value
-						managed.PreviousCompletionRatio = &valueCopy
-					}
-					if value, ok := pricing.CacheRatio[item.DisplayModel]; ok {
-						valueCopy := value
-						managed.PreviousCacheRatio = &valueCopy
-					}
-					if value, ok := pricing.ModelPrice[item.DisplayModel]; ok {
-						valueCopy := value
-						managed.PreviousRequestPriceUSD = &valueCopy
-					}
-				}
-			}
-			if managed.CreatedTime == 0 {
-				managed.CreatedTime = now
-			}
-			newManaged = append(newManaged, managed)
-			if item.BillingMode == MinimalBillingRequest {
-				pricing.ModelPrice[item.DisplayModel] = *item.RequestPriceUSD
-				delete(pricing.ModelRatio, item.DisplayModel)
-				delete(pricing.CompletionRatio, item.DisplayModel)
-				delete(pricing.CacheRatio, item.DisplayModel)
-			} else {
-				pricing.ModelRatio[item.DisplayModel] = *item.ModelRatio
-				pricing.CompletionRatio[item.DisplayModel] = *item.CompletionRatio
-				if item.CacheRatio == nil {
-					delete(pricing.CacheRatio, item.DisplayModel)
-				} else {
-					pricing.CacheRatio[item.DisplayModel] = *item.CacheRatio
-				}
-				delete(pricing.ModelPrice, item.DisplayModel)
-			}
-		}
-
-		newSet := make(map[string]struct{}, len(newManaged))
-		for _, item := range newManaged {
-			newSet[item.DisplayModel] = struct{}{}
-		}
-		for _, old := range oldManaged {
-			if _, keep := newSet[old.DisplayModel]; keep {
-				continue
-			}
-			var otherAbilities int64
-			if err := tx.Model(&Ability{}).Where("LOWER(model) = LOWER(?) AND channel_id <> ?", old.DisplayModel, channel.Id).Count(&otherAbilities).Error; err != nil {
-				return err
-			}
-			if otherAbilities == 0 {
-				restoreMinimalPricingEntry(pricing.ModelRatio, old.DisplayModel, old.PreviousModelRatio)
-				restoreMinimalPricingEntry(pricing.CompletionRatio, old.DisplayModel, old.PreviousCompletionRatio)
-				restoreMinimalPricingEntry(pricing.CacheRatio, old.DisplayModel, old.PreviousCacheRatio)
-				restoreMinimalPricingEntry(pricing.ModelPrice, old.DisplayModel, old.PreviousRequestPriceUSD)
-				if err := tx.Delete(&Model{}, old.ModelId).Error; err != nil {
-					return err
-				}
-			}
-		}
-
-		if input.Id == 0 {
-			source = MinimalModeSource{ChannelId: channel.Id, ChannelType: input.ChannelType, ProviderName: input.ProviderName, Revision: 1, CreatedTime: now, UpdatedTime: now}
-			if err := tx.Create(&source).Error; err != nil {
-				return err
-			}
-		} else {
-			source.Revision++
-			source.ChannelType = input.ChannelType
-			source.ProviderName = input.ProviderName
-			source.UpdatedTime = now
-		}
-		if err := tx.Where("source_id = ?", source.Id).Delete(&MinimalModeModel{}).Error; err != nil {
-			return err
-		}
-		for index := range newManaged {
-			newManaged[index].Id = 0
-			newManaged[index].SourceId = source.Id
-		}
-		if len(newManaged) > 0 {
-			if err := tx.Create(&newManaged).Error; err != nil {
-				return err
-			}
-		}
-		snapshot, committedModels, missing, err := currentMinimalSnapshot(tx, &source, &channel, newManaged, pricing)
-		if err != nil {
-			return err
-		}
-		if missing {
-			return ErrMinimalDrifted
-		}
-		digest, err := minimalDigest(snapshot)
-		if err != nil {
-			return err
-		}
-		source.LastSyncedDigest = digest
-		if err := tx.Model(&MinimalModeSource{}).Where("id = ?", source.Id).Updates(map[string]any{
-			"channel_type": source.ChannelType, "provider_name": source.ProviderName, "revision": source.Revision,
-			"last_synced_digest": digest, "updated_time": now,
-		}).Error; err != nil {
-			return err
-		}
-		runtimeOptions, err = minimalOptionsJSON(pricing)
-		if err != nil {
-			return err
-		}
-		committedView = MinimalModeSourceView{
-			Id: source.Id, ChannelId: channel.Id, Revision: source.Revision,
-			Name: channel.Name, ProviderName: source.ProviderName,
-			BaseURL: channel.GetBaseURL(), ChannelType: source.ChannelType,
-			Groups: sortedMinimalList(splitMinimalList(channel.Group)), Models: committedModels,
-			HasAPIKey: strings.TrimSpace(channel.Key) != "", SyncState: MinimalSyncInSync,
-		}
-		return UpdateOptionsWithTx(tx, runtimeOptions)
-	})
+	views, options, err := reconcileMinimalModeSources([]MinimalModeSourceInput{input}, false)
 	if err != nil {
 		return MinimalModeSourceView{}, nil, err
 	}
-	cacheMinimalModeChannelOwnership(channel.Id, true)
-	return committedView, runtimeOptions, nil
+	return views[0], options, nil
+}
+
+// CreateMinimalModeSources commits every channel and its shared model resources
+// together. A failed batch must not leave channels or pricing behind.
+func CreateMinimalModeSources(inputs []MinimalModeSourceInput) ([]MinimalModeSourceView, map[string]string, error) {
+	if len(inputs) == 0 || len(inputs) > MaxMinimalModeBatchKeys {
+		return nil, nil, errors.New("Enter between 1 and 100 API keys")
+	}
+	for _, input := range inputs {
+		if input.Id != 0 || input.ExpectedRevision != 0 {
+			return nil, nil, errors.New("Batch creation cannot update existing channels")
+		}
+	}
+	return reconcileMinimalModeSources(inputs, true)
+}
+
+func reconcileMinimalModeSources(inputs []MinimalModeSourceInput, creatingBatch bool) ([]MinimalModeSourceView, map[string]string, error) {
+	GroupSettingsMutex.Lock()
+	defer GroupSettingsMutex.Unlock()
+	var committedViews []MinimalModeSourceView
+	var runtimeOptions map[string]string
+	now := GetDBTimestamp()
+	err := runMinimalModeTransaction(func(tx *gorm.DB) error {
+		committedViews = nil
+		runtimeOptions = nil
+		for _, input := range inputs {
+			input.Models = append([]MinimalModeModelInput(nil), input.Models...)
+			for index := range input.Models {
+				input.Models[index].EndpointType = minimalEndpointType(input.Models[index].EndpointType, input.ChannelType)
+			}
+			if creatingBatch {
+				var matchingKeys []string
+				if err := tx.Model(&Channel{}).Where("base_url = ? AND "+commonKeyCol+" = ?", input.BaseURL, input.APIKey).Pluck("key", &matchingKeys).Error; err != nil {
+					return err
+				}
+				for _, key := range matchingKeys {
+					// Preserve case-sensitive credentials on case-insensitive databases.
+					if key == input.APIKey {
+						return errors.New("An API key is already configured for this upstream")
+					}
+				}
+			}
+			var source MinimalModeSource
+			var channel Channel
+			var oldManaged []MinimalModeModel
+			if input.Id != 0 {
+				if err := lockForUpdate(tx).Where("id = ?", input.Id).First(&source).Error; err != nil {
+					if errors.Is(err, gorm.ErrRecordNotFound) {
+						return ErrMinimalSourceNotFound
+					}
+					return err
+				}
+				if source.Revision != input.ExpectedRevision {
+					return ErrMinimalRevision
+				}
+				if err := lockForUpdate(tx).Where("id = ?", source.ChannelId).First(&channel).Error; err != nil {
+					return ErrMinimalDrifted
+				}
+				if err := lockForUpdate(tx).Where("source_id = ?", source.Id).Order("id ASC").Find(&oldManaged).Error; err != nil {
+					return err
+				}
+			}
+
+			pricing, err := minimalPricingOptionMaps(tx, true)
+			if err != nil {
+				return err
+			}
+			if input.Id != 0 {
+				current, _, missing, err := currentMinimalSnapshot(tx, &source, &channel, oldManaged, pricing)
+				if err != nil {
+					return err
+				}
+				digest, err := minimalDigest(current)
+				if err != nil {
+					return err
+				}
+				if missing || digest != source.LastSyncedDigest {
+					return ErrMinimalDrifted
+				}
+			}
+
+			oldByDisplay := make(map[string]MinimalModeModel, len(oldManaged))
+			for _, item := range oldManaged {
+				oldByDisplay[strings.ToLower(item.DisplayModel)] = item
+			}
+			sharedByDisplay := make(map[string]MinimalModeModel)
+			defaultPricing := defaultMinimalPricingMaps()
+			for index := range input.Models {
+				item := &input.Models[index]
+				identity := strings.ToLower(item.DisplayModel)
+				owned, ownedByCurrentSource := oldByDisplay[identity]
+				if ownedByCurrentSource {
+					item.DisplayModel = owned.DisplayModel
+				}
+
+				var sharedOwner MinimalModeModel
+				sharedQuery := lockForUpdate(tx).
+					Where("LOWER(display_model) = LOWER(?) AND source_id <> ?", item.DisplayModel, source.Id).
+					Order("id ASC")
+				hasSharedOwner := false
+				if err := sharedQuery.First(&sharedOwner).Error; err == nil {
+					hasSharedOwner = true
+					item.DisplayModel = sharedOwner.DisplayModel
+					identity = strings.ToLower(item.DisplayModel)
+					sharedByDisplay[identity] = sharedOwner
+				} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+					return err
+				}
+
+				var existing Model
+				if err := lockForUpdate(tx).Where("LOWER(model_name) = LOWER(?)", item.DisplayModel).First(&existing).Error; err == nil {
+					ownedModelMatches := ownedByCurrentSource && owned.ModelId == existing.Id
+					sharedModelMatches := hasSharedOwner && sharedOwner.ModelId == existing.Id
+					if !ownedModelMatches && !sharedModelMatches {
+						return fmt.Errorf("%w: model %s already exists outside minimal mode", ErrMinimalModelConflict, item.DisplayModel)
+					}
+					if hasSharedOwner && existing.Icon != item.IconKey {
+						return fmt.Errorf("%w: shared alias %s must use the same icon", ErrMinimalModelConflict, item.DisplayModel)
+					}
+				} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+					return err
+				} else if ownedByCurrentSource || hasSharedOwner {
+					return ErrMinimalDrifted
+				}
+				var externalAbility Ability
+				abilityQuery := lockForUpdate(tx).Where("LOWER(model) = LOWER(?)", item.DisplayModel)
+				if channel.Id != 0 {
+					abilityQuery = abilityQuery.Where("channel_id <> ?", channel.Id)
+				}
+				abilityQuery = abilityQuery.Where(
+					"channel_id NOT IN (?)",
+					tx.Model(&MinimalModeSource{}).Select("channel_id"),
+				)
+				if err := abilityQuery.First(&externalAbility).Error; err == nil {
+					return fmt.Errorf("%w: alias %s already has an unmanaged routing ability", ErrMinimalModelConflict, item.DisplayModel)
+				} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+					return err
+				}
+				if hasSharedOwner && !minimalSharedPricingMatches(pricing, *item) {
+					return fmt.Errorf("%w: shared alias %s must use the same pricing", ErrMinimalModelConflict, item.DisplayModel)
+				}
+				if !ownedByCurrentSource && !hasSharedOwner &&
+					(minimalPricingEntryConflicts(pricing.ModelRatio, defaultPricing.ModelRatio, item.DisplayModel) ||
+						minimalPricingEntryConflicts(pricing.CompletionRatio, defaultPricing.CompletionRatio, item.DisplayModel) ||
+						minimalPricingEntryConflicts(pricing.CacheRatio, defaultPricing.CacheRatio, item.DisplayModel) ||
+						minimalPricingEntryConflicts(pricing.ModelPrice, defaultPricing.ModelPrice, item.DisplayModel)) {
+					return fmt.Errorf("%w: alias %s already has manually managed pricing", ErrMinimalModelConflict, item.DisplayModel)
+				}
+			}
+
+			oldOwnedSet := make(map[string]struct{}, len(oldManaged))
+			for _, item := range oldManaged {
+				oldOwnedSet[item.DisplayModel] = struct{}{}
+			}
+			unmanagedModels := make([]string, 0)
+			if input.Id != 0 {
+				for _, name := range splitMinimalList(channel.Models) {
+					if _, owned := oldOwnedSet[name]; !owned {
+						unmanagedModels = append(unmanagedModels, name)
+					}
+				}
+			}
+			newDisplays := make([]string, 0, len(input.Models))
+			for _, item := range input.Models {
+				newDisplays = append(newDisplays, item.DisplayModel)
+			}
+			channelModels := sortedMinimalList(append(unmanagedModels, newDisplays...))
+			groups := sortedMinimalList(input.Groups)
+			mapping := make(map[string]string)
+			if input.Id != 0 {
+				mapping, err = minimalMapping(&channel)
+				if err != nil {
+					return err
+				}
+				for display := range oldOwnedSet {
+					delete(mapping, display)
+				}
+			}
+			for _, item := range input.Models {
+				if item.UpstreamModel != item.DisplayModel {
+					mapping[item.DisplayModel] = item.UpstreamModel
+				}
+			}
+			mappingJSON := ""
+			if len(mapping) > 0 {
+				encoded, err := common.Marshal(mapping)
+				if err != nil {
+					return err
+				}
+				mappingJSON = string(encoded)
+			}
+			modelsByEndpoint := map[string][]string{
+				MinimalEndpointChat:      []string{},
+				MinimalEndpointResponses: []string{},
+				MinimalEndpointMessages:  []string{},
+			}
+			for _, item := range input.Models {
+				modelsByEndpoint[item.EndpointType] = append(modelsByEndpoint[item.EndpointType], item.DisplayModel)
+			}
+			defaultEndpoint := minimalEndpointType("", input.ChannelType)
+			for _, modelName := range unmanagedModels {
+				modelsByEndpoint[defaultEndpoint] = append(modelsByEndpoint[defaultEndpoint], modelName)
+			}
+			otherSettings := dto.ChannelOtherSettings{}
+			if strings.TrimSpace(channel.OtherSettings) != "" {
+				if err := common.UnmarshalJsonStr(channel.OtherSettings, &otherSettings); err != nil {
+					return ErrMinimalDrifted
+				}
+			}
+			otherSettings.AdvancedCustom = &dto.AdvancedCustomConfig{
+				Routes: minimalEndpointRoutes(modelsByEndpoint),
+			}
+			if err := otherSettings.AdvancedCustom.Validate(); err != nil {
+				return err
+			}
+			otherSettingsJSON, err := common.Marshal(otherSettings)
+			if err != nil {
+				return err
+			}
+			baseURL := input.BaseURL
+			priority := int64(0)
+			weight := uint(0)
+			autoBan := 1
+			if input.Id == 0 {
+				channel = Channel{
+					Type:          constant.ChannelTypeAdvancedCustom,
+					Key:           input.APIKey,
+					Status:        common.ChannelStatusEnabled,
+					Name:          input.Name,
+					Weight:        &weight,
+					CreatedTime:   now,
+					BaseURL:       &baseURL,
+					Models:        strings.Join(channelModels, ","),
+					Group:         strings.Join(groups, ","),
+					ModelMapping:  &mappingJSON,
+					Priority:      &priority,
+					AutoBan:       &autoBan,
+					OtherSettings: string(otherSettingsJSON),
+				}
+				if err := tx.Create(&channel).Error; err != nil {
+					return err
+				}
+			} else {
+				updates := map[string]any{
+					"type":          constant.ChannelTypeAdvancedCustom,
+					"name":          input.Name,
+					"base_url":      baseURL,
+					"models":        strings.Join(channelModels, ","),
+					"group":         strings.Join(groups, ","),
+					"model_mapping": mappingJSON,
+					"settings":      string(otherSettingsJSON),
+				}
+				if strings.TrimSpace(input.APIKey) != "" {
+					updates["key"] = input.APIKey
+					channel.Key = input.APIKey
+				}
+				if err := tx.Model(&Channel{}).Where("id = ?", channel.Id).Updates(updates).Error; err != nil {
+					return err
+				}
+				channel.Type = constant.ChannelTypeAdvancedCustom
+				channel.Name = input.Name
+				channel.BaseURL = &baseURL
+				channel.Models = strings.Join(channelModels, ",")
+				channel.Group = strings.Join(groups, ",")
+				channel.ModelMapping = &mappingJSON
+				channel.OtherSettings = string(otherSettingsJSON)
+			}
+			if err := channel.UpdateAbilities(tx); err != nil {
+				return err
+			}
+
+			newManaged := make([]MinimalModeModel, 0, len(input.Models))
+			vendorsByName := make(map[string]Vendor)
+			for _, item := range input.Models {
+				providerName := strings.SplitN(item.IconKey, ".", 2)[0]
+				vendor, ok := vendorsByName[providerName]
+				if !ok {
+					if err := lockForUpdate(tx).Where("LOWER(name) = LOWER(?)", providerName).First(&vendor).Error; err != nil {
+						if !errors.Is(err, gorm.ErrRecordNotFound) {
+							return err
+						}
+						vendor = Vendor{
+							Name: providerName, Icon: item.IconKey, Status: 1,
+							CreatedTime: now, UpdatedTime: now,
+						}
+						if err := tx.Create(&vendor).Error; err != nil {
+							return err
+						}
+					}
+					vendorsByName[providerName] = vendor
+				}
+				identity := strings.ToLower(item.DisplayModel)
+				owned, exists := oldByDisplay[identity]
+				sharedOwner, hasSharedOwner := sharedByDisplay[identity]
+				meta := Model{}
+				if exists {
+					if err := lockForUpdate(tx).Where("id = ?", owned.ModelId).First(&meta).Error; err != nil {
+						return err
+					}
+					if err := tx.Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
+						"icon": item.IconKey, "vendor_id": vendor.Id, "updated_time": now,
+					}).Error; err != nil {
+						return err
+					}
+				} else if hasSharedOwner {
+					if err := lockForUpdate(tx).Where("id = ?", sharedOwner.ModelId).First(&meta).Error; err != nil {
+						return ErrMinimalDrifted
+					}
+				} else {
+					meta = Model{ModelName: item.DisplayModel, Icon: item.IconKey, VendorID: vendor.Id, Status: 1, SyncOfficial: 0, NameRule: NameRuleExact, CreatedTime: now, UpdatedTime: now}
+					if err := tx.Create(&meta).Error; err != nil {
+						return err
+					}
+					if err := tx.Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{"status": 1, "sync_official": 0}).Error; err != nil {
+						return err
+					}
+				}
+				managed := MinimalModeModel{
+					Id:                      owned.Id,
+					SourceId:                source.Id,
+					ModelId:                 meta.Id,
+					DisplayModel:            item.DisplayModel,
+					UpstreamModel:           item.UpstreamModel,
+					IconKey:                 item.IconKey,
+					EndpointType:            item.EndpointType,
+					BillingMode:             item.BillingMode,
+					ModelRatio:              item.ModelRatio,
+					CompletionRatio:         item.CompletionRatio,
+					CacheRatio:              item.CacheRatio,
+					RequestPriceUSD:         item.RequestPriceUSD,
+					PreviousPricingCaptured: owned.PreviousPricingCaptured,
+					PreviousModelRatio:      owned.PreviousModelRatio,
+					PreviousCompletionRatio: owned.PreviousCompletionRatio,
+					PreviousCacheRatio:      owned.PreviousCacheRatio,
+					PreviousRequestPriceUSD: owned.PreviousRequestPriceUSD,
+					CreatedTime:             owned.CreatedTime,
+					UpdatedTime:             now,
+				}
+				if !exists {
+					if hasSharedOwner {
+						managed.PreviousPricingCaptured = sharedOwner.PreviousPricingCaptured
+						managed.PreviousModelRatio = sharedOwner.PreviousModelRatio
+						managed.PreviousCompletionRatio = sharedOwner.PreviousCompletionRatio
+						managed.PreviousCacheRatio = sharedOwner.PreviousCacheRatio
+						managed.PreviousRequestPriceUSD = sharedOwner.PreviousRequestPriceUSD
+					} else {
+						managed.PreviousPricingCaptured = true
+						if value, ok := pricing.ModelRatio[item.DisplayModel]; ok {
+							valueCopy := value
+							managed.PreviousModelRatio = &valueCopy
+						}
+						if value, ok := pricing.CompletionRatio[item.DisplayModel]; ok {
+							valueCopy := value
+							managed.PreviousCompletionRatio = &valueCopy
+						}
+						if value, ok := pricing.CacheRatio[item.DisplayModel]; ok {
+							valueCopy := value
+							managed.PreviousCacheRatio = &valueCopy
+						}
+						if value, ok := pricing.ModelPrice[item.DisplayModel]; ok {
+							valueCopy := value
+							managed.PreviousRequestPriceUSD = &valueCopy
+						}
+					}
+				}
+				if managed.CreatedTime == 0 {
+					managed.CreatedTime = now
+				}
+				newManaged = append(newManaged, managed)
+				if item.BillingMode == MinimalBillingRequest {
+					pricing.ModelPrice[item.DisplayModel] = *item.RequestPriceUSD
+					delete(pricing.ModelRatio, item.DisplayModel)
+					delete(pricing.CompletionRatio, item.DisplayModel)
+					delete(pricing.CacheRatio, item.DisplayModel)
+				} else {
+					pricing.ModelRatio[item.DisplayModel] = *item.ModelRatio
+					pricing.CompletionRatio[item.DisplayModel] = *item.CompletionRatio
+					if item.CacheRatio == nil {
+						delete(pricing.CacheRatio, item.DisplayModel)
+					} else {
+						pricing.CacheRatio[item.DisplayModel] = *item.CacheRatio
+					}
+					delete(pricing.ModelPrice, item.DisplayModel)
+				}
+			}
+
+			newSet := make(map[string]struct{}, len(newManaged))
+			for _, item := range newManaged {
+				newSet[item.DisplayModel] = struct{}{}
+			}
+			for _, old := range oldManaged {
+				if _, keep := newSet[old.DisplayModel]; keep {
+					continue
+				}
+				var otherAbilities int64
+				if err := tx.Model(&Ability{}).Where("LOWER(model) = LOWER(?) AND channel_id <> ?", old.DisplayModel, channel.Id).Count(&otherAbilities).Error; err != nil {
+					return err
+				}
+				if otherAbilities == 0 {
+					restoreMinimalPricingEntry(pricing.ModelRatio, old.DisplayModel, old.PreviousModelRatio)
+					restoreMinimalPricingEntry(pricing.CompletionRatio, old.DisplayModel, old.PreviousCompletionRatio)
+					restoreMinimalPricingEntry(pricing.CacheRatio, old.DisplayModel, old.PreviousCacheRatio)
+					restoreMinimalPricingEntry(pricing.ModelPrice, old.DisplayModel, old.PreviousRequestPriceUSD)
+					if err := tx.Delete(&Model{}, old.ModelId).Error; err != nil {
+						return err
+					}
+				}
+			}
+
+			if input.Id == 0 {
+				source = MinimalModeSource{ChannelId: channel.Id, ChannelType: input.ChannelType, ProviderName: input.ProviderName, Revision: 1, CreatedTime: now, UpdatedTime: now}
+				if err := tx.Create(&source).Error; err != nil {
+					return err
+				}
+			} else {
+				source.Revision++
+				source.ChannelType = input.ChannelType
+				source.ProviderName = input.ProviderName
+				source.UpdatedTime = now
+			}
+			if err := tx.Where("source_id = ?", source.Id).Delete(&MinimalModeModel{}).Error; err != nil {
+				return err
+			}
+			for index := range newManaged {
+				newManaged[index].Id = 0
+				newManaged[index].SourceId = source.Id
+			}
+			if len(newManaged) > 0 {
+				if err := tx.Create(&newManaged).Error; err != nil {
+					return err
+				}
+			}
+			snapshot, committedModels, missing, err := currentMinimalSnapshot(tx, &source, &channel, newManaged, pricing)
+			if err != nil {
+				return err
+			}
+			if missing {
+				return ErrMinimalDrifted
+			}
+			digest, err := minimalDigest(snapshot)
+			if err != nil {
+				return err
+			}
+			source.LastSyncedDigest = digest
+			if err := tx.Model(&MinimalModeSource{}).Where("id = ?", source.Id).Updates(map[string]any{
+				"channel_type": source.ChannelType, "provider_name": source.ProviderName, "revision": source.Revision,
+				"last_synced_digest": digest, "updated_time": now,
+			}).Error; err != nil {
+				return err
+			}
+			runtimeOptions, err = minimalOptionsJSON(pricing)
+			if err != nil {
+				return err
+			}
+			committedViews = append(committedViews, MinimalModeSourceView{
+				Id: source.Id, ChannelId: channel.Id, Revision: source.Revision,
+				Name: channel.Name, ProviderName: source.ProviderName,
+				BaseURL: channel.GetBaseURL(), ChannelType: source.ChannelType,
+				Groups: sortedMinimalList(splitMinimalList(channel.Group)), Models: committedModels,
+				HasAPIKey: strings.TrimSpace(channel.Key) != "", SyncState: MinimalSyncInSync,
+			})
+			if err := UpdateOptionsWithTx(tx, runtimeOptions); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, view := range committedViews {
+		cacheMinimalModeChannelOwnership(view.ChannelId, true)
+	}
+	return committedViews, runtimeOptions, nil
 }
 
 func AdoptMinimalModeSource(sourceId int, expectedRevision int64) (MinimalModeSourceView, error) {

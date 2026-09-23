@@ -86,6 +86,8 @@ export function MinimalModeSection() {
   const [editingSource, setEditingSource] = useState<MinimalModeSource | null>(
     null
   )
+  const [templateSource, setTemplateSource] =
+    useState<MinimalModeSource | null>(null)
   const [deleteSource, setDeleteSource] = useState<MinimalModeSource | null>(
     null
   )
@@ -320,6 +322,7 @@ export function MinimalModeSection() {
           <Button
             onClick={() => {
               setEditingSource(null)
+              setTemplateSource(null)
               setEditorOpen(true)
             }}
           >
@@ -379,6 +382,20 @@ export function MinimalModeSection() {
                     </p>
                   </div>
                   <div className='flex flex-wrap gap-2'>
+                    {source.sync_state === 'in_sync' && (
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        disabled={pending}
+                        onClick={() => {
+                          setEditingSource(null)
+                          setTemplateSource(source)
+                          setEditorOpen(true)
+                        }}
+                      >
+                        {t('Add channels from configuration')}
+                      </Button>
+                    )}
                     {source.sync_state === 'in_sync' ? (
                       <Button
                         size='sm'
@@ -386,6 +403,7 @@ export function MinimalModeSection() {
                         disabled={pending}
                         onClick={() => {
                           setEditingSource(source)
+                          setTemplateSource(null)
                           setEditorOpen(true)
                         }}
                       >
@@ -428,6 +446,7 @@ export function MinimalModeSection() {
       <MinimalModeSourceEditor
         open={editorOpen}
         source={editingSource}
+        template={templateSource}
         state={query.data}
         onOpenChange={setEditorOpen}
         onSaved={refresh}

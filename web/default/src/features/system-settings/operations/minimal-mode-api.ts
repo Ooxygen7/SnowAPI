@@ -19,6 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { api } from '@/lib/api'
 
 import type {
+  MinimalModeBatchInput,
   MinimalModeDiscoveryInput,
   MinimalModeResponse,
   MinimalModeSettingsInput,
@@ -105,6 +106,17 @@ export async function adoptMinimalModeSource(
   const response = await api.post<MinimalModeResponse<MinimalModeSource>>(
     `/api/minimal-mode/sources/${source.id}/adopt`,
     { expected_revision: source.revision }
+  )
+  return unwrapMinimalModeResponse(response.data)
+}
+
+export async function createMinimalModeSources(
+  input: MinimalModeBatchInput
+): Promise<MinimalModeSource[]> {
+  const response = await api.post<MinimalModeResponse<MinimalModeSource[]>>(
+    '/api/minimal-mode/sources/batch',
+    input,
+    { skipErrorHandler: true }
   )
   return unwrapMinimalModeResponse(response.data)
 }
