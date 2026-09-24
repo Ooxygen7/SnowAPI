@@ -16,33 +16,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-type ArtworkKind =
-  | 'cubes'
-  | 'cubes-small'
-  | 'polyhedron'
-  | 'contours'
-  | 'canopy'
-  | 'puzzle'
+type ArtworkKind = 'polyhedron' | 'contours' | 'canopy' | 'puzzle'
 
 export function HomeArtwork(props: { kind: ArtworkKind }) {
-  if (props.kind === 'cubes' || props.kind === 'cubes-small') {
-    return (
-      <div
-        className={`snow-home-art snow-home-cubes ${props.kind === 'cubes-small' ? 'snow-home-cubes-small' : ''}`}
-        aria-hidden='true'
-      >
-        <div className='snow-home-cube-orbit'>
-          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-            <span key={i} className={`snow-home-cube snow-home-cube-${i}`}>
-              <i />
-              <i />
-              <i />
-            </span>
-          ))}
-        </div>
-      </div>
-    )
-  }
   if (props.kind === 'polyhedron') {
     return (
       <div className='snow-home-art snow-home-polyhedron' aria-hidden='true'>

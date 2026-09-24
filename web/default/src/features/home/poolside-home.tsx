@@ -28,6 +28,7 @@ import { useStatus } from '@/hooks/use-status'
 
 import { GatewayShowcase } from './components/gateway-showcase'
 import { HomeArtwork } from './components/home-artwork'
+import { StripedWordmark } from './components/striped-wordmark'
 
 import './poolside-home.css'
 
@@ -69,7 +70,7 @@ export default function PoolsideHome() {
             aria-label={t('Navigation')}
             onClick={() => setMenuOpen(false)}
           >
-            <a href='#models'>{t('Models')}</a>
+            <Link to='/model-list'>{t('Models')}</Link>
             <Link to='/sign-in'>{t('Get started')}</Link>
             <a href='#developers'>{t('Developers')}</a>
             <a href='#platform'>{t('Platform')}</a>
@@ -122,60 +123,6 @@ export default function PoolsideHome() {
               </Link>
             </div>
             <GatewayShowcase />
-          </section>
-
-          <section
-            id='models'
-            className='snow-home-section'
-            aria-labelledby='snow-models-title'
-          >
-            <h2 id='snow-models-title'>
-              {t('Your models. One API.')}{' '}
-              <span>
-                {t(
-                  'Model access, clear pricing, and the tools to build your next idea.'
-                )}
-              </span>
-            </h2>
-            <div className='snow-home-model-grid'>
-              <Link to='/model-list' className='snow-home-model-card'>
-                <HomeArtwork kind='cubes' />
-                <div className='snow-home-card-content'>
-                  <h3>
-                    DeepSeek{' '}
-                    <span className='snow-home-chip'>
-                      <b>V4.1</b>
-                      <span>Flash</span>
-                    </span>
-                  </h3>
-                  <p>{t('Find the right endpoint for every model')}</p>
-                  <div className='snow-home-card-meta'>
-                    <span>Chat Completions</span>
-                    <span>
-                      API <ArrowUpRight size={14} />
-                    </span>
-                  </div>
-                </div>
-              </Link>
-              <Link to='/model-list' className='snow-home-model-card'>
-                <HomeArtwork kind='cubes-small' />
-                <div className='snow-home-card-content'>
-                  <h3>
-                    GLM{' '}
-                    <span className='snow-home-chip snow-home-chip-pink'>
-                      <b>5.3</b>
-                    </span>
-                  </h3>
-                  <p>{t('One model, multiple upstream channels')}</p>
-                  <div className='snow-home-card-meta'>
-                    <span>{t('Model access')}</span>
-                    <span>
-                      API <ArrowUpRight size={14} />
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            </div>
           </section>
 
           <section
@@ -308,6 +255,7 @@ export default function PoolsideHome() {
               © {new Date().getFullYear()} unsnow.org
             </a>
           </nav>
+          <StripedWordmark />
         </footer>
       </div>
     </div>
