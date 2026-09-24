@@ -28,6 +28,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 
+import { ModelFundingBadge } from './model-funding-badge'
 import { ModelHealthBar } from './model-health-bar'
 import { ModelProvider } from './model-provider'
 import type { CatalogModel } from './types'
@@ -136,6 +137,20 @@ export function ModelDetailsDialog(props: {
           tabIndex={0}
           className='no-scrollbar flex min-h-0 flex-col gap-3 overflow-y-auto overscroll-contain px-5 py-3 sm:px-6 [&>section]:shrink-0'
         >
+          {model.fundingSource ? (
+            <div className='flex flex-col items-start gap-2'>
+              <ModelFundingBadge source={model.fundingSource} />
+              <p className='text-muted-foreground text-xs leading-relaxed'>
+                {model.fundingSource === 'subscription_only'
+                  ? t(
+                      'This model uses subscription quota only. Account balance cannot be used.'
+                    )
+                  : t(
+                      'This model uses account balance only. Subscription quota cannot be used.'
+                    )}
+              </p>
+            </div>
+          ) : null}
           <DialogSection title={t('Price')}>
             {model.priceUnitKey === 'request' ? (
               <PriceCard

@@ -49,6 +49,8 @@ import { SettingsPageFormActions } from '../components/settings-page-context'
 import { SettingsSection } from '../components/settings-section'
 import { useSettingsForm } from '../hooks/use-settings-form'
 import { useUpdateOption } from '../hooks/use-update-option'
+import { modelFundingSourcesSchema } from './model-funding-sources'
+import { ModelFundingSourcesEditor } from './model-funding-sources-editor'
 
 const quotaSchema = z.object({
   QuotaForNewUser: z.coerce.number().min(0),
@@ -59,6 +61,13 @@ const quotaSchema = z.object({
   }),
   quota_setting: z.object({
     enable_free_model_pre_consume: z.boolean(),
+    model_funding_sources: z.string().refine((value) => {
+      try {
+        return modelFundingSourcesSchema.safeParse(JSON.parse(value)).success
+      } catch {
+        return false
+      }
+    }),
   }),
 })
 
@@ -127,6 +136,22 @@ export function QuotaSettingsSection({
           />
           <FormDirtyIndicator isDirty={isDirty} />
           <SettingsFormGrid>
+            <SettingsFormGridItem span='full'>
+              <FormField
+                control={form.control}
+                name='quota_setting.model_funding_sources'
+                render={({ field }) => (
+                  <FormItem>
+                    <ModelFundingSourcesEditor
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled={updateOption.isPending || isSubmitting}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </SettingsFormGridItem>
             <FormField
               control={form.control}
               name='QuotaForNewUser'

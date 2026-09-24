@@ -57,6 +57,7 @@ export type CatalogModel = {
   id: string
   name: string
   hasAccess: boolean
+  fundingSource?: 'subscription_only' | 'wallet_only'
   provider: string
   providerIcon?: string
   description?: string

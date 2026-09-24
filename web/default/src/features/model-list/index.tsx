@@ -91,6 +91,7 @@ function toCatalogModel(
     id: normalizeModelName(model.model_name),
     name: model.model_name,
     hasAccess: canUsePricingModel(model, currentGroup),
+    fundingSource: model.funding_source,
     provider:
       getLobeIconName(model.icon || model.vendor_icon) || fallbackProvider,
     providerIcon: model.icon || model.vendor_icon,

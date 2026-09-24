@@ -4,6 +4,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 
 	"github.com/gin-gonic/gin"
@@ -57,6 +58,12 @@ func GetPricing(c *gin.Context) {
 
 	usableGroup = service.GetUserUsableGroups(group)
 	pricing = filterPricingByUsableGroups(pricing, usableGroup)
+	// Decorate the response copy, not the shared pricing cache, so changes to
+	// model funding restrictions are visible immediately without cache rebuilds.
+	for index := range pricing {
+		pricing[index].FundingSource = operation_setting.GetModelFundingSource(pricing[index].ModelName)
+	}
+	c.Header("Cache-Control", "no-store")
 	// check groupRatio contains usableGroup
 	for group := range ratio_setting.GetGroupRatioCopy() {
 		if _, ok := usableGroup[group]; !ok {

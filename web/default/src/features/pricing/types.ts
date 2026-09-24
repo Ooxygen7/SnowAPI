@@ -35,6 +35,7 @@ export type PricingEndpointInfo = {
 export type PricingModel = {
   id: number
   model_name: string
+  funding_source?: 'subscription_only' | 'wallet_only'
   description?: string
   icon?: string
   vendor_id?: number

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -165,7 +166,7 @@ func SyncOptions(frequency int) {
 }
 
 func UpdateOption(key string, value string) error {
-	if key == "console_setting.announcements" {
+	if key == "console_setting.announcements" || key == operation_setting.ModelFundingSourcesOption {
 		return UpdateOptionsBulk(map[string]string{key: value})
 	}
 	// Save to database first
@@ -218,6 +219,28 @@ func UpdateOptionsWithTx(tx *gorm.DB, values map[string]string) error {
 	}
 	sort.Strings(keys)
 	for _, key := range keys {
+		if key == operation_setting.ModelFundingSourcesOption {
+			rules, err := operation_setting.ParseModelFundingSources(values[key])
+			if err != nil {
+				return err
+			}
+			var configured []string
+			if len(rules) > 0 {
+				if err := tx.Model(&Ability{}).Distinct("model").Pluck("model", &configured).Error; err != nil {
+					return err
+				}
+			}
+			known := make(map[string]bool, len(configured))
+			for _, name := range configured {
+				known[name] = true
+			}
+			for name := range rules {
+				// Retain saved rules when a channel is temporarily removed.
+				if !known[name] && operation_setting.GetModelFundingSource(name) == "" {
+					return fmt.Errorf("model %q is not configured on this site", name)
+				}
+			}
+		}
 		option := Option{Key: key}
 		if err := tx.FirstOrCreate(&option, Option{Key: key}).Error; err != nil {
 			return err

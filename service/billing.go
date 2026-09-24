@@ -6,6 +6,7 @@ import (
 
 	"github.com/QuantumNous/new-api/logger"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/QuantumNous/new-api/types"
 	"github.com/gin-gonic/gin"
 )
@@ -14,6 +15,12 @@ const (
 	BillingSourceWallet       = "wallet"
 	BillingSourceSubscription = "subscription"
 )
+
+// Restricted zero-price models must still validate the required funding source.
+// Unrestricted free models retain the existing pre-consume bypass.
+func ShouldPreConsumeBilling(info *relaycommon.RelayInfo) bool {
+	return !info.PriceData.FreeModel || operation_setting.GetModelFundingSource(info.OriginModelName) != ""
+}
 
 // PreConsumeBilling 根据用户计费偏好创建 BillingSession 并执行预扣费。
 // 会话存储在 relayInfo.Billing 上，供后续 Settle / Refund 使用。

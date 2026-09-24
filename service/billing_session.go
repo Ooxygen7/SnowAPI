@@ -10,6 +10,7 @@ import (
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/QuantumNous/new-api/types"
 
 	"github.com/bytedance/gopkg/util/gopool"
@@ -397,6 +398,29 @@ func NewBillingSession(c *gin.Context, relayInfo *relaycommon.RelayInfo, preCons
 			return nil, apiErr
 		}
 		return session, nil
+	}
+
+	// Administrator model restrictions override user preferences and plan
+	// overflow. A session keeps this funding source for reserve/settle/refund.
+	if source := operation_setting.GetModelFundingSource(relayInfo.OriginModelName); source != "" {
+		var session *BillingSession
+		var apiErr *types.NewAPIError
+		switch source {
+		case "subscription_only":
+			session, apiErr = trySubscription()
+		case "wallet_only":
+			session, apiErr = tryWallet()
+		default:
+			return nil, types.NewErrorWithStatusCode(fmt.Errorf("invalid model funding configuration"), types.ErrorCodeInvalidRequest, http.StatusForbidden, types.ErrOptionWithSkipRetry())
+		}
+		if apiErr != nil && apiErr.GetErrorCode() == types.ErrorCodeInsufficientUserQuota {
+			message := "This model only accepts account balance; available wallet quota is insufficient. Subscription quota cannot be used."
+			if source == "subscription_only" {
+				message = "This model only accepts subscription quota; no active subscription with sufficient quota is available. Account balance cannot be used."
+			}
+			return nil, types.NewErrorWithStatusCode(errors.New(message), types.ErrorCodeInsufficientUserQuota, http.StatusForbidden, types.ErrOptionWithSkipRetry(), types.ErrOptionWithNoRecordErrorLog())
+		}
+		return session, apiErr
 	}
 
 	switch pref {

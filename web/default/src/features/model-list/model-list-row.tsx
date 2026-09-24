@@ -22,6 +22,7 @@ import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
 
+import { ModelFundingBadge } from './model-funding-badge'
 import { ModelHealthBar } from './model-health-bar'
 import { ModelProvider } from './model-provider'
 import type { CatalogModel } from './types'
@@ -56,6 +57,13 @@ export function ModelListRow(props: {
 }) {
   const { t } = useTranslation()
   const priceUnit = t(props.model.priceUnitKey)
+  let fundingLabel = ''
+  if (props.model.fundingSource === 'subscription_only') {
+    fundingLabel = t('Subscription only')
+  }
+  if (props.model.fundingSource === 'wallet_only') {
+    fundingLabel = t('Balance only')
+  }
 
   return (
     <li className='content-auto border-b last:border-b-0'>
@@ -64,7 +72,13 @@ export function ModelListRow(props: {
         data-press-animation='none'
         className='group relative grid w-full grid-cols-[minmax(0,1fr)_1.5rem] gap-x-3 gap-y-3 overflow-hidden px-4 py-3 text-left outline-none lg:min-h-14 lg:grid-cols-[minmax(230px,1.8fr)_minmax(100px,0.65fr)_minmax(90px,0.55fr)_minmax(90px,0.55fr)_minmax(150px,0.9fr)_1.5rem] lg:items-center lg:gap-x-4'
         onClick={() => props.onSelect(props.model.id)}
-        aria-label={`${props.model.name}. ${t('Click to view full details')}`}
+        aria-label={[
+          props.model.name,
+          fundingLabel,
+          t('Click to view full details'),
+        ]
+          .filter(Boolean)
+          .join('. ')}
       >
         <span
           aria-hidden='true'
@@ -72,8 +86,8 @@ export function ModelListRow(props: {
         />
 
         <div className='relative min-w-0 pr-7 lg:pr-0'>
-          <div className='flex min-w-0 items-center gap-2'>
-            <code className='min-w-0 truncate text-sm font-semibold tracking-[-0.01em]'>
+          <div className='flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1'>
+            <code className='max-w-full min-w-0 truncate text-sm font-semibold tracking-[-0.01em]'>
               {props.model.name}
             </code>
             <span
@@ -86,6 +100,7 @@ export function ModelListRow(props: {
             >
               {props.model.hasAccess ? t('Available') : t('No access')}
             </span>
+            <ModelFundingBadge source={props.model.fundingSource} />
           </div>
           {props.model.description ? (
             <p className='text-muted-foreground mt-0.5 line-clamp-1 text-xs'>
