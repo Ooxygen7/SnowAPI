@@ -1549,7 +1549,7 @@ body[data-snowapi-console='true']
 body[data-snowapi-console='true']
   .snowapi-astryx-content
   [data-slot='progress-indicator'] {
-  background: var(--foreground) !important;
+  background: var(--snowapi-progress-fill, var(--foreground)) !important;
 }
 
 body[data-snowapi-console='true']

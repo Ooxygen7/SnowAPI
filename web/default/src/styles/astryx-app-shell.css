@@ -1029,6 +1029,7 @@ For commercial licensing, please contact support@quantumnous.com
 }
 
 .snowapi-subscription-progress {
+  --snowapi-progress-fill: oklch(0.96 0 0);
   margin-top: 0.65rem;
 }
 
@@ -1038,7 +1039,7 @@ For commercial licensing, please contact support@quantumnous.com
 }
 
 .snowapi-subscription-progress [data-slot='progress-indicator'] {
-  background: oklch(0.96 0 0);
+  background: var(--snowapi-progress-fill);
 }
 
 .snowapi-my-subscription-times {
