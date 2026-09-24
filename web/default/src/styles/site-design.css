@@ -1,0 +1,100 @@
+/*
+Copyright (C) 2023-2026 QuantumNous
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+For commercial licensing, please contact support@quantumnous.com
+*/
+
+/* The selected site design follows navigation, portals, and public documents.
+ * Removing the data attribute / selecting Snowflake restores existing themes. */
+html[data-site-design='poolside'] {
+  --site-paper: #fbfaf6;
+  --site-ink: #11110f;
+  --site-surface: #f7f6ef;
+  --site-inset: #efeee7;
+  --site-muted: #6f6d69;
+  --site-rule: #e4e1d7;
+  --site-emphasis: #d4d0c4;
+  background: var(--site-paper);
+}
+html.dark[data-site-design='poolside'] {
+  --site-paper: #141413;
+  --site-ink: #f5f4ef;
+  --site-surface: #1e1e1a;
+  --site-inset: #292822;
+  --site-muted: #aaa79e;
+  --site-rule: #37362f;
+  --site-emphasis: #4a483e;
+}
+html[data-site-design='poolside'] body,
+html[data-site-design='poolside'] body[data-snowapi-console='true'],
+html[data-site-design='poolside']
+  .snowapi-minimal-public-shell:not(.snowapi-minimal-public-shell-dark) {
+  --background: var(--site-paper);
+  --foreground: var(--site-ink);
+  --card: var(--site-surface);
+  --card-foreground: var(--site-ink);
+  --popover: var(--site-surface);
+  --popover-foreground: var(--site-ink);
+  --secondary: var(--site-inset);
+  --secondary-foreground: var(--site-ink);
+  --muted: var(--site-inset);
+  --muted-foreground: var(--site-muted);
+  --accent: var(--site-inset);
+  --accent-foreground: var(--site-ink);
+  --border: var(--site-rule);
+  --input: var(--site-emphasis);
+  --table-row: var(--site-surface);
+  --table-row-hover: var(--site-inset);
+  --table-header: var(--site-inset);
+  --table-header-hover: var(--site-inset);
+  --sidebar: var(--site-paper);
+  --sidebar-foreground: var(--site-ink);
+  --sidebar-accent: var(--site-inset);
+  --sidebar-accent-foreground: var(--site-ink);
+  --sidebar-border: var(--site-rule);
+  --color-background-body: var(--site-paper);
+  --color-background-surface: var(--site-surface);
+  --color-background-card: var(--site-surface);
+  --color-background-popover: var(--site-surface);
+  --color-background-muted: var(--site-inset);
+  --color-accent-muted: var(--site-inset);
+  --color-neutral: var(--site-rule);
+  --color-text-primary: var(--site-ink);
+  --color-text-secondary: var(--site-muted);
+  --color-icon-primary: var(--site-ink);
+  --color-icon-secondary: var(--site-muted);
+  --color-border: var(--site-rule);
+  --color-border-emphasized: var(--site-emphasis);
+  --snowapi-rainflow-surface: var(--site-surface);
+  --snowapi-rainflow-surface-strong: var(--site-inset);
+  --snowapi-rainflow-surface-inset: var(--site-paper);
+  --snowapi-public-surface: var(--site-surface);
+  --snowapi-public-surface-strong: var(--site-inset);
+  --snowapi-floating-surface: var(--site-surface);
+  --snowapi-floating-border: var(--site-rule);
+  --snowapi-floating-ink: var(--site-ink);
+  --snowapi-floating-muted: var(--site-muted);
+}
+
+html[data-site-design='poolside']
+  body[data-snowapi-console='true']
+  :is(
+    [data-visual-region='data-table'],
+    [data-visual-region='static-data-table']
+  ) {
+  --data-table-surface: var(--site-surface);
+  --data-table-row-hover: var(--site-inset);
+}

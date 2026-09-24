@@ -36,6 +36,7 @@ import '@/lib/dayjs'
 import { applyFaviconToDom } from '@/lib/dom-utils'
 import { initializeFrontendCache } from '@/lib/frontend-cache'
 import { handleServerError } from '@/lib/handle-server-error'
+import { applySiteDesign } from '@/lib/site-design'
 import { applySnowApiAppearanceDefaultsOnce } from '@/lib/snowapi-appearance-defaults'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -54,6 +55,7 @@ import './styles/index.css'
 initializeFrontendCache()
 installBuildMetadata()
 applySnowApiAppearanceDefaultsOnce()
+applySiteDesign(undefined)
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -141,6 +143,7 @@ if (!rootElement) {
       const saved = localStorage.getItem('status')
       if (saved) {
         const s = JSON.parse(saved)
+        applySiteDesign(s?.home_design)
         if (s?.system_name) apply(s.system_name)
         if (s?.logo) applyFaviconToDom(s.logo)
       }
@@ -150,6 +153,7 @@ if (!rootElement) {
     // Background refresh
     getStatus()
       .then((s) => {
+        if (s) applySiteDesign(s.home_design)
         if (s?.system_name) {
           apply(s.system_name as string)
           try {

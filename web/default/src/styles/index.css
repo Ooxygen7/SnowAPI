@@ -33,6 +33,7 @@ For commercial licensing, please contact support@quantumnous.com
 @import './theme.css';
 @import './theme-presets.css';
 @import './astryx-app-shell.css';
+@import './site-design.css';
 
 .snowapi-confirm-content {
   max-height: calc(100dvh - 2rem);

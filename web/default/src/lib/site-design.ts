@@ -17,18 +17,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-.snowapi-legal-page {
-  background: var(--background);
-}
-.snowapi-legal-section {
-  min-width: 0;
-  min-height: 0;
-  scroll-margin-top: 7rem;
-  overflow-wrap: anywhere;
-  background: var(--snowapi-public-surface);
-}
-.snowapi-legal-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+// Shared by the cache-first bootstrap and the live system-status subscriber.
+export function applySiteDesign(design: unknown) {
+  document.documentElement.dataset.siteDesign =
+    design === 'snowflake' ? 'snowflake' : 'poolside'
 }

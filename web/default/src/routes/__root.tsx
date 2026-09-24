@@ -24,6 +24,7 @@ import {
   redirect,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { useLayoutEffect } from 'react'
 
 import { NavigationProgress } from '@/components/navigation-progress'
 import { Toaster } from '@/components/ui/sonner'
@@ -33,12 +34,16 @@ import { LoginWelcomeBoundary } from '@/features/auth/components/login-welcome'
 import { GeneralError } from '@/features/errors/general-error'
 import { NotFoundError } from '@/features/errors/not-found-error'
 import { getSetupStatus } from '@/features/setup/api'
-import { useSystemConfig } from '@/hooks/use-system-config'
+import { useStatus } from '@/hooks/use-status'
 import { IS_DEMO } from '@/lib/deployment-mode'
+import { applySiteDesign } from '@/lib/site-design'
 
 function RootComponent() {
-  // Load system configuration (logo, system name, etc.) from backend
-  useSystemConfig({ autoLoad: true })
+  // The shared status query also synchronizes branding and system configuration.
+  const { status } = useStatus()
+  useLayoutEffect(() => {
+    if (status) applySiteDesign(status.home_design)
+  }, [status])
 
   return (
     <ThemeCustomizationProvider>

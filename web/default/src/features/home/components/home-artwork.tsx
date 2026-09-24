@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-type ArtworkKind = 'polyhedron' | 'contours' | 'canopy' | 'puzzle'
+type ArtworkKind = 'polyhedron'
 
 export function HomeArtwork(props: { kind: ArtworkKind }) {
   if (props.kind === 'polyhedron') {
@@ -43,72 +43,5 @@ export function HomeArtwork(props: { kind: ArtworkKind }) {
       </div>
     )
   }
-  if (props.kind === 'contours') {
-    return (
-      <div className='snow-home-art snow-home-contours' aria-hidden='true'>
-        <svg viewBox='0 0 304 310' fill='none'>
-          <g stroke='currentColor' strokeWidth='.65'>
-            {Array.from({ length: 25 }, (_, i) => (
-              <path
-                key={i}
-                d={`M${-90 + i * 8} -30 C${35 + i * 4} 32 ${-76 + i * 11} 91 ${65 + i * 6} 115 S${145 + i * 5} 192 ${110 + i * 7} 228 S${210 + i * 5} 320 ${290 + i * 7} 350`}
-              />
-            ))}
-          </g>
-          <g fill='#4137ff'>
-            <circle cx='86' cy='102' r='5' />
-            <circle cx='192' cy='73' r='5' />
-            <circle cx='147' cy='201' r='5' />
-            <circle cx='227' cy='245' r='5' />
-          </g>
-        </svg>
-      </div>
-    )
-  }
-  if (props.kind === 'canopy') {
-    return (
-      <div className='snow-home-art snow-home-canopy' aria-hidden='true'>
-        <svg
-          viewBox='0 0 304 310'
-          fill='none'
-          stroke='currentColor'
-          strokeWidth='.65'
-        >
-          <g className='snow-home-canopy-wire'>
-            <path d='M45 130Q151-28 266 130Q154 228 45 130ZM45 130Q151 22 266 130M45 130Q151 70 266 130M45 130Q151 114 266 130M45 130Q151 153 266 130M45 130Q151 190 266 130' />
-            {[65, 90, 115, 140, 165, 190, 215, 240].map((x) => (
-              <path key={x} d={`M151 44 Q${x} 72 ${x} 155 Q${x} 183 157 174`} />
-            ))}
-            <path d='M153 169V257Q153 280 175 277Q191 275 189 260M158 169V255Q158 273 174 272Q186 271 184 260' />
-          </g>
-        </svg>
-      </div>
-    )
-  }
-  return (
-    <div className='snow-home-art snow-home-puzzle' aria-hidden='true'>
-      <svg viewBox='0 0 304 310'>
-        <g stroke='#c7c5ba' strokeWidth='1' className='snow-home-puzzle-pieces'>
-          <path
-            fill='#e9e7df'
-            d='m54 126 52-31 23 14q-14 17 4 20t23-6l30 18-26 16q-20-12-27 0t9 16l-31 18-57-34z'
-          />
-          <path fill='#d5d2c9' d='m54 157 57 34v19l-57-34z' />
-          <path fill='#c9c6bc' d='m111 191 31-18v19l-31 18z' />
-          <path
-            fill='#f3f2ec'
-            d='m157 82 42-25 58 34v30l-30 18q-21-14-27-1t9 16l-35 20-25-15q17-16-2-21t-24 7l-22-13 26-16q20 12 25-1t-10-16z'
-          />
-          <path fill='#dbd8ce' d='m174 174 35-20v19l-35 20-25-15v-19z' />
-          <path fill='#d0cdc2' d='m227 139 30-18v19l-30 18z' />
-          <path
-            fill='#e5e2d9'
-            d='m187 196 37-22 23 13q-13 16 3 19l-45 26-51-30 24-14z'
-          />
-          <path fill='#c4c0b6' d='m154 202 51 30v18l-51-30z' />
-          <path fill='#d8d5cb' d='m205 232 45-26v18l-45 26z' />
-        </g>
-      </svg>
-    </div>
-  )
+  return null
 }

@@ -55,7 +55,7 @@ export function useHomeMotion<T extends HTMLElement>(paused = false) {
   }
 }
 
-// Elapsed time is retained across pauses; animation frames never update React state.
+// Elapsed time is retained across pauses; the shared clock is capped at 30 fps.
 export function useHomeAnimationFrame(
   playing: boolean,
   draw: (elapsed: number) => void

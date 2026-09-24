@@ -20,46 +20,56 @@ For commercial licensing, please contact support@quantumnous.com
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { getTerminalFrame } from './terminal-timeline'
+import {
+  getTerminalFrame,
+  TERMINAL_COMPLETE_MS,
+  TERMINAL_CYCLE_MS,
+  TERMINAL_LINE_TIMES,
+  TERMINAL_LINES,
+  TERMINAL_PROMPT,
+} from './terminal-timeline'
 
-test('the command is typed into the input before being submitted to the transcript', () => {
-  assert.deepEqual(getTerminalFrame(0, 100), {
-    submitted: false,
-    promptLength: 0,
-    steps: 0,
-    complete: false,
-  })
-  assert.equal(getTerminalFrame(2950, 100).promptLength, 50)
-  assert.equal(getTerminalFrame(5500, 100).promptLength, 100)
-  assert.deepEqual(getTerminalFrame(6100, 100), {
-    submitted: true,
-    promptLength: 0,
-    steps: 0,
-    complete: false,
-  })
-})
-
-test('tool results appear in sequence before completion, then the demonstration restarts', () => {
-  assert.equal(getTerminalFrame(10000, 100).steps, 2)
-  assert.equal(getTerminalFrame(25000, 100).complete, false)
-  assert.deepEqual(getTerminalFrame(30000, 100), {
-    submitted: true,
-    promptLength: 0,
-    steps: 9,
-    complete: true,
-  })
-  assert.deepEqual(getTerminalFrame(34000, 100), getTerminalFrame(0, 100))
-})
-
-test('reduced motion exposes the completed transcript without requiring playback', () => {
-  assert.deepEqual(getTerminalFrame(0, 100, true), {
-    submitted: true,
-    promptLength: 0,
-    steps: 9,
-    complete: true,
-  })
-  assert.deepEqual(
-    getTerminalFrame(2000, 100, true),
-    getTerminalFrame(0, 100, true)
+test('the prompt types in the input before moving to the transcript', () => {
+  assert.equal(getTerminalFrame(0).promptLength, 0)
+  assert.equal(
+    getTerminalFrame(2950).promptLength,
+    Math.floor(TERMINAL_PROMPT.length / 2)
   )
+  assert.equal(getTerminalFrame(5500).promptLength, TERMINAL_PROMPT.length)
+  assert.equal(getTerminalFrame(6000).submitted, true)
+  assert.equal(getTerminalFrame(6000).promptLength, 0)
+  assert.equal(getTerminalFrame(6000).lines, 0)
+})
+
+test('each output line arrives independently, with a running work timer', () => {
+  TERMINAL_LINE_TIMES.forEach((at, index) => {
+    assert.equal(getTerminalFrame(at - 1).lines, index)
+    assert.equal(getTerminalFrame(at).lines, index + 1)
+  })
+  assert.equal(getTerminalFrame(17000).seconds, 11)
+  assert.equal(getTerminalFrame(TERMINAL_COMPLETE_MS - 1).complete, false)
+})
+
+test('terminal and background hold the finished frame for exactly two seconds, then reset together', () => {
+  const done = getTerminalFrame(TERMINAL_COMPLETE_MS)
+  assert.equal(done.complete, true)
+  assert.equal(done.lines, TERMINAL_LINES.length)
+  assert.deepEqual(getTerminalFrame(TERMINAL_COMPLETE_MS + 1999), done)
+  assert.equal(TERMINAL_CYCLE_MS - TERMINAL_COMPLETE_MS, 2000)
+  assert.deepEqual(
+    getTerminalFrame(TERMINAL_COMPLETE_MS + 2000),
+    getTerminalFrame(0)
+  )
+  assert.deepEqual(
+    getTerminalFrame(TERMINAL_CYCLE_MS * 3 + 7500),
+    getTerminalFrame(7500)
+  )
+})
+
+test('reduced motion exposes the complete demonstration without playback', () => {
+  assert.deepEqual(
+    getTerminalFrame(0, true),
+    getTerminalFrame(TERMINAL_COMPLETE_MS)
+  )
+  assert.deepEqual(getTerminalFrame(2000, true), getTerminalFrame(0, true))
 })

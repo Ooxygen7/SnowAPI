@@ -20,19 +20,17 @@ import { ArrowLeft01Icon, ArrowUpRight01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { skipToken, useQuery } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { MinimalPublicShell } from '@/components/layout'
 import { LoadingState } from '@/components/loading-state'
 import { RichContent } from '@/components/rich-content'
 import { Button } from '@/components/ui/button'
-import { useMediaQuery } from '@/hooks'
 import { isHttpUrl, isLikelyHtml } from '@/lib/content-format'
 import { appPath } from '@/lib/deployment-mode'
-import { cn } from '@/lib/utils'
 
-import { LegalChapterWheel } from './legal-chapter-wheel'
+import './legal.css'
 import type { BuiltInLegalDocument } from './legal-documents'
 import type { LegalDocumentResponse } from './types'
 
@@ -56,19 +54,11 @@ type RenderedLegalSection = {
 type LegalSectionCardProps = {
   section: RenderedLegalSection
   index: number
-  animated?: boolean
 }
 
 function LegalSectionCard(props: LegalSectionCardProps) {
   return (
-    <section
-      className={cn(
-        'snowapi-legal-section rounded-2xl px-5 py-6 sm:px-8 sm:py-8',
-        props.animated
-          ? 'snowapi-legal-chapter-card'
-          : 'snowapi-legal-mobile-section'
-      )}
-    >
+    <section className='snowapi-legal-section rounded-2xl px-5 py-6 sm:px-8 sm:py-8'>
       <div className='flex items-baseline gap-4'>
         <span className='text-muted-foreground/60 font-mono text-[0.68rem]'>
           {String(props.index + 1).padStart(2, '0')}
@@ -130,8 +120,6 @@ function parseCustomMarkdown(title: string, content: string) {
 export function LegalDocument(props: LegalDocumentProps) {
   const { t } = useTranslation()
   const { history } = useRouter()
-  const isMobile = useMediaQuery('(max-width: 767px)')
-  const [activeIndex, setActiveIndex] = useState(0)
   const { data, isLoading: documentLoading } = useQuery({
     queryKey: [props.queryKey],
     queryFn: props.fetchDocument ?? skipToken,
@@ -163,8 +151,6 @@ export function LegalDocument(props: LegalDocumentProps) {
     rawContent,
     t,
   ])
-  const visibleIndex = Math.min(activeIndex, Math.max(sections.length - 1, 0))
-  const activeSection = sections[visibleIndex]
 
   const goBack = useCallback(() => {
     if (window.history.length > 1) {
@@ -174,13 +160,9 @@ export function LegalDocument(props: LegalDocumentProps) {
     window.location.assign(appPath('/'))
   }, [history])
 
-  const selectSection = useCallback((index: number) => {
-    setActiveIndex(index)
-  }, [])
-
   return (
     <MinimalPublicShell className='snowapi-legal-page'>
-      <div className='mx-auto w-full max-w-6xl pb-20 sm:pb-24'>
+      <div className='mx-auto w-full max-w-4xl pb-20 sm:pb-24'>
         <Button
           type='button'
           variant='ghost'
@@ -238,8 +220,8 @@ export function LegalDocument(props: LegalDocumentProps) {
           </div>
         ) : null}
 
-        {!isLoading && !isExternal && !contentIsHtml && isMobile ? (
-          <article className='snowapi-legal-mobile-stack'>
+        {!isLoading && !isExternal && !contentIsHtml ? (
+          <article className='snowapi-legal-stack'>
             {sections.map((section, index) => (
               <LegalSectionCard
                 key={section.id}
@@ -248,38 +230,6 @@ export function LegalDocument(props: LegalDocumentProps) {
               />
             ))}
           </article>
-        ) : null}
-
-        {!isLoading &&
-        !isExternal &&
-        !contentIsHtml &&
-        !isMobile &&
-        sections.length > 0 ? (
-          <div className='snowapi-legal-chapter-layout'>
-            <aside className='snowapi-legal-wheel-panel'>
-              <LegalChapterWheel
-                items={sections.map((section) => ({
-                  id: section.id,
-                  label: section.title,
-                }))}
-                activeIndex={visibleIndex}
-                ariaLabel={t('Document chapters')}
-                onChange={selectSection}
-                capturePageWheel
-              />
-            </aside>
-
-            <article className='snowapi-legal-chapter-stage' aria-live='polite'>
-              {activeSection ? (
-                <LegalSectionCard
-                  key={activeSection.id}
-                  section={activeSection}
-                  index={visibleIndex}
-                  animated
-                />
-              ) : null}
-            </article>
-          </div>
         ) : null}
       </div>
     </MinimalPublicShell>

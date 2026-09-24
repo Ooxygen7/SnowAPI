@@ -28,6 +28,7 @@ import { useStatus } from '@/hooks/use-status'
 
 import { GatewayShowcase } from './components/gateway-showcase'
 import { HomeArtwork } from './components/home-artwork'
+import { PlatformArtwork } from './components/platform-artwork'
 import { StripedWordmark } from './components/striped-wordmark'
 
 import './poolside-home.css'
@@ -199,7 +200,7 @@ export default function PoolsideHome() {
             </h2>
             <div className='snow-home-platform-grid'>
               <Link to='/wallet' className='snow-home-platform-card'>
-                <HomeArtwork kind='contours' />
+                <PlatformArtwork kind='contours' />
                 <div className='snow-home-card-content'>
                   <h3>SnowEvent</h3>
                   <p>{t('Choose a subscription that fits your workflow')}</p>
@@ -210,7 +211,7 @@ export default function PoolsideHome() {
                 </div>
               </Link>
               <Link to='/privacy-policy' className='snow-home-platform-card'>
-                <HomeArtwork kind='canopy' />
+                <PlatformArtwork kind='canopy' />
                 <div className='snow-home-card-content'>
                   <h3>{t('Privacy and security')}</h3>
                   <p>{t('Manage your account and security')}</p>
@@ -226,7 +227,7 @@ export default function PoolsideHome() {
                 rel='noreferrer'
                 className='snow-home-platform-card'
               >
-                <HomeArtwork kind='puzzle' />
+                <PlatformArtwork kind='puzzle' />
                 <div className='snow-home-card-content'>
                   <h3>{t('Build with us.')}</h3>
                   <p>{t('Explore the SnowAPI source code')}</p>

@@ -17,9 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import { useEffect, useRef } from 'react'
-
-import { useHomeAnimationFrame } from '../hooks/use-home-motion'
+import { useEffect, useRef, type RefObject } from 'react'
 
 // A small, dependency-free shader: warm moving light, fine film grain and scanlines.
 const vertexSource = `
@@ -52,10 +50,11 @@ void main() {
 }
 `
 
-export function GrainBackground(props: { playing: boolean }) {
+export function GrainBackground(props: {
+  renderFrame: RefObject<(elapsed: number) => void>
+}) {
   const canvas = useRef<HTMLCanvasElement>(null)
-  const render = useRef<(elapsed: number) => void>(() => {})
-  useHomeAnimationFrame(props.playing, (elapsed) => render.current(elapsed))
+  const render = props.renderFrame
 
   useEffect(() => {
     const element = canvas.current
@@ -153,7 +152,7 @@ export function GrainBackground(props: { playing: boolean }) {
       gl.deleteBuffer(buffer)
       gl.deleteProgram(program)
     }
-  }, [])
+  }, [render])
 
   return <canvas ref={canvas} className='snow-home-grain' aria-hidden='true' />
 }

@@ -228,7 +228,7 @@ For commercial licensing, please contact support@quantumnous.com
   justify-content: center;
   gap: 12px;
   position: relative;
-  padding: 0 100px 0 56px;
+  padding: 0 56px;
   color: var(--home-muted);
   border-bottom: 1px solid var(--home-rule);
   font: 11px/1.3 var(--font-mono, monospace);
@@ -255,33 +255,6 @@ For commercial licensing, please contact support@quantumnous.com
 }
 .snow-home-window-dots i:nth-child(3) {
   background: #28c840;
-}
-.snow-home-window-actions {
-  position: absolute;
-  right: 8px;
-  display: flex;
-  gap: 2px;
-  align-items: center;
-}
-.snow-home-preview-label {
-  font-size: 10px;
-  margin-right: 4px;
-}
-.snow-home-window-actions button {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 5px;
-  cursor: pointer;
-}
-.snow-home-window-actions button:hover {
-  background: var(--home-rule);
-  color: var(--home-ink);
-}
-.snow-home-window-actions button:disabled {
-  opacity: 0.35;
-  cursor: default;
 }
 .snow-home-terminal {
   height: calc(100% - 40px);
@@ -311,26 +284,6 @@ For commercial licensing, please contact support@quantumnous.com
 .snow-home-terminal-scroll:focus-visible {
   outline-offset: -3px;
 }
-.snow-home-terminal-welcome {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 8px;
-}
-.snow-home-claude-mark {
-  font-size: 34px;
-  line-height: 1;
-  color: #b96343;
-}
-.snow-home-terminal-welcome strong {
-  color: var(--home-ink);
-  font-weight: 600;
-  font-size: 13px;
-}
-.snow-home-terminal-connection {
-  font-size: 10px;
-  margin-bottom: 18px;
-}
 .snow-home-terminal-request {
   background: var(--home-surface);
   color: var(--home-ink);
@@ -341,44 +294,46 @@ For commercial licensing, please contact support@quantumnous.com
 .snow-home-terminal-request > span {
   color: var(--home-accent);
 }
-.snow-home-terminal-step {
-  margin: 12px 0;
-}
-.snow-home-terminal-command {
-  color: var(--home-ink);
-}
-.snow-home-terminal-command > span {
-  color: var(--home-accent);
-  font-size: 10px;
-}
-.snow-home-terminal-output {
-  margin: 3px 0 0 5px;
-  padding-left: 14px;
-  border-left: 1px solid var(--home-rule);
+.snow-home-terminal-line {
   white-space: pre-wrap;
+  min-height: 1.65em;
 }
-.snow-home-terminal-step[data-tone='plan'] .snow-home-terminal-command {
-  color: var(--home-muted);
+.snow-home-terminal-line[data-tone='command'] {
+  color: var(--home-accent);
+  margin-top: 14px;
 }
-.snow-home-terminal-step[data-tone='success'] .snow-home-terminal-output,
-.snow-home-terminal-output [data-diff='+'] {
+.snow-home-terminal-line[data-tone='note'] {
+  margin-top: 14px;
+}
+.snow-home-terminal-line[data-tone='success'],
+.snow-home-terminal-line[data-tone='add'] {
   color: var(--terminal-green);
 }
-.snow-home-terminal-output [data-diff='-'] {
+.snow-home-terminal-line[data-tone='remove'] {
   color: var(--terminal-red);
-}
-.snow-home-terminal-step[data-tone='done'] .snow-home-terminal-output {
-  border: 0;
-  padding-left: 0;
-  margin-left: 0;
 }
 .snow-home-terminal-working {
   padding: 6px 0 12px;
+  font-variant-numeric: tabular-nums;
 }
-.snow-home-terminal-working > span {
-  display: inline-block;
-  color: var(--home-accent);
-  animation: snow-home-working 2.8s steps(12) infinite;
+.snow-home-working-glyph {
+  display: inline-grid;
+  grid-template-columns: repeat(2, 2px);
+  gap: 2px;
+  margin: 0 6px 0 1px;
+  vertical-align: 1px;
+  animation: snow-home-working 1.6s steps(8) infinite;
+}
+.snow-home-working-glyph i {
+  width: 2px;
+  height: 2px;
+  background: var(--home-accent);
+}
+.snow-home-working-glyph i:nth-child(2) {
+  opacity: 0.3;
+}
+.snow-home-working-glyph i:nth-child(3) {
+  opacity: 0.6;
 }
 .snow-home-terminal-input {
   display: flex;
@@ -536,18 +491,85 @@ For commercial licensing, please contact support@quantumnous.com
   min-height: 38px;
 }
 .snow-home-platform-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 520px;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(to bottom, var(--home-surface), var(--home-bg));
 }
 .snow-home-platform-card .snow-home-card-content {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
   display: flex;
-  flex: 1;
   flex-direction: column;
+  padding: 32px;
+  pointer-events: none;
 }
 .snow-home-platform-card .snow-home-card-meta {
-  margin-top: auto;
   padding-top: 28px;
+  margin-top: auto;
+}
+.snow-home-platform-art {
+  --art-x: 0;
+  --art-y: 0;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.snow-home-platform-contours img {
+  position: absolute;
+  left: 50%;
+  height: 100%;
+  width: auto;
+  max-width: none;
+  transform: translateX(-66.6667%);
+  transition: transform 900ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.snow-home-platform-contours[data-active='true'] img {
+  transform: translate(
+      calc(-66.6667% + var(--art-x) * 26px),
+      calc(var(--art-y) * 12px)
+    )
+    scale(1.06);
+}
+.snow-home-platform-canopy img {
+  position: absolute;
+  bottom: 80px;
+  left: 24px;
+  width: 110%;
+  max-width: none;
+  opacity: 0.65;
+  transform-origin: 55% 55%;
+  transition: transform 1000ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.snow-home-platform-canopy[data-active='true'] img {
+  transform: perspective(800px) rotateX(calc(var(--art-y) * -5deg))
+    rotateY(calc(var(--art-x) * 6deg)) rotate(-1deg) scale(1.025);
+}
+.snow-home-platform-puzzle video {
+  position: absolute;
+  top: -8px;
+  left: -25%;
+  width: 150%;
+  height: auto;
+  max-width: none;
+  opacity: 0.65;
+  mix-blend-mode: multiply;
+  transform: translateY(-20%);
+  mask-image: linear-gradient(to top, transparent, black 40px);
+}
+.dark .snow-home-platform-contours img,
+.dark .snow-home-platform-canopy img {
+  filter: invert(1) brightness(0.8);
+}
+.dark .snow-home-platform-puzzle video {
+  filter: invert(1);
+  mix-blend-mode: screen;
+  opacity: 0.3;
 }
 .snow-home-art {
   position: relative;
@@ -568,24 +590,6 @@ For commercial licensing, please contact support@quantumnous.com
 .snow-home-polyhedron-core {
   transform-origin: center;
   animation: snow-home-polyhedron-turn 14s ease-in-out infinite alternate;
-}
-.snow-home-contours,
-.snow-home-canopy,
-.snow-home-puzzle {
-  height: 280px;
-  color: #ada99c;
-}
-.snow-home-contours svg {
-  width: 110%;
-  margin-left: -5%;
-}
-.snow-home-canopy-wire {
-  transform-origin: center;
-  animation: snow-home-sway 12s ease-in-out infinite alternate;
-}
-.snow-home-puzzle-pieces {
-  transform-origin: center;
-  animation: snow-home-sway 8s ease-in-out infinite alternate-reverse;
 }
 .snow-home-footer {
   display: grid;
@@ -807,9 +811,6 @@ For commercial licensing, please contact support@quantumnous.com
     padding-right: 68px;
     font-size: 10px;
   }
-  .snow-home-preview-label {
-    display: none;
-  }
 }
 @keyframes snow-home-caret {
   50% {
@@ -822,14 +823,6 @@ For commercial licensing, please contact support@quantumnous.com
   }
   to {
     transform: rotate(14deg) scale(1.02);
-  }
-}
-@keyframes snow-home-sway {
-  from {
-    transform: translateY(-4px) rotate(-3deg);
-  }
-  to {
-    transform: translateY(5px) rotate(3deg);
   }
 }
 @media (prefers-reduced-motion: reduce) {
