@@ -64,12 +64,19 @@ export const TERMINAL_LINES = [
   ],
 ] as const
 
-export const TERMINAL_SUBMIT_MS = 6000
-export const TERMINAL_LINE_TIMES = TERMINAL_LINES.map(
-  (_, index) => 6600 + index * 640
+export const TERMINAL_SUBMIT_MS = 3000
+// Bursts of output alternate with longer inspection pauses, at twice the speed.
+const lineWeights = TERMINAL_LINES.map(([tone], index) =>
+  tone === 'note' ? 3 : 0.55 + (index % 3) * 0.35
 )
+const totalWeight = lineWeights.reduce((sum, weight) => sum + weight, 0)
+let accumulatedWeight = 0
+export const TERMINAL_LINE_TIMES = lineWeights.map((weight) => {
+  accumulatedWeight += weight
+  return Math.round(3000 + (accumulatedWeight / totalWeight) * 10860)
+})
 export const TERMINAL_COMPLETE_MS =
-  (TERMINAL_LINE_TIMES.at(-1) ?? TERMINAL_SUBMIT_MS) + 800
+  (TERMINAL_LINE_TIMES.at(-1) ?? TERMINAL_SUBMIT_MS) + 400
 export const TERMINAL_CYCLE_MS = TERMINAL_COMPLETE_MS + 2000
 
 export function getTerminalFrame(elapsed: number, reducedMotion = false) {
@@ -83,7 +90,7 @@ export function getTerminalFrame(elapsed: number, reducedMotion = false) {
       ? 0
       : Math.min(
           TERMINAL_PROMPT.length,
-          Math.floor((Math.max(0, time - 600) / 4700) * TERMINAL_PROMPT.length)
+          Math.floor((Math.max(0, time - 300) / 2350) * TERMINAL_PROMPT.length)
         ),
     lines: TERMINAL_LINE_TIMES.filter((at) => time >= at).length,
     seconds: Math.floor(
@@ -91,6 +98,6 @@ export function getTerminalFrame(elapsed: number, reducedMotion = false) {
         1000
     ),
     complete: time >= TERMINAL_COMPLETE_MS,
-    backgroundTime: Math.min(time, TERMINAL_COMPLETE_MS),
+    backgroundTime: Math.min(time, TERMINAL_COMPLETE_MS) * 2,
   }
 }

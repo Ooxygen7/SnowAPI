@@ -161,7 +161,7 @@ export function LegalDocument(props: LegalDocumentProps) {
   }, [history])
 
   return (
-    <MinimalPublicShell className='snowapi-legal-page'>
+    <MinimalPublicShell className='snowapi-legal-page' logoOnly>
       <div className='mx-auto w-full max-w-4xl pb-20 sm:pb-24'>
         <Button
           type='button'

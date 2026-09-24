@@ -65,7 +65,7 @@ describe('live model health', () => {
     }
     assert.equal(
       aggregateModelHealth([refreshed]).get('mimo-v2.5')?.successRate,
-      0
+      40
     )
     assert.equal(aggregateModelHealth([]).has('mimo-v2.5'), false)
   })

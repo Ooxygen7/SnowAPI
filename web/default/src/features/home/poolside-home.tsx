@@ -16,15 +16,16 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+
 import { Link } from '@tanstack/react-router'
-import { ArrowRight, ArrowUpRight, Menu, X } from 'lucide-react'
+import { ArrowRight, Menu, X } from 'lucide-react'
 import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { Trans, useTranslation } from 'react-i18next'
 
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { SnowApiLogoMark } from '@/components/snowapi-logo-mark'
 import { ThemeSwitch } from '@/components/theme-switch'
-import { useStatus } from '@/hooks/use-status'
+import { PublicResourceLinks } from '@/features/legal/public-resource-links'
 
 import { GatewayShowcase } from './components/gateway-showcase'
 import { HomeArtwork } from './components/home-artwork'
@@ -35,9 +36,7 @@ import './poolside-home.css'
 
 export default function PoolsideHome() {
   const { t } = useTranslation()
-  const { status } = useStatus()
   const [menuOpen, setMenuOpen] = useState(false)
-
   return (
     <div className='snow-poolside-home'>
       <a href='#snow-home-content' className='snow-home-skip'>
@@ -71,40 +70,22 @@ export default function PoolsideHome() {
             aria-label={t('Navigation')}
             onClick={() => setMenuOpen(false)}
           >
-            <Link to='/model-list'>{t('Models')}</Link>
-            <Link to='/sign-in'>{t('Get started')}</Link>
-            <a href='#developers'>{t('Developers')}</a>
-            <a href='#platform'>{t('Platform')}</a>
-            <Link to='/auto-access'>{t('Docs')}</Link>
-            <a
-              href='https://github.com/Ooxygen7/SnowAPI'
-              target='_blank'
-              rel='noreferrer'
-            >
-              GitHub
-            </a>
+            <PublicResourceLinks />
           </nav>
         </header>
-
         <main id='snow-home-content' className='snow-home-main'>
           <section className='snow-home-hero' aria-labelledby='snow-home-title'>
             <h1 id='snow-home-title'>
-              {t('Build with leading AI models,')}{' '}
-              <Link to='/model-list' className='snow-home-model-link'>
-                DeepSeek{' '}
-                <span className='snow-home-chip'>
-                  <b>V4.1</b>
-                  <span>Flash</span>
-                </span>
-              </Link>{' '}
-              {t('and')}{' '}
-              <Link to='/model-list' className='snow-home-model-link'>
-                GLM{' '}
-                <span className='snow-home-chip snow-home-chip-pink'>
-                  <b>5.3</b>
-                </span>
-              </Link>{' '}
-              {t('through one SnowAPI gateway.')}
+              <Trans
+                i18nKey='Leading AI models, together in the SnowAPI <beta>beta</beta> gateway.'
+                components={{
+                  beta: (
+                    <span className='snow-home-chip'>
+                      <b />
+                    </span>
+                  ),
+                }}
+              />
             </h1>
             <div className='snow-home-hero-actions'>
               <Link
@@ -114,18 +95,9 @@ export default function PoolsideHome() {
                 {t('Get started with SnowAPI')}
                 <ArrowRight size={14} aria-hidden='true' />
               </Link>
-              <Link className='snow-home-button' to='/model-list'>
-                {t('Explore models')}
-                <ArrowUpRight size={14} aria-hidden='true' />
-              </Link>
-              <Link className='snow-home-button' to='/auto-access'>
-                {t('Read the documentation')}
-                <ArrowUpRight size={14} aria-hidden='true' />
-              </Link>
             </div>
             <GatewayShowcase />
           </section>
-
           <section
             id='developers'
             className='snow-home-section'
@@ -139,7 +111,7 @@ export default function PoolsideHome() {
                 )}
               </span>
             </h2>
-            <Link to='/auto-access' className='snow-home-feature-card'>
+            <article className='snow-home-feature-card'>
               <HomeArtwork kind='polyhedron' />
               <div className='snow-home-card-content'>
                 <h3>{t('Automate your workflow with SnowAPI')}</h3>
@@ -148,43 +120,35 @@ export default function PoolsideHome() {
                     'Connect your tools and automate your workflow with SnowAPI.'
                   )}
                 </p>
-                <span className='snow-home-card-meta'>
-                  {t('Docs')} <ArrowUpRight size={14} />
-                </span>
               </div>
-            </Link>
+            </article>
             <div className='snow-home-resource-grid'>
-              <Link to='/keys' className='snow-home-resource-card'>
-                <span className='snow-home-eyebrow'>01 / API</span>
+              <article className='snow-home-resource-card'>
                 <h3>{t('Create and manage your API keys')}</h3>
-                <span className='snow-home-card-meta'>
-                  {t('Get started')}
-                  <ArrowUpRight size={14} />
-                </span>
-              </Link>
-              <Link to='/model-list' className='snow-home-resource-card'>
-                <span className='snow-home-eyebrow'>02 / API</span>
+                <p>
+                  {t(
+                    'Give every application its own key. Set an expiry, spending cap, model restrictions and IP allowlist; disable or replace a key without interrupting your other projects.'
+                  )}
+                </p>
+              </article>
+              <article className='snow-home-resource-card'>
                 <h3>{t('Follow model health in real time')}</h3>
-                <span className='snow-home-card-meta'>
-                  {t('Models')}
-                  <ArrowUpRight size={14} />
-                </span>
-              </Link>
-              <Link to='/usage-logs' className='snow-home-resource-card'>
-                <span className='snow-home-eyebrow'>03 / API</span>
+                <p>
+                  {t(
+                    'Explore 24 hourly success rates from real requests across the site. Colors reveal changes at a glance; hover over any hour for its result. Hours without requests remain unknown.'
+                  )}
+                </p>
+              </article>
+              <article className='snow-home-resource-card'>
                 <h3>{t('Understand every request with usage logs')}</h3>
-                <span className='snow-home-card-meta'>
-                  {t('Usage logs')}
-                  <ArrowUpRight size={14} />
-                </span>
-              </Link>
+                <p>
+                  {t(
+                    'Filter requests by time, model or API key. Review token usage, latency and charges, and inspect billing details to trace spending and diagnose failed requests.'
+                  )}
+                </p>
+              </article>
             </div>
-            <Link className='snow-home-section-link' to='/auto-access'>
-              {t('Read the documentation')}
-              <ArrowRight size={16} />
-            </Link>
           </section>
-
           <section
             id='platform'
             className='snow-home-section'
@@ -199,55 +163,33 @@ export default function PoolsideHome() {
               </span>
             </h2>
             <div className='snow-home-platform-grid'>
-              <Link to='/wallet' className='snow-home-platform-card'>
+              <article className='snow-home-platform-card'>
                 <PlatformArtwork kind='contours' />
                 <div className='snow-home-card-content'>
                   <h3>SnowEvent</h3>
                   <p>{t('Choose a subscription that fits your workflow')}</p>
-                  <span className='snow-home-card-meta'>
-                    {t('Subscriptions')}
-                    <ArrowUpRight size={14} />
-                  </span>
                 </div>
-              </Link>
-              <Link to='/privacy-policy' className='snow-home-platform-card'>
+              </article>
+              <article className='snow-home-platform-card'>
                 <PlatformArtwork kind='canopy' />
                 <div className='snow-home-card-content'>
                   <h3>{t('Privacy and security')}</h3>
                   <p>{t('Manage your account and security')}</p>
-                  <span className='snow-home-card-meta'>
-                    {t('Privacy Policy')}
-                    <ArrowUpRight size={14} />
-                  </span>
                 </div>
-              </Link>
-              <a
-                href='https://github.com/Ooxygen7/SnowAPI'
-                target='_blank'
-                rel='noreferrer'
-                className='snow-home-platform-card'
-              >
+              </article>
+              <article className='snow-home-platform-card'>
                 <PlatformArtwork kind='puzzle' />
                 <div className='snow-home-card-content'>
                   <h3>{t('Build with us.')}</h3>
                   <p>{t('Explore the SnowAPI source code')}</p>
-                  <span className='snow-home-card-meta'>
-                    GitHub
-                    <ArrowUpRight size={14} />
-                  </span>
                 </div>
-              </a>
+              </article>
             </div>
           </section>
         </main>
-
         <footer className='snow-home-footer'>
           <nav aria-label={t('Footer navigation')}>
-            <a href='#platform'>{t('Platform')}</a>
-            <Link to='/auto-access'>{t('Docs')}</Link>
-            {status?.faq_enabled ? <Link to='/faq'>{t('FAQ')}</Link> : null}
-            <Link to='/privacy-policy'>{t('Privacy Policy')}</Link>
-            <Link to='/user-agreement'>{t('Terms of Service')}</Link>
+            <PublicResourceLinks />
             <div className='snow-home-preferences'>
               <ThemeSwitch />
               <LanguageSwitcher />

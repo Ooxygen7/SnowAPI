@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as UserAgreementRouteImport } from './routes/user-agreement'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as FaqRouteImport } from './routes/faq'
+import { Route as DocsRouteImport } from './routes/docs'
 import { Route as AutoAccessRouteImport } from './routes/auto-access'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as authRouteRouteImport } from './routes/(auth)/route'
@@ -76,6 +77,11 @@ const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
 const FaqRoute = FaqRouteImport.update({
   id: '/faq',
   path: '/faq',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocsRoute = DocsRouteImport.update({
+  id: '/docs',
+  path: '/docs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AutoAccessRoute = AutoAccessRouteImport.update({
@@ -363,6 +369,7 @@ const AuthenticatedSystemSettingsAuthSectionRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auto-access': typeof AutoAccessRoute
+  '/docs': typeof DocsRoute
   '/faq': typeof FaqRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/user-agreement': typeof UserAgreementRoute
@@ -416,6 +423,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auto-access': typeof AutoAccessRoute
+  '/docs': typeof DocsRoute
   '/faq': typeof FaqRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/user-agreement': typeof UserAgreementRoute
@@ -471,6 +479,7 @@ export interface FileRoutesById {
   '/(auth)': typeof authRouteRouteWithChildren
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auto-access': typeof AutoAccessRoute
+  '/docs': typeof DocsRoute
   '/faq': typeof FaqRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/user-agreement': typeof UserAgreementRoute
@@ -526,6 +535,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auto-access'
+    | '/docs'
     | '/faq'
     | '/privacy-policy'
     | '/user-agreement'
@@ -579,6 +589,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auto-access'
+    | '/docs'
     | '/faq'
     | '/privacy-policy'
     | '/user-agreement'
@@ -633,6 +644,7 @@ export interface FileRouteTypes {
     | '/(auth)'
     | '/_authenticated'
     | '/auto-access'
+    | '/docs'
     | '/faq'
     | '/privacy-policy'
     | '/user-agreement'
@@ -689,6 +701,7 @@ export interface RootRouteChildren {
   authRouteRoute: typeof authRouteRouteWithChildren
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AutoAccessRoute: typeof AutoAccessRoute
+  DocsRoute: typeof DocsRoute
   FaqRoute: typeof FaqRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   UserAgreementRoute: typeof UserAgreementRoute
@@ -722,6 +735,13 @@ declare module '@tanstack/react-router' {
       path: '/faq'
       fullPath: '/faq'
       preLoaderRoute: typeof FaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/docs': {
+      id: '/docs'
+      path: '/docs'
+      fullPath: '/docs'
+      preLoaderRoute: typeof DocsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auto-access': {
@@ -1209,6 +1229,7 @@ const rootRouteChildren: RootRouteChildren = {
   authRouteRoute: authRouteRouteWithChildren,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AutoAccessRoute: AutoAccessRoute,
+  DocsRoute: DocsRoute,
   FaqRoute: FaqRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
   UserAgreementRoute: UserAgreementRoute,

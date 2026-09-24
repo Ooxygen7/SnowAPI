@@ -16,6 +16,7 @@ body .snowapi-checkout.snowapi-dialog-content {
   color: var(--snowapi-floating-ink) !important;
   box-shadow: none !important;
   font-family: var(--font-sans);
+  opacity: 1;
 }
 .snowapi-checkout[data-open] {
   animation: snowapi-checkout-enter 240ms ease-out both;
@@ -158,6 +159,7 @@ body .snowapi-checkout.snowapi-dialog-content {
   font-variant-numeric: tabular-nums;
 }
 .snowapi-checkout-summary {
+  background: #fff;
   margin-top: 66px;
   padding: 30px;
   border: 1px solid var(--snowapi-floating-border);
@@ -241,6 +243,16 @@ body .snowapi-checkout.snowapi-dialog-content {
   min-height: 20px;
   text-align: center;
   margin-bottom: 0 !important;
+}
+.snowapi-checkout-status:empty {
+  display: none;
+}
+:root:not(.dark) .snowapi-checkout-account,
+:root:not(.dark) .snowapi-checkout-method {
+  background: #fff;
+}
+.dark .snowapi-checkout-summary {
+  background: var(--snowapi-floating-surface);
 }
 .snowapi-checkout-footer {
   display: flex;

@@ -19,11 +19,17 @@ For commercial licensing, please contact support@quantumnous.com
 import { useTranslation } from 'react-i18next'
 
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import {
   formatUptimePct,
   getSuccessRateDotClass,
   getSuccessRateTextClass,
   getSuccessRateLevel,
 } from '@/features/performance-metrics/lib/format'
+import { toIntlLocale } from '@/i18n/languages'
 import { cn } from '@/lib/utils'
 
 import type { CatalogModelHealthHour } from './types'
@@ -34,7 +40,14 @@ export function ModelHealthBar(props: {
   hourlyHealth: CatalogModelHealthHour[]
   showLabel?: boolean
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const hourFormat = new Intl.DateTimeFormat(toIntlLocale(i18n.language), {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
   const successRate =
     props.successRate === null
       ? null
@@ -87,29 +100,31 @@ export function ModelHealthBar(props: {
               )}
             />
           ))}
-          {hourlyHealth.map((health) => (
-            <span
-              key={health.hour}
-              aria-hidden='true'
-              data-health-level={
-                health.successRate === null
-                  ? 'unknown'
-                  : getSuccessRateLevel(health.successRate)
-              }
-              title={
-                health.successRate === null
-                  ? t('No data')
-                  : `${t('Success rate')}: ${formatUptimePct(health.successRate)}`
-              }
-              className={cn(
-                'rounded-[2px] transition-colors duration-300 motion-reduce:transition-none',
-                props.showLabel ? 'h-4' : 'h-2.5',
-                health.successRate === null
-                  ? 'bg-muted-foreground/15'
-                  : getSuccessRateDotClass(health.successRate)
-              )}
-            />
-          ))}
+          {hourlyHealth.map((health) => {
+            const label = `${hourFormat.format(new Date(health.hour * 1000))} – ${hourFormat.format(new Date((health.hour + 3600) * 1000))} · ${t('Success rate')}: ${health.successRate === null ? t('No data') : formatUptimePct(health.successRate)}`
+            return (
+              <Tooltip key={health.hour}>
+                <TooltipTrigger
+                  render={<span />}
+                  tabIndex={props.showLabel ? 0 : undefined}
+                  aria-label={label}
+                  data-health-level={
+                    health.successRate === null
+                      ? 'unknown'
+                      : getSuccessRateLevel(health.successRate)
+                  }
+                  className={cn(
+                    'rounded-[2px] transition-colors duration-300 motion-reduce:transition-none',
+                    props.showLabel ? 'h-4' : 'h-2.5',
+                    health.successRate === null
+                      ? 'bg-muted-foreground/15'
+                      : getSuccessRateDotClass(health.successRate)
+                  )}
+                />
+                <TooltipContent>{label}</TooltipContent>
+              </Tooltip>
+            )
+          })}
         </div>
         {props.showLabel ? null : (
           <span

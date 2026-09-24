@@ -83,7 +83,7 @@ export function GatewayShowcase() {
             <i />
             <i />
           </span>
-          <span className='snow-home-window-title'>terminal — website</span>
+          <span className='snow-home-window-title'>terminal</span>
         </div>
         <div
           className='snow-home-terminal'

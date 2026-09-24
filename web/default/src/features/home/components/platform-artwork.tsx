@@ -34,7 +34,7 @@ export function PlatformArtwork(props: {
 
   useEffect(() => {
     const element = ref.current
-    const card = element?.closest('a')
+    const card = element?.closest<HTMLElement>('.snow-home-platform-card')
     if (!element || !card) return
     const media = video.current
     const coarse = window.matchMedia('(hover: none)')

@@ -200,9 +200,18 @@ export function aggregateModelHealth(models: ModelHealthModel[]) {
               )
             : null,
       }))
-    const latestKnownHealth = [...hourlyHealth]
-      .reverse()
-      .find((health) => health.successRate !== null)
+    const observedHours = hourlyHealth.filter((health) => health.totalCount > 0)
+    const meanSuccessRate = observedHours.length
+      ? Number(
+          (
+            observedHours.reduce(
+              (sum, health) =>
+                sum + (health.successCount / health.totalCount) * 100,
+              0
+            ) / observedHours.length
+          ).toFixed(2)
+        )
+      : null
     const icon = [...visibleModels]
       .sort((a, b) => {
         const channelComparison =
@@ -213,7 +222,7 @@ export function aggregateModelHealth(models: ModelHealthModel[]) {
       .find((model) => Boolean(model.icon))?.icon
 
     snapshots.set(identity, {
-      successRate: latestKnownHealth?.successRate ?? null,
+      successRate: meanSuccessRate,
       hourlyHealth,
       ...(icon ? { icon } : {}),
     })

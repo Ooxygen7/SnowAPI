@@ -9,7 +9,6 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
-	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 )
 
@@ -25,127 +24,16 @@ func RegisterScheduledSystemTasks() {
 	service.RegisterSystemTaskHandler(asyncTaskPollHandler{})
 }
 
-// modelHealthProbeHandler sends one tiny request to each chat-capable model in
-// the model square. The system task lease ensures only one node probes every
-// model during each 12-minute interval.
+// Retain the retired task handler so already queued jobs finish without sending
+// an upstream request. Health is now populated exclusively by user relays.
 type modelHealthProbeHandler struct{}
 
-func (modelHealthProbeHandler) Type() string { return model.SystemTaskTypeModelHealth }
-
-func (modelHealthProbeHandler) Enabled() bool { return true }
-
+func (modelHealthProbeHandler) Type() string            { return model.SystemTaskTypeModelHealth }
+func (modelHealthProbeHandler) Enabled() bool           { return false }
 func (modelHealthProbeHandler) Interval() time.Duration { return 12 * time.Minute }
-
-func (modelHealthProbeHandler) NewPayload() any { return nil }
-
-type modelHealthProbeSummary struct {
-	Tested    int `json:"tested"`
-	Succeeded int `json:"succeeded"`
-	Failed    int `json:"failed"`
-	Skipped   int `json:"skipped"`
-}
-
-func (modelHealthProbeHandler) Run(ctx context.Context, task *model.SystemTask, runnerID string) {
-	testUserID, err := resolveChannelTestUserID(nil)
-	if err != nil {
-		finishSystemTaskHandler(task, runnerID, model.SystemTaskStatusFailed, nil, err)
-		return
-	}
-	user, err := model.GetUserCache(testUserID)
-	if err != nil {
-		finishSystemTaskHandler(task, runnerID, model.SystemTaskStatusFailed, nil, err)
-		return
-	}
-
-	summary := modelHealthProbeSummary{}
-	for _, pricing := range model.GetPricing() {
-		if ctx.Err() != nil {
-			finishSystemTaskHandler(task, runnerID, model.SystemTaskStatusFailed, summary, ctx.Err())
-			return
-		}
-
-		endpointType, ok := selectModelHealthProbeEndpoint(pricing.SupportedEndpointTypes)
-		if !ok {
-			summary.Skipped++
-			continue
-		}
-		group := selectModelHealthProbeGroup(pricing.EnableGroup, user.Group)
-		endpointInfo, _ := common.GetDefaultEndpointInfo(endpointType)
-		channel, channelErr := model.GetChannel(group, pricing.ModelName, 0, endpointInfo.Path)
-		summary.Tested++
-		if channelErr != nil || channel == nil {
-			summary.Failed++
-			if recordErr := model.RecordChannelModelHealth(0, pricing.ModelName, false, true, time.Now()); recordErr != nil {
-				common.SysError(fmt.Sprintf("failed to record model health probe for %s: %v", pricing.ModelName, recordErr))
-			}
-			continue
-		}
-
-		probeCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
-		result := testChannel(probeCtx, channel, testUserID, pricing.ModelName, string(endpointType), false)
-		cancel()
-		success := result.localErr == nil && result.newAPIError == nil
-		if success {
-			summary.Succeeded++
-		} else {
-			summary.Failed++
-		}
-		if recordErr := model.RecordChannelModelHealth(channel.Id, pricing.ModelName, success, true, time.Now()); recordErr != nil {
-			common.SysError(fmt.Sprintf("failed to record model health probe for %s: %v", pricing.ModelName, recordErr))
-		}
-	}
-
-	if err := model.DeleteExpiredModelHealth(time.Now()); err != nil {
-		finishSystemTaskHandler(task, runnerID, model.SystemTaskStatusFailed, summary, err)
-		return
-	}
-	finishSystemTaskHandler(task, runnerID, model.SystemTaskStatusSucceeded, summary, nil)
-}
-
-func selectModelHealthProbeEndpoint(endpoints []constant.EndpointType) (constant.EndpointType, bool) {
-	preferred := []constant.EndpointType{
-		constant.EndpointTypeOpenAI,
-		constant.EndpointTypeOpenAIResponse,
-		constant.EndpointTypeOpenAIResponseCompact,
-		constant.EndpointTypeAnthropic,
-		constant.EndpointTypeGemini,
-	}
-	for _, candidate := range preferred {
-		for _, endpoint := range endpoints {
-			if endpoint == candidate {
-				return candidate, true
-			}
-		}
-	}
-	return "", false
-}
-
-func selectModelHealthProbeGroup(groups []string, userGroup string) string {
-	for _, group := range groups {
-		if group == userGroup {
-			return group
-		}
-	}
-	for _, group := range groups {
-		if group == "all" {
-			if userGroup != "" {
-				return userGroup
-			}
-			return setting.GetDefaultGroup()
-		}
-	}
-	for _, group := range groups {
-		if group == setting.GetDefaultGroup() {
-			return group
-		}
-	}
-	if len(groups) > 0 {
-		return groups[0]
-	}
-	if userGroup != "" {
-		return userGroup
-	}
-	return setting.GetDefaultGroup()
+func (modelHealthProbeHandler) NewPayload() any         { return nil }
+func (modelHealthProbeHandler) Run(_ context.Context, task *model.SystemTask, runnerID string) {
+	finishSystemTaskHandler(task, runnerID, model.SystemTaskStatusSucceeded, nil, nil)
 }
 
 // channelTestHandler runs the scheduled "test all channels" job. Enablement and

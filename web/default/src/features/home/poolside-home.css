@@ -139,7 +139,9 @@ For commercial licensing, please contact support@quantumnous.com
   align-items: stretch;
   border: 1px solid #4137ff40;
   border-radius: 5px;
-  color: #4137ff;
+  color: #fff;
+  background: #4137ff;
+  padding: 0 6px;
   font:
     12px/26px 'Inter',
     Arial,
@@ -473,8 +475,13 @@ For commercial licensing, please contact support@quantumnous.com
   font: 11px/1.5 var(--font-mono, monospace);
 }
 .snow-home-resource-card h3 {
-  margin: 24px 0;
+  margin: 0 0 20px;
   font-size: 20px;
+}
+.snow-home-resource-card p {
+  color: var(--home-muted);
+  font-size: 14px;
+  line-height: 1.8;
 }
 .snow-home-resource-card .snow-home-card-meta {
   margin-top: auto;
@@ -564,7 +571,9 @@ For commercial licensing, please contact support@quantumnous.com
 }
 .dark .snow-home-platform-contours img,
 .dark .snow-home-platform-canopy img {
-  filter: invert(1) brightness(0.8);
+  filter: invert(1) grayscale(1) brightness(2.5);
+  mix-blend-mode: screen;
+  opacity: 0.7;
 }
 .dark .snow-home-platform-puzzle video {
   filter: invert(1);

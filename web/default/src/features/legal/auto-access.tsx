@@ -20,11 +20,9 @@ import { useTranslation } from 'react-i18next'
 
 import { useAuthStore } from '@/stores/auth-store'
 
-import { LegalDocument } from './legal-document'
-
 import './legal.css'
 
-export function AutoAccessPage() {
+export function useAutoAccessSections() {
   const { t } = useTranslation()
   const userId = useAuthStore((state) => state.auth.user?.id)
   const origin = window.location.origin
@@ -135,12 +133,8 @@ export function AutoAccessPage() {
     },
   ]
 
-  return (
-    <LegalDocument
-      title={t('Management API documentation')}
-      queryKey='auto-access-docs'
-      sections={sections}
-      loading={false}
-    />
-  )
+  return sections.map((section) => ({
+    ...section,
+    id: `automatic-access-${section.id}`,
+  }))
 }

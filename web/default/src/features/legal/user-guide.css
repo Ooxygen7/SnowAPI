@@ -1,0 +1,163 @@
+/*
+Copyright (C) 2023-2026 QuantumNous
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+For commercial licensing, please contact support@quantumnous.com
+*/
+.snowapi-guide-layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  align-items: start;
+  gap: 72px;
+  max-width: 1240px;
+  margin: auto;
+  padding-bottom: 80px;
+}
+.snowapi-guide-sidebar {
+  position: sticky;
+  top: 104px;
+  max-height: calc(100dvh - 136px);
+  overflow: auto;
+  scrollbar-width: thin;
+  padding: 8px 16px 24px 0;
+}
+.snowapi-guide-sidebar nav,
+.snowapi-guide-mobile-index nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.snowapi-guide-sidebar a,
+.snowapi-guide-mobile-index a {
+  padding: 6px 10px;
+  border-radius: 7px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.snowapi-guide-sidebar a[aria-current],
+.snowapi-guide-sidebar a:hover,
+.snowapi-guide-mobile-index a:hover {
+  color: var(--foreground);
+  background: var(--muted);
+}
+.snowapi-guide-preferences {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+.snowapi-guide-index-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+  margin: 0 10px 14px;
+}
+.snowapi-guide-resources {
+  border-top: 1px solid var(--border);
+  margin-top: 24px;
+  padding-top: 18px;
+}
+.snowapi-guide-content {
+  min-width: 0;
+}
+.snowapi-guide-heading {
+  padding: 32px 0 56px;
+}
+.snowapi-guide-heading p {
+  color: var(--muted-foreground);
+  font: 12px var(--font-mono);
+  margin-bottom: 12px;
+}
+.snowapi-guide-heading h1 {
+  font-size: clamp(30px, 4vw, 48px);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+.snowapi-guide-section {
+  scroll-margin-top: 110px;
+  border-top: 1px solid var(--border);
+  padding: 40px 0;
+  overflow-wrap: anywhere;
+}
+.snowapi-guide-section h2 {
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  margin-bottom: 20px;
+}
+.snowapi-guide-section p,
+.snowapi-guide-section li {
+  font-size: 14px;
+  line-height: 1.95;
+}
+.snowapi-guide-section pre {
+  max-width: 100%;
+  overflow-x: auto;
+  font-size: 12px;
+}
+.snowapi-guide-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  border-top: 1px solid var(--border);
+  padding-top: 32px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.snowapi-guide-mobile-index,
+.snowapi-guide-mobile-preferences {
+  display: none;
+}
+.snowapi-guide-page a:focus-visible,
+.snowapi-guide-page summary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+@media (max-width: 900px) {
+  .snowapi-guide-layout {
+    display: block;
+  }
+  .snowapi-guide-sidebar {
+    display: none;
+  }
+  .snowapi-guide-mobile-preferences {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  .snowapi-guide-heading {
+    padding: 24px 0 32px;
+  }
+  .snowapi-guide-mobile-index {
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 32px;
+  }
+  .snowapi-guide-mobile-index summary {
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .snowapi-guide-mobile-index nav {
+    margin-top: 14px;
+    max-height: 50dvh;
+    overflow: auto;
+  }
+  .snowapi-guide-section {
+    padding: 28px 0;
+    scroll-margin-top: 92px;
+  }
+}

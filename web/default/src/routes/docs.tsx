@@ -16,10 +16,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { createFileRoute, redirect } from '@tanstack/react-router'
 
-export const Route = createFileRoute('/auto-access')({
-  beforeLoad: () => {
-    throw redirect({ to: '/docs', hash: 'automatic-access' })
-  },
-})
+import { createFileRoute } from '@tanstack/react-router'
+
+import { UserGuide } from '@/features/legal/user-guide'
+
+export const Route = createFileRoute('/docs')({ component: UserGuide })

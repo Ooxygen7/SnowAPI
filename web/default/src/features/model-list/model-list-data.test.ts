@@ -74,7 +74,7 @@ test('aggregates every visible channel by normalized model and hour', () => {
   ])
 
   assert.deepEqual(snapshots.get('gpt-4o'), {
-    successRate: 50,
+    successRate: 60,
     hourlyHealth: [
       { hour: 100, totalCount: 10, successCount: 7, successRate: 70 },
       { hour: 200, totalCount: 2, successCount: 1, successRate: 50 },
@@ -94,6 +94,21 @@ test('keeps unknown buckets null and ignores overall rows when channels exist', 
       { hour: 100, totalCount: 0, successCount: 0, successRate: null },
     ],
   })
+})
+
+test('hourly average is not traffic weighted and only includes the last 24 slots', () => {
+  const rows = [
+    healthModel('model-a', 0, 0, 100, 100),
+    ...Array.from({ length: 22 }, (_, index) =>
+      healthModel('model-a', 0, index + 1, 0, 0)
+    ),
+    healthModel('model-a', 0, 23, 1, 1),
+    healthModel('model-a', 0, 24, 100, 0),
+  ]
+  const health = aggregateModelHealth(rows).get('model-a')
+  assert.equal(health?.successRate, 50)
+  assert.equal(health?.hourlyHealth.length, 24)
+  assert.equal(health?.hourlyHealth[0]?.hour, 1)
 })
 
 test('merges duplicate catalog rows deterministically without changing display spelling', () => {

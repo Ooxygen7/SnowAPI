@@ -32,13 +32,13 @@ import {
 test('the prompt types in the input before moving to the transcript', () => {
   assert.equal(getTerminalFrame(0).promptLength, 0)
   assert.equal(
-    getTerminalFrame(2950).promptLength,
+    getTerminalFrame(1475).promptLength,
     Math.floor(TERMINAL_PROMPT.length / 2)
   )
-  assert.equal(getTerminalFrame(5500).promptLength, TERMINAL_PROMPT.length)
-  assert.equal(getTerminalFrame(6000).submitted, true)
-  assert.equal(getTerminalFrame(6000).promptLength, 0)
-  assert.equal(getTerminalFrame(6000).lines, 0)
+  assert.equal(getTerminalFrame(2750).promptLength, TERMINAL_PROMPT.length)
+  assert.equal(getTerminalFrame(3000).submitted, true)
+  assert.equal(getTerminalFrame(3000).promptLength, 0)
+  assert.equal(getTerminalFrame(3000).lines, 0)
 })
 
 test('each output line arrives independently, with a running work timer', () => {
@@ -46,7 +46,12 @@ test('each output line arrives independently, with a running work timer', () => 
     assert.equal(getTerminalFrame(at - 1).lines, index)
     assert.equal(getTerminalFrame(at).lines, index + 1)
   })
-  assert.equal(getTerminalFrame(17000).seconds, 11)
+  assert.equal(getTerminalFrame(8500).seconds, 5)
+  const gaps = TERMINAL_LINE_TIMES.slice(1).map(
+    (at, index) => at - TERMINAL_LINE_TIMES[index]
+  )
+  assert.ok(new Set(gaps).size > 2)
+  assert.equal(TERMINAL_COMPLETE_MS, 14260)
   assert.equal(getTerminalFrame(TERMINAL_COMPLETE_MS - 1).complete, false)
 })
 

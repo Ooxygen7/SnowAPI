@@ -16,10 +16,30 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { createFileRoute, redirect } from '@tanstack/react-router'
 
-export const Route = createFileRoute('/auto-access')({
-  beforeLoad: () => {
-    throw redirect({ to: '/docs', hash: 'automatic-access' })
-  },
-})
+import { Link } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
+
+export function PublicResourceLinks() {
+  const { t } = useTranslation()
+  return (
+    <>
+      <Link to='/docs'>{t('Docs')}</Link>
+      <Link to='/docs' hash='faq'>
+        {t('FAQ')}
+      </Link>
+      <Link to='/privacy-policy'>{t('Privacy Policy')}</Link>
+      <Link to='/user-agreement'>{t('Terms of Service')}</Link>
+      <a href='https://mail.unsnow.org/' target='_blank' rel='noreferrer'>
+        {t('Temporary email')}
+      </a>
+      <a
+        href='https://github.com/Ooxygen7/SnowAPI'
+        target='_blank'
+        rel='noreferrer'
+      >
+        GitHub
+      </a>
+    </>
+  )
+}

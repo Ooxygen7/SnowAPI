@@ -1,9 +1,10 @@
 package controller
 
 import (
+	"errors"
 	"testing"
 
-	"github.com/QuantumNous/new-api/constant"
+	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -34,23 +35,30 @@ func TestShouldRecordModelHealth(t *testing.T) {
 	}
 }
 
-func TestSelectModelHealthProbeEndpoint(t *testing.T) {
-	endpoint, ok := selectModelHealthProbeEndpoint([]constant.EndpointType{
-		constant.EndpointTypeGemini,
-		constant.EndpointTypeOpenAIResponse,
-	})
-	assert.True(t, ok)
-	assert.Equal(t, constant.EndpointTypeOpenAIResponse, endpoint)
-
-	_, ok = selectModelHealthProbeEndpoint([]constant.EndpointType{
-		constant.EndpointTypeImageGeneration,
-	})
-	assert.False(t, ok)
+func TestModelHealthNeverSchedulesSyntheticProbes(t *testing.T) {
+	assert.False(t, (modelHealthProbeHandler{}).Enabled())
 }
 
-func TestSelectModelHealthProbeGroup(t *testing.T) {
-	assert.Equal(t, "Light", selectModelHealthProbeGroup([]string{"Free", "Light"}, "Light"))
-	assert.Equal(t, "Light", selectModelHealthProbeGroup([]string{"all"}, "Light"))
-	assert.Equal(t, "Free", selectModelHealthProbeGroup([]string{"Free", "Light"}, "guest"))
-	assert.Equal(t, "first", selectModelHealthProbeGroup([]string{"first", "second"}, "guest"))
+func TestModelHealthRequestSucceeded(t *testing.T) {
+	cases := []struct {
+		name           string
+		relaySucceeded bool
+		stream         *relaycommon.StreamStatus
+		want           bool
+	}{
+		{"completed non-stream request", true, nil, true},
+		{"upstream HTTP error", false, nil, false},
+		{"completed stream", true, &relaycommon.StreamStatus{EndReason: relaycommon.StreamEndReasonDone}, true},
+		{"provider ends at EOF", true, &relaycommon.StreamStatus{EndReason: relaycommon.StreamEndReasonEOF}, true},
+		{"provider finish handler", true, &relaycommon.StreamStatus{EndReason: relaycommon.StreamEndReasonHandlerStop}, true},
+		{"timeout after HTTP 200", true, &relaycommon.StreamStatus{EndReason: relaycommon.StreamEndReasonTimeout}, false},
+		{"stream decode error", true, &relaycommon.StreamStatus{EndReason: relaycommon.StreamEndReasonDone, ErrorCount: 1}, false},
+		{"stream end error", true, &relaycommon.StreamStatus{EndReason: relaycommon.StreamEndReasonEOF, EndError: errors.New("connection reset")}, false},
+		{"unfinished stream", true, &relaycommon.StreamStatus{}, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, modelHealthRequestSucceeded(tc.relaySucceeded, tc.stream))
+		})
+	}
 }

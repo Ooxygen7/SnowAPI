@@ -74,6 +74,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		newAPIError    *types.NewAPIError
 		ws             *websocket.Conn
 		relaySucceeded bool
+		relayAttempted bool
 	)
 
 	if relayFormat == types.RelayFormatOpenAIRealtime {
@@ -125,10 +126,13 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 	if shouldRecordModelHealth(relayFormat, c.Request.URL.Path) {
 		modelName := relayInfo.OriginModelName
 		defer func() {
-			success := relaySucceeded
-			channelID := c.GetInt("channel_id")
+			if !relayAttempted {
+				return
+			}
+			success := modelHealthRequestSucceeded(relaySucceeded, relayInfo.StreamStatus)
+			completedAt := time.Now()
 			gopool.Go(func() {
-				if recordErr := model.RecordChannelModelHealth(channelID, modelName, success, false, time.Now()); recordErr != nil {
+				if recordErr := model.RecordModelRequestHealth(modelName, success, completedAt); recordErr != nil {
 					common.SysError(fmt.Sprintf("failed to record model health for %s: %v", modelName, recordErr))
 				}
 			})
@@ -235,6 +239,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 			break
 		}
 		c.Request.Body = io.NopCloser(bodyStorage)
+		relayAttempted = true
 
 		switch relayFormat {
 		case types.RelayFormatOpenAIRealtime:

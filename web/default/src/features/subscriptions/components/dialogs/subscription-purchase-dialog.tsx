@@ -271,13 +271,6 @@ function SubscriptionCheckout(
                   </dd>
                 </div>
               </dl>
-              {quote?.is_upgrade && (
-                <p className='snowapi-checkout-note'>
-                  {t(
-                    'Your current billing cycle stays unchanged. Only the remaining-period upgrade difference is charged.'
-                  )}
-                </p>
-              )}
               {checkout.isError && (
                 <div role='alert' className='snowapi-checkout-error'>
                   {t('Unable to load the payment quote.')}
@@ -326,9 +319,6 @@ function SubscriptionCheckout(
               >
                 {payment.paid && t('Payment successful')}
                 {payment.busy && t('Processing payment…')}
-                {!payment.paid &&
-                  !payment.busy &&
-                  t('Slide to confirm your purchase.')}
               </p>
             </aside>
           </div>
