@@ -16,55 +16,28 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Link } from '@tanstack/react-router'
-import { ArrowUpRight } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { lazy, Suspense } from 'react'
 
-import { HomeHeader } from './components/home-header'
-import { SnowflakeCanvas } from './components/snowflake-canvas'
+import { useStatus } from '@/hooks/use-status'
 
-import './home.css'
+const PoolsideHome = lazy(() => import('./poolside-home'))
+const SnowflakeHome = lazy(() => import('./snowflake-home'))
 
 export function Home() {
-  const { t } = useTranslation()
+  const { status, loading } = useStatus()
+  if (loading) {
+    return <div className='bg-background min-h-dvh' aria-busy='true' />
+  }
 
   return (
-    <main className='snowapi-deeix-home'>
-      <HomeHeader />
-
-      <section id='home' className='snowapi-deeix-hero'>
-        <div className='snowapi-deeix-ambient-particles' aria-hidden='true'>
-          <span />
-          <span />
-        </div>
-        <div className='snowapi-deeix-container snowapi-deeix-hero-layout'>
-          <div className='snowapi-deeix-hero-copy'>
-            <h1>
-              <span className='snowapi-deeix-title'>SNOW API</span>
-              <span className='snowapi-deeix-subtitle'>
-                {t('Intelligence, delivered.')}
-              </span>
-            </h1>
-            <p>
-              {t(
-                'SnowAPI brings reliable model access, clear pricing, usage visibility, and simple API key management into one focused gateway.'
-              )}
-            </p>
-            <Link to='/sign-in' className='snowapi-deeix-primary-link'>
-              {t('Enter SnowAPI')}
-              <ArrowUpRight aria-hidden='true' />
-            </Link>
-          </div>
-
-          <SnowflakeCanvas />
-        </div>
-      </section>
-
-      <footer className='snowapi-deeix-copyright'>
-        <a href='https://unsnow.org' target='_blank' rel='noreferrer'>
-          © 2026 unsnow.org
-        </a>
-      </footer>
-    </main>
+    <Suspense
+      fallback={<div className='bg-background min-h-dvh' aria-busy='true' />}
+    >
+      {status?.home_design === 'snowflake' ? (
+        <SnowflakeHome />
+      ) : (
+        <PoolsideHome />
+      )}
+    </Suspense>
   )
 }

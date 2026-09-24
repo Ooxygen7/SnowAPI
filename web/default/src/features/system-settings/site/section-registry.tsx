@@ -23,8 +23,16 @@ import {
 import { SidebarModulesSection } from '../maintenance/sidebar-modules-section'
 import type { SiteSettings } from '../types'
 import { createSectionRegistry } from '../utils/section-registry'
+import { HomeDesignSection } from './home-design-section'
 
 const SITE_SECTIONS = [
+  {
+    id: 'home-design',
+    titleKey: 'Homepage design',
+    build: (settings: SiteSettings) => (
+      <HomeDesignSection design={settings['theme.home_design']} />
+    ),
+  },
   {
     id: 'sidebar-modules',
     titleKey: 'Sidebar modules',

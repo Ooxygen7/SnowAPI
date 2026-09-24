@@ -108,6 +108,7 @@ export type SystemTaskListResponse = {
 
 export type SiteSettings = {
   'theme.frontend': string
+  'theme.home_design': string
   SystemName: string
   Logo: string
   Footer: string

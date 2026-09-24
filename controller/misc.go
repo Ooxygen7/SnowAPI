@@ -62,6 +62,7 @@ func GetStatus(c *gin.Context) {
 		"telegram_oauth":                    common.TelegramOAuthEnabled,
 		"telegram_bot_name":                 common.TelegramBotName,
 		"theme":                             system_setting.GetThemeSettings().Frontend,
+		"home_design":                       system_setting.GetThemeSettings().HomeDesign,
 		"system_name":                       common.SystemName,
 		"logo":                              common.Logo,
 		"footer_html":                       common.Footer,

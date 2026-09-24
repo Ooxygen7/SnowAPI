@@ -77,6 +77,7 @@ export interface SystemStatus {
   success?: boolean
   message?: string
   data?: {
+    home_design?: 'poolside' | 'snowflake'
     version?: string
     system_name?: string
     logo?: string
@@ -122,6 +123,7 @@ export interface SystemStatus {
     [key: string]: unknown
   }
   // Allow direct access to common properties
+  home_design?: 'poolside' | 'snowflake'
   version?: string
   system_name?: string
   logo?: string

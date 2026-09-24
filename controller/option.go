@@ -213,6 +213,11 @@ func UpdateOption(c *gin.Context) {
 			})
 			return
 		}
+	case "theme.home_design":
+		if option.Value != "poolside" && option.Value != "snowflake" {
+			c.JSON(http.StatusOK, gin.H{"success": false, "message": "Invalid homepage design"})
+			return
+		}
 	case "theme.frontend":
 		if option.Value != "default" && option.Value != "classic" {
 			c.JSON(http.StatusOK, gin.H{

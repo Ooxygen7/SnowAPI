@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { Cancel01Icon, Search01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
+import { useQuery } from '@tanstack/react-query'
 import { useDeferredValue, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -35,26 +36,19 @@ import type {
   PricingModel,
 } from '@/features/pricing/types'
 import { getLobeIconName } from '@/lib/lobe-icon'
+import { useAuthStore } from '@/stores/auth-store'
 
+import { getModelHealth } from './api'
 import { ModelDetailsDialog } from './model-details-dialog'
 import {
   buildCatalogEndpoints,
+  aggregateModelHealth,
   canUsePricingModel,
   mergePricingModels,
   normalizeModelName,
 } from './model-list-data'
 import { ModelListRow } from './model-list-row'
-import type { CatalogModel, CatalogModelHealthHour } from './types'
-
-const PERFECT_HOURLY_HEALTH: CatalogModelHealthHour[] = Array.from(
-  { length: 24 },
-  (_, hour) => ({
-    hour,
-    totalCount: 1,
-    successCount: 1,
-    successRate: 100,
-  })
-)
+import type { CatalogModel } from './types'
 
 function formatKnownPrice(model: PricingModel, priceType: 'input' | 'output') {
   const hasRequiredRatio =
@@ -107,8 +101,8 @@ function toCatalogModel(
     outputPrice: isRequestPriced ? null : formatKnownPrice(model, 'output'),
     priceUnitKey: isRequestPriced ? 'request' : 'Per 1M tokens',
     requestPrice,
-    successRate: 100,
-    hourlyHealth: PERFECT_HOURLY_HEALTH,
+    successRate: null,
+    hourlyHealth: [],
     endpoints,
   }
 }
@@ -134,6 +128,15 @@ function LoadingRows(props: { label: string }) {
 
 export function ModelList() {
   const { t } = useTranslation()
+  const userId = useAuthStore((state) => state.auth.user?.id)
+  const userGroup = useAuthStore((state) => state.auth.user?.group)
+  const healthQuery = useQuery({
+    queryKey: ['model-health', userId, userGroup],
+    queryFn: getModelHealth,
+    enabled: Boolean(userId),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  })
   const [search, setSearch] = useState('')
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
@@ -146,13 +149,25 @@ export function ModelList() {
     isLoading,
     refetch: refetchCatalog,
   } = usePricingData()
-  const catalogModels = useMemo(
-    () =>
-      mergePricingModels(models).map((model) =>
-        toCatalogModel(model, endpointMap, currentGroup, t('Unknown'))
-      ),
-    [currentGroup, endpointMap, models, t]
-  )
+  const catalogModels = useMemo(() => {
+    const snapshots = aggregateModelHealth(healthQuery.data?.data.models ?? [])
+    return mergePricingModels(models).map((model) => {
+      const catalog = toCatalogModel(
+        model,
+        endpointMap,
+        currentGroup,
+        t('Unknown')
+      )
+      const health = snapshots.get(catalog.id)
+      return health
+        ? {
+            ...catalog,
+            successRate: health.successRate,
+            hourlyHealth: health.hourlyHealth,
+          }
+        : catalog
+    })
+  }, [currentGroup, endpointMap, models, t, healthQuery.data])
 
   const filteredModels = useMemo(() => {
     const query = deferredSearch.trim().toLocaleLowerCase('en-US')
@@ -232,6 +247,22 @@ export function ModelList() {
       <SectionPageLayout data-visual-region='model-list'>
         <SectionPageLayout.Content>
           <div className='flex w-full flex-col gap-4 pt-5 sm:pt-8'>
+            {healthQuery.isError ? (
+              <div
+                role='status'
+                className='text-muted-foreground flex flex-wrap items-center gap-2 text-xs'
+              >
+                <span>{t('Health data could not be refreshed.')}</span>
+                <Button
+                  type='button'
+                  variant='ghost'
+                  size='sm'
+                  onClick={() => void healthQuery.refetch()}
+                >
+                  {t('Retry')}
+                </Button>
+              </div>
+            ) : null}
             <div
               data-slot='model-list-toolbar'
               data-visual-region='model-list-search'

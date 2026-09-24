@@ -40,6 +40,7 @@ type modelHealthTarget struct {
 }
 
 func GetModelHealth(c *gin.Context) {
+	c.Header("Cache-Control", "no-store")
 	user, err := model.GetUserCache(c.GetInt("id"))
 	if err != nil {
 		common.ApiError(c, err)

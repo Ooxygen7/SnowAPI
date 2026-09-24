@@ -22,5 +22,8 @@ import type { ModelHealthResponse } from './types'
 
 export async function getModelHealth(): Promise<ModelHealthResponse> {
   const response = await api.get<ModelHealthResponse>('/api/user/model-health')
+  if (!response.data.success || !Array.isArray(response.data.data?.models)) {
+    throw new Error(response.data.message || 'Failed to fetch model health')
+  }
   return response.data
 }

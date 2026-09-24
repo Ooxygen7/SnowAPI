@@ -26,6 +26,7 @@ import {
 
 const defaultSiteSettings: SiteSettings = {
   'theme.frontend': 'default',
+  'theme.home_design': 'poolside',
   SystemName: 'New API',
   Logo: '',
   Footer: '',
