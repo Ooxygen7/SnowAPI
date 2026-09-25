@@ -310,27 +310,27 @@ export function IPAudit() {
             IP Geolocation by DB-IP
           </a>
         </div>
+        {/* Portaled dialogs must stay inside a rendered layout slot. */}
+        {activeDialog && (
+          <BanActionDialog
+            open
+            action={activeDialog.action}
+            user={activeDialog.user}
+            onOpenChange={(open) => !open && setActiveDialog(null)}
+            onCompleted={completeMutation}
+          />
+        )}
+        {detailsDialog && (
+          <BanDetailsDialog
+            open
+            user={detailsDialog.user}
+            ban={detailsDialog.ban}
+            evidence={detailsDialog.evidence}
+            formatTime={formatTime}
+            onOpenChange={(open) => !open && setDetailsDialog(null)}
+          />
+        )}
       </SectionPageLayout.Content>
-
-      {activeDialog && (
-        <BanActionDialog
-          open
-          action={activeDialog.action}
-          user={activeDialog.user}
-          onOpenChange={(open) => !open && setActiveDialog(null)}
-          onCompleted={completeMutation}
-        />
-      )}
-      {detailsDialog && (
-        <BanDetailsDialog
-          open
-          user={detailsDialog.user}
-          ban={detailsDialog.ban}
-          evidence={detailsDialog.evidence}
-          formatTime={formatTime}
-          onOpenChange={(open) => !open && setDetailsDialog(null)}
-        />
-      )}
     </SectionPageLayout>
   )
 }

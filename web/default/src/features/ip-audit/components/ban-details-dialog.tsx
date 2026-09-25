@@ -93,7 +93,7 @@ export function BanDetailsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <section className='space-y-3'>
+        <section className='min-w-0 space-y-3'>
           <h3 className='text-sm font-medium'>{t('Evidence')}</h3>
           <div className='grid grid-cols-2 gap-2 sm:grid-cols-4'>
             <EvidenceMetric label={t('Eligible IPs')} value={eligibleIPs} />
@@ -159,7 +159,7 @@ export function BanDetailsDialog({
           )}
         </section>
 
-        <section className='space-y-3 border-t pt-4'>
+        <section className='min-w-0 space-y-3 border-t pt-4'>
           <h3 className='text-sm font-medium'>{t('History')}</h3>
           {eventsQuery.isLoading && (
             <div className='space-y-2'>
