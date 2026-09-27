@@ -28,6 +28,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useTheme } from '@/context/theme-provider'
 import { getGlobalTokenUsageOverview } from '@/features/dashboard/api'
 import { toIntlLocale } from '@/i18n/languages'
+import { getChartColor } from '@/lib/colors'
 import dayjs from '@/lib/dayjs'
 import { VCHART_OPTION } from '@/lib/vchart'
 
@@ -162,7 +163,7 @@ export function GlobalTokenUsagePanel() {
           ],
         },
       },
-      color: ['#737373'],
+      color: [getChartColor(0)],
       background: 'transparent',
       animation: !shouldReduceMotion,
     }),

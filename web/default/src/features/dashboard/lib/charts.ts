@@ -22,6 +22,7 @@ import type {
   ProcessedChartData,
   ProcessedUserChartData,
 } from '@/features/dashboard/types'
+import { CHART_COLORS, getChartColor } from '@/lib/colors'
 import { getCurrencyDisplay } from '@/lib/currency'
 import { formatChartTime, type TimeGranularity } from '@/lib/time'
 
@@ -38,22 +39,8 @@ type TooltipLineItem = {
 }
 
 export function getDashboardChartColors(domainLength: number): string[] {
-  const palette = [
-    '#202020',
-    '#4a4a4a',
-    '#737373',
-    '#969696',
-    '#b5b5b5',
-    '#d1d1d1',
-    '#5f5f5f',
-    '#898989',
-    '#aaaaaa',
-    '#c5c5c5',
-  ]
-
-  return Array.from(
-    { length: Math.max(0, domainLength) },
-    (_, index) => palette[index % palette.length]
+  return Array.from({ length: Math.max(0, domainLength) }, (_, index) =>
+    getChartColor(index)
   )
 }
 
@@ -696,18 +683,7 @@ export function processChartData(
   }
 }
 
-const USER_COLORS = [
-  '#202020',
-  '#4a4a4a',
-  '#737373',
-  '#969696',
-  '#b5b5b5',
-  '#d1d1d1',
-  '#5f5f5f',
-  '#898989',
-  '#aaaaaa',
-  '#c5c5c5',
-]
+const USER_COLORS = [...CHART_COLORS]
 
 export function processUserChartData(
   data: QuotaDataItem[],
