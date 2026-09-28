@@ -366,7 +366,7 @@ func prepareFiveHourQuotaWindowTx(tx *gorm.DB, sub *UserSubscription, now int64)
 	if err != nil {
 		return nil, nil, err
 	}
-	if now >= window.EndTime {
+	if now >= window.EndTime || window.ClosedAt > 0 {
 		return nil, window, nil
 	}
 	return window, nil, nil
@@ -536,6 +536,63 @@ func RefundSubscriptionUsage(ref *SubscriptionUsageRef) error {
 	return SetSubscriptionUsageFinal(ref, 0, SubscriptionUsageStateRefunded)
 }
 
+// ResetDueFiveHourSubscriptionWindows retires elapsed windows even while the
+// user is idle. Usage remains on the ledger for late settlement/refunds; only
+// the current-window reference is cleared. The next admission starts 5 hours
+// from that request, never from the maintenance tick or the last request.
+func ResetDueFiveHourSubscriptionWindows(limit int) (int, error) {
+	if limit <= 0 {
+		limit = 200
+	}
+	now := GetDBTimestamp()
+	dueWindows := DB.Model(&SubscriptionQuotaWindow{}).Select("id").
+		Where("window_type = ? AND end_time <= ?", SubscriptionQuotaWindowFiveHour, now)
+	var subs []UserSubscription
+	if err := DB.Where("status = ? AND end_time > ? AND current_five_hour_window_id IN (?)", "active", now, dueWindows).
+		Order("id asc").Limit(limit).Find(&subs).Error; err != nil {
+		return 0, err
+	}
+	resetCount := 0
+	for _, candidate := range subs {
+		didReset := false
+		err := runSubscriptionQuotaTransaction(func(tx *gorm.DB) error {
+			didReset = false
+			var sub UserSubscription
+			query := lockForUpdate(tx).Where("id = ? AND status = ? AND end_time > ?", candidate.Id, "active", now).Find(&sub)
+			if query.Error != nil || query.RowsAffected == 0 {
+				return query.Error
+			}
+			if sub.CurrentFiveHourWindowId <= 0 {
+				return nil
+			}
+			window, err := loadSubscriptionQuotaWindowTx(tx, sub.CurrentFiveHourWindowId, sub.Id, SubscriptionQuotaWindowFiveHour)
+			if err != nil {
+				return err
+			}
+			// A concurrent request may already have replaced the selected window.
+			if window.EndTime > now {
+				return nil
+			}
+			if err := closeSubscriptionQuotaWindowTx(tx, window, now); err != nil {
+				return err
+			}
+			sub.CurrentFiveHourWindowId = 0
+			if err := saveSubscriptionWindowStateTx(tx, &sub, now); err != nil {
+				return err
+			}
+			didReset = true
+			return nil
+		})
+		if err != nil {
+			return resetCount, err
+		}
+		if didReset {
+			resetCount++
+		}
+	}
+	return resetCount, nil
+}
+
 func buildSubscriptionQuotaWindowSummaries(subs []UserSubscription) map[int]*SubscriptionQuotaWindowSummary {
 	result := make(map[int]*SubscriptionQuotaWindowSummary, len(subs))
 	windowIds := make([]int, 0, len(subs))
@@ -570,11 +627,16 @@ func buildSubscriptionQuotaWindowSummaries(subs []UserSubscription) map[int]*Sub
 			continue
 		}
 		window, ok := byId[sub.CurrentFiveHourWindowId]
-		if !ok || window.WindowType != SubscriptionQuotaWindowFiveHour {
+		if !ok || window.WindowType != SubscriptionQuotaWindowFiveHour || window.UserSubscriptionId != sub.Id {
+			continue
+		}
+		// Current allowance is restored at the exact boundary, independent of
+		// maintenance scheduling. Historical ledger rows must never be zeroed.
+		if sub.Status == "active" && sub.EndTime > now && (now >= window.EndTime || window.ClosedAt > 0) {
 			continue
 		}
 		state := "active"
-		if now >= window.EndTime {
+		if now >= window.EndTime || window.ClosedAt > 0 {
 			state = "expired"
 		}
 		remaining := window.AmountTotal - window.AmountUsed

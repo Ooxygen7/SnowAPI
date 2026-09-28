@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { Crown, RefreshCw, Sparkles, Check } from 'lucide-react'
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -44,21 +44,21 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import {
-  getPublicPlans,
-  getSelfSubscriptionFull,
-  updateBillingPreference,
-} from '@/features/subscriptions/api'
+import { updateBillingPreference } from '@/features/subscriptions/api'
 import { SubscriptionPurchaseDialog } from '@/features/subscriptions/components/dialogs/subscription-purchase-dialog'
 import { formatDuration, formatResetPeriod } from '@/features/subscriptions/lib'
 import type {
   PlanRecord,
   UserSubscriptionRecord,
 } from '@/features/subscriptions/types'
+import { useSubscriptionOverview } from '@/features/subscriptions/use-subscription-overview'
 import { formatQuota } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 import type { TopupInfo } from '../types'
+
+const EMPTY_PLANS: PlanRecord[] = []
+const EMPTY_SUBSCRIPTIONS: UserSubscriptionRecord[] = []
 
 interface SubscriptionPlansCardProps {
   topupInfo: TopupInfo | null
@@ -92,55 +92,26 @@ export function SubscriptionPlansCard({
 }: SubscriptionPlansCardProps) {
   const { t } = useTranslation()
 
-  const [plans, setPlans] = useState<PlanRecord[]>([])
-  const [activeSubscriptions, setActiveSubscriptions] = useState<
-    UserSubscriptionRecord[]
-  >([])
-  const [allSubscriptions, setAllSubscriptions] = useState<
-    UserSubscriptionRecord[]
-  >([])
-  const [billingPreference, setBillingPreference] =
-    useState('subscription_first')
-  const [loading, setLoading] = useState(true)
+  const overviewQuery = useSubscriptionOverview()
+  const plans = overviewQuery.data?.plans ?? EMPTY_PLANS
+  const activeSubscriptions =
+    overviewQuery.data?.activeSubscriptions ?? EMPTY_SUBSCRIPTIONS
+  const allSubscriptions =
+    overviewQuery.data?.allSubscriptions ?? EMPTY_SUBSCRIPTIONS
+  const [pendingPreference, setPendingPreference] = useState<string | null>(
+    null
+  )
+  const billingPreference =
+    pendingPreference ??
+    overviewQuery.data?.billingPreference ??
+    'subscription_first'
+  const loading = overviewQuery.isPending
   const [refreshing, setRefreshing] = useState(false)
 
   const [purchaseOpen, setPurchaseOpen] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<PlanRecord | null>(null)
 
-  const fetchPlans = useCallback(async () => {
-    try {
-      const res = await getPublicPlans()
-      if (res.success) {
-        setPlans(res.data || [])
-      }
-    } catch {
-      setPlans([])
-    }
-  }, [])
-
-  const fetchSelfSubscription = useCallback(async () => {
-    try {
-      const res = await getSelfSubscriptionFull()
-      if (res.success && res.data) {
-        setBillingPreference(
-          res.data.billing_preference || 'subscription_first'
-        )
-        setActiveSubscriptions(res.data.subscriptions || [])
-        setAllSubscriptions(res.data.all_subscriptions || [])
-      }
-    } catch {
-      // ignore
-    }
-  }, [])
-
-  useEffect(() => {
-    const init = async () => {
-      setLoading(true)
-      await Promise.all([fetchPlans(), fetchSelfSubscription()])
-      setLoading(false)
-    }
-    init()
-  }, [fetchPlans, fetchSelfSubscription])
+  const fetchSelfSubscription = overviewQuery.refetch
 
   const handleRefresh = async () => {
     setRefreshing(true)
@@ -152,21 +123,19 @@ export function SubscriptionPlansCard({
   }
 
   const handlePreferenceChange = async (pref: string) => {
-    const previous = billingPreference
-    setBillingPreference(pref)
+    setPendingPreference(pref)
     try {
       const res = await updateBillingPreference(pref)
       if (res.success) {
         toast.success(t('Updated successfully'))
-        const normalized = res.data?.billing_preference || pref
-        setBillingPreference(normalized)
+        await overviewQuery.refetch()
       } else {
         toast.error(res.message || t('Update failed'))
-        setBillingPreference(previous)
       }
     } catch {
       toast.error(t('Request failed'))
-      setBillingPreference(previous)
+    } finally {
+      setPendingPreference(null)
     }
   }
 

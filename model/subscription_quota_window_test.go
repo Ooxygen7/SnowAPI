@@ -475,7 +475,7 @@ func TestSettlementAndRefundStayOnOriginalWindows(t *testing.T) {
 	assert.Zero(t, stored.AmountUsed)
 }
 
-func TestSubscriptionSummariesExposeDisabledIdleActiveAndExpiredWindows(t *testing.T) {
+func TestSubscriptionSummariesRestoreAllowanceAtFiveHourDeadline(t *testing.T) {
 	truncateTables(t)
 	_, enabledSub := seedQuotaWindowSubscription(t, 7105, 1000, 300)
 	_, disabledSub := seedQuotaWindowSubscription(t, 7105, 1000, 0)
@@ -512,7 +512,14 @@ func TestSubscriptionSummariesExposeDisabledIdleActiveAndExpiredWindows(t *testi
 	for _, summary := range summaries {
 		if summary.Subscription.Id == enabledSub.Id {
 			require.NotNil(t, summary.FiveHourWindow)
-			assert.Equal(t, "expired", summary.FiveHourWindow.State)
+			assert.Equal(t, "idle", summary.FiveHourWindow.State)
+			assert.Zero(t, summary.FiveHourWindow.AmountUsed)
+			assert.Equal(t, enabledSub.FiveHourQuota, summary.FiveHourWindow.Remaining)
+			assert.Zero(t, summary.FiveHourWindow.EndTime, "no past deadline advertised as the next reset")
+			assert.Zero(t, summary.FiveHourWindow.WindowId)
 		}
 	}
+	var historical SubscriptionQuotaWindow
+	require.NoError(t, DB.First(&historical, preConsumed.UsageRef.FiveHourWindowId).Error)
+	assert.EqualValues(t, 50, historical.AmountUsed, "reading current allowance must preserve accounting")
 }

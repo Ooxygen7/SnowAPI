@@ -144,7 +144,12 @@ export function MySubscriptionCard() {
           <div>
             <TimerReset className='size-4' aria-hidden='true' />
             <dt>{t('5-hour limit resets')}</dt>
-            <dd>{fiveHourReset ?? t('Starts after first request')}</dd>
+            <dd>
+              {fiveHourReset ??
+                (fiveHourTotal > 0
+                  ? t('Ready — starts with your next request')
+                  : t('Disabled'))}
+            </dd>
           </div>
           <div>
             <TimerReset className='size-4' aria-hidden='true' />

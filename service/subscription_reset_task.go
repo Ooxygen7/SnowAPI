@@ -53,6 +53,7 @@ func runSubscriptionQuotaResetOnce() {
 
 	ctx := context.Background()
 	totalReset := 0
+	totalFiveHourReset := 0
 	totalExpired := 0
 	for {
 		n, err := model.ExpireDueSubscriptions(subscriptionResetBatchSize)
@@ -82,6 +83,17 @@ func runSubscriptionQuotaResetOnce() {
 			break
 		}
 	}
+	for {
+		n, err := model.ResetDueFiveHourSubscriptionWindows(subscriptionResetBatchSize)
+		if err != nil {
+			logger.LogWarn(ctx, fmt.Sprintf("subscription five-hour reset task failed: %v", err))
+			break
+		}
+		totalFiveHourReset += n
+		if n < subscriptionResetBatchSize {
+			break
+		}
+	}
 	lastCleanup := time.Unix(subscriptionCleanupLast.Load(), 0)
 	if time.Since(lastCleanup) >= subscriptionCleanupInterval {
 		retentionSeconds := int64(7 * 24 * 3600)
@@ -95,7 +107,7 @@ func runSubscriptionQuotaResetOnce() {
 			}
 		}
 	}
-	if common.DebugEnabled && (totalReset > 0 || totalExpired > 0) {
-		logger.LogDebug(ctx, "subscription maintenance: reset_count=%d, expired_count=%d", totalReset, totalExpired)
+	if common.DebugEnabled && (totalReset > 0 || totalFiveHourReset > 0 || totalExpired > 0) {
+		logger.LogDebug(ctx, "subscription maintenance: reset_count=%d, five_hour_reset_count=%d, expired_count=%d", totalReset, totalFiveHourReset, totalExpired)
 	}
 }

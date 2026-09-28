@@ -33,6 +33,8 @@ func TestSubscriptionCheckoutSettlesSnapshotExactlyOnce(t *testing.T) {
 	require.NoError(t, DB.AutoMigrate(&SubscriptionOrder{}, &TopUp{}))
 	plan := &SubscriptionPlan{Title: "Light", Enabled: true, PriceAmount: 10, DurationUnit: SubscriptionDurationMonth, DurationValue: 1, UpgradeGroup: "Light", TotalAmount: 1000}
 	require.NoError(t, DB.Create(plan).Error)
+	// Other fixtures may recreate the plans table and reuse a cached plan ID.
+	InvalidateSubscriptionPlanCache(plan.Id)
 	order, err := CreateSubscriptionCheckoutOrder(userId, plan.Id, "epay", "checkout-once", 10, 100)
 	require.NoError(t, err)
 	t.Cleanup(func() {

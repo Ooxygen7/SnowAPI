@@ -4171,6 +4171,7 @@
     "Read the documentation": "Đọc tài liệu",
     "Read the request client and streaming handler. Found 4 call sites.": "Đã đọc client yêu cầu và trình xử lý luồng. Tìm thấy 4 vị trí gọi.",
     "Ready": "Sẵn sàng",
+    "Ready — starts with your next request": "Sẵn sàng — bắt đầu từ yêu cầu tiếp theo",
     "Ready for real use": "Sẵn sàng sử dụng thực tế",
     "Ready to initialize": "Sẵn sàng khởi tạo",
     "Ready to simplify": "Sẵn sàng đơn giản hóa",

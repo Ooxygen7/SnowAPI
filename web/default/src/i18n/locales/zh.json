@@ -4171,6 +4171,7 @@
     "Read the documentation": "阅读文档",
     "Read the request client and streaming handler. Found 4 call sites.": "已读取请求客户端和流式处理逻辑，找到 4 处调用。",
     "Ready": "就绪",
+    "Ready — starts with your next request": "额度已就绪，下次使用开始计时",
     "Ready for real use": "已可投入实际使用",
     "Ready to initialize": "准备初始化",
     "Ready to simplify": "准备好简化",

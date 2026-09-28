@@ -4171,6 +4171,7 @@
     "Read the documentation": "ドキュメントを読む",
     "Read the request client and streaming handler. Found 4 call sites.": "リクエストクライアントとストリーム処理を読み取りました。呼び出し箇所は 4 件です。",
     "Ready": "準備完了",
+    "Ready — starts with your next request": "利用可能 — 次のリクエストから計測開始",
     "Ready for real use": "実運用に対応",
     "Ready to initialize": "初期化準備完了",
     "Ready to simplify": "シンプルにする準備は",
