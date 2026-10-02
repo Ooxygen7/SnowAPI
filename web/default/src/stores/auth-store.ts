@@ -50,6 +50,7 @@ export interface AuthUser {
 interface AuthState {
   auth: {
     user: AuthUser | null
+    sessionVersion: number
     setUser: (user: AuthUser | null) => void
     reset: () => void
   }
@@ -75,26 +76,50 @@ export const useAuthStore = create<AuthState>()((set) => {
   return {
     auth: {
       user: initUser,
+      sessionVersion: 0,
       setUser: (user) =>
         set((state) => {
           // Persist user to localStorage
-          if (typeof window !== 'undefined') {
-            if (user) {
-              window.localStorage.setItem('user', JSON.stringify(user))
-            } else {
-              window.localStorage.removeItem('user')
+          try {
+            if (typeof window !== 'undefined') {
+              if (user) {
+                window.localStorage.setItem('user', JSON.stringify(user))
+                window.localStorage.setItem('uid', String(user.id))
+              } else {
+                window.localStorage.removeItem('user')
+                window.localStorage.removeItem('uid')
+              }
             }
+          } catch {
+            // Storage failure must not prevent the in-memory account change.
           }
-          return { ...state, auth: { ...state.auth, user } }
+          const changed = state.auth.user?.id !== user?.id
+          return {
+            ...state,
+            auth: {
+              ...state.auth,
+              user,
+              sessionVersion: state.auth.sessionVersion + Number(changed),
+            },
+          }
         }),
       reset: () =>
         set((state) => {
-          if (typeof window !== 'undefined') {
-            window.localStorage.removeItem('user')
+          try {
+            if (typeof window !== 'undefined') {
+              window.localStorage.removeItem('user')
+              window.localStorage.removeItem('uid')
+            }
+          } catch {
+            // Still invalidate requests and private caches in restricted mode.
           }
           return {
             ...state,
-            auth: { ...state.auth, user: null },
+            auth: {
+              ...state.auth,
+              user: null,
+              sessionVersion: state.auth.sessionVersion + 1,
+            },
           }
         }),
     },

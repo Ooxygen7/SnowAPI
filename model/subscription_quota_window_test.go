@@ -206,6 +206,7 @@ func TestSubscriptionUpgradeChargesProratedDifferenceAndReplacesActivePlan(t *te
 	require.NoError(t, err)
 	require.NotNil(t, quote)
 	assert.True(t, quote.IsUpgrade)
+	assert.Equal(t, oldSubscription.EndTime, quote.CurrentEndTime, "checkout must disclose the preserved expiry")
 	assert.InDelta(t, 10, quote.AmountDue, 0.1)
 	assert.InDelta(t, 5, quote.UpgradeCredit, 0.1)
 

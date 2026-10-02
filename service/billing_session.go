@@ -45,6 +45,26 @@ func (s *BillingSession) Settle(actualQuota int) error {
 	if s.settled {
 		return nil
 	}
+	if sub, ok := s.funding.(*SubscriptionFunding); ok {
+		// Persist the target first; a background worker can finish after any
+		// database failure or process restart without repeating a charge.
+		if err := model.QueueSubscriptionSettlement(&sub.usageRef, int64(actualQuota), s.relayInfo.TokenId, int64(s.preConsumedQuota)); err != nil {
+			return err
+		}
+		s.fundingSettled = true // queued consumption must never be refunded
+		// Logs describe actual consumption even if the durable intent needs a
+		// later retry. Assign the absolute delta so retries cannot add it twice.
+		s.relayInfo.SubscriptionPostDelta = int64(actualQuota - s.preConsumedQuota)
+		ref, err := model.CompleteSubscriptionSettlement(sub.usageRef.RequestId)
+		if err != nil {
+			return err
+		}
+		sub.usageRef = ref
+		sub.finalConsumed = int64(actualQuota)
+		s.relayInfo.SubscriptionUsageRef = ref
+		s.settled = true
+		return nil
+	}
 	delta := actualQuota - s.preConsumedQuota
 	// 1) 调整资金来源（仅在尚未提交时执行，防止重复调用）
 	if !s.fundingSettled {

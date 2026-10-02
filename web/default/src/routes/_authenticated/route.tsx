@@ -23,7 +23,7 @@ import { getSelf } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
 
 // 内存中的验证标记，避免同一会话中重复验证
-let sessionVerified = false
+let verifiedSessionVersion: number | undefined
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ location }) => {
@@ -38,17 +38,20 @@ export const Route = createFileRoute('/_authenticated')({
     }
 
     // 本地有用户信息，但需要验证 session 是否有效（每个会话只验证一次）
-    if (!sessionVerified) {
+    if (verifiedSessionVersion !== auth.sessionVersion) {
       // 仅 401 视为 session 失效；网络错误/超时/5xx 返回 null 放行，下次导航重验
       const res = await getSelf().catch((err: unknown) =>
         (err as { response?: { status?: number } })?.response?.status === 401
           ? { success: false }
           : null
       )
+      if (useAuthStore.getState().auth.sessionVersion !== auth.sessionVersion) {
+        throw redirect({ to: '/sign-in', search: { redirect: location.href } })
+      }
       if (res?.success && res.data) {
         // 验证成功，更新用户信息（可能有变化）
         auth.setUser(res.data)
-        sessionVerified = true
+        verifiedSessionVersion = useAuthStore.getState().auth.sessionVersion
       } else if (res) {
         // 验证失败，清除本地缓存并跳转登录页
         auth.reset()

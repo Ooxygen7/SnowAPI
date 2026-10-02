@@ -30,6 +30,7 @@ declare module 'axios' {
     skipBusinessError?: boolean
     skipErrorHandler?: boolean
     disableDuplicate?: boolean
+    accountScope?: string
   }
 }
 
@@ -69,12 +70,17 @@ if (import.meta.env.VITE_SNOWAPI_DEMO === 'true') {
 const inFlightGet = new Map<string, Promise<unknown>>()
 const originalGet = api.get.bind(api)
 
+function getAccountScope(): string {
+  return `${useAuthStore.getState().auth.sessionVersion}:${getUserId() ?? ''}`
+}
+
 api.get = ((url: string, config: ApiRequestConfig = {}) => {
+  config = { ...config, accountScope: getAccountScope() }
   const disableDuplicate = config.disableDuplicate
-  if (disableDuplicate) return originalGet(url, config)
+  if (disableDuplicate || config.signal) return originalGet(url, config)
 
   const params = config.params ? JSON.stringify(config.params) : '{}'
-  const key = `${url}?${params}`
+  const key = `${getAccountScope()}:${url}?${params}`
 
   // Return existing in-flight request if available
   const inFlightRequest = inFlightGet.get(key)
@@ -93,6 +99,9 @@ api.get = ((url: string, config: ApiRequestConfig = {}) => {
 // Handle business logic errors and HTTP errors globally
 api.interceptors.response.use(
   (response) => {
+    if (response.config.accountScope !== getAccountScope()) {
+      throw new axios.CanceledError('Account changed')
+    }
     if (typeof response.data?.message === 'string') {
       response.data.message = localizeApiMessage(response.data.message)
     }
@@ -114,6 +123,13 @@ api.interceptors.response.use(
     return response
   },
   (error) => {
+    if (
+      axios.isCancel(error) ||
+      (error?.config?.accountScope !== undefined &&
+        error.config.accountScope !== getAccountScope())
+    ) {
+      return Promise.reject(new axios.CanceledError('Account changed'))
+    }
     if (error?.response?.data?.code === 'snow_shield_required') {
       window.dispatchEvent(new Event(SNOW_SHIELD_REQUIRED_EVENT))
       return Promise.reject(error)
@@ -186,6 +202,13 @@ export function getCommonHeaders(): Record<string, string> {
 
 // Attach user ID header for all requests
 api.interceptors.request.use((config) => {
+  if (
+    config.accountScope !== undefined &&
+    config.accountScope !== getAccountScope()
+  ) {
+    throw new axios.CanceledError('Account changed')
+  }
+  config.accountScope = getAccountScope()
   config.headers.set('Accept-Language', toIntlLocale(i18next.language) ?? 'en')
   const uid = getUserId()
   if (uid) {

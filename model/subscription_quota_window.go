@@ -519,6 +519,9 @@ func SetSubscriptionUsageFinal(ref *SubscriptionUsageRef, finalConsumed int64, s
 		if err := lockForUpdate(tx).Where("request_id = ?", attemptRef.RequestId).First(&record).Error; err != nil {
 			return err
 		}
+		if record.SettlementPending {
+			return ErrSubscriptionUsageFinalized
+		}
 		if err := adjustSubscriptionUsageTx(tx, &record, &attemptRef, finalConsumed, state, getSubscriptionDBTimestampTx(tx)); err != nil {
 			return err
 		}
@@ -593,7 +596,7 @@ func ResetDueFiveHourSubscriptionWindows(limit int) (int, error) {
 	return resetCount, nil
 }
 
-func buildSubscriptionQuotaWindowSummaries(subs []UserSubscription) map[int]*SubscriptionQuotaWindowSummary {
+func buildSubscriptionQuotaWindowSummaries(subs []UserSubscription) (map[int]*SubscriptionQuotaWindowSummary, error) {
 	result := make(map[int]*SubscriptionQuotaWindowSummary, len(subs))
 	windowIds := make([]int, 0, len(subs))
 	for _, sub := range subs {
@@ -611,11 +614,11 @@ func buildSubscriptionQuotaWindowSummaries(subs []UserSubscription) map[int]*Sub
 		}
 	}
 	if len(windowIds) == 0 {
-		return result
+		return result, nil
 	}
 	var windows []SubscriptionQuotaWindow
 	if err := DB.Where("id IN ?", windowIds).Find(&windows).Error; err != nil {
-		return result
+		return nil, err
 	}
 	byId := make(map[int]SubscriptionQuotaWindow, len(windows))
 	for _, window := range windows {
@@ -654,7 +657,7 @@ func buildSubscriptionQuotaWindowSummaries(subs []UserSubscription) map[int]*Sub
 			EndTime:     window.EndTime,
 		}
 	}
-	return result
+	return result, nil
 }
 
 // CleanupSubscriptionQuotaWindows removes only closed, old ledger rows that no

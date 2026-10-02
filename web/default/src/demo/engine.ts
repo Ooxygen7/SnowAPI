@@ -188,6 +188,7 @@ export class DemoEngine {
       current_subscription_id: current ? 1 : undefined,
       current_plan_id: current?.id,
       current_plan_title: current?.title,
+      current_end_time: current ? this.state.endTime : undefined,
     }
   }
 

@@ -123,6 +123,7 @@ export interface SubscriptionBalanceQuote {
   current_subscription_id?: number
   current_plan_id?: number
   current_plan_title?: string
+  current_end_time?: number
 }
 
 export interface CreateUserSubscriptionRequest {

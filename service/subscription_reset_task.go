@@ -22,9 +22,10 @@ const (
 )
 
 var (
-	subscriptionResetOnce    sync.Once
-	subscriptionResetRunning atomic.Bool
-	subscriptionCleanupLast  atomic.Int64
+	subscriptionResetOnce        sync.Once
+	subscriptionResetRunning     atomic.Bool
+	subscriptionCleanupLast      atomic.Int64
+	subscriptionSettlementCursor int
 )
 
 func StartSubscriptionQuotaResetTask() {
@@ -52,6 +53,11 @@ func runSubscriptionQuotaResetOnce() {
 	defer subscriptionResetRunning.Store(false)
 
 	ctx := context.Background()
+	_, nextCursor, settlementErr := model.ReconcileSubscriptionSettlements(subscriptionSettlementCursor, subscriptionResetBatchSize)
+	subscriptionSettlementCursor = nextCursor
+	if settlementErr != nil {
+		logger.LogWarn(ctx, fmt.Sprintf("subscription settlement recovery failed: %v", settlementErr))
+	}
 	totalReset := 0
 	totalFiveHourReset := 0
 	totalExpired := 0

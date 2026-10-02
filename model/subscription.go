@@ -329,6 +329,7 @@ type SubscriptionBalanceQuote struct {
 	CurrentSubscriptionId int     `json:"current_subscription_id,omitempty"`
 	CurrentPlanId         int     `json:"current_plan_id,omitempty"`
 	CurrentPlanTitle      string  `json:"current_plan_title,omitempty"`
+	CurrentEndTime        int64   `json:"current_end_time,omitempty"`
 }
 
 type SubscriptionResetResult struct {
@@ -566,6 +567,7 @@ func calculateSubscriptionBalanceQuoteTx(tx *gorm.DB, userId int, targetPlan *Su
 		quote.CurrentSubscriptionId = selection.Current.Id
 		quote.CurrentPlanId = selection.Current.PlanId
 		quote.CurrentPlanTitle = selection.CurrentPlan.Title
+		quote.CurrentEndTime = selection.Current.EndTime
 	}
 	if amountDue.IsNegative() {
 		amountDue = decimal.Zero
@@ -1244,7 +1246,7 @@ func GetAllActiveUserSubscriptions(userId int) ([]SubscriptionSummary, error) {
 	if err != nil {
 		return nil, err
 	}
-	return buildSubscriptionSummaries(subs), nil
+	return buildSubscriptionSummaries(subs)
 }
 
 // HasActiveUserSubscription returns whether the user has any active subscription.
@@ -1293,14 +1295,17 @@ func GetAllUserSubscriptions(userId int) ([]SubscriptionSummary, error) {
 	if err != nil {
 		return nil, err
 	}
-	return buildSubscriptionSummaries(subs), nil
+	return buildSubscriptionSummaries(subs)
 }
 
-func buildSubscriptionSummaries(subs []UserSubscription) []SubscriptionSummary {
+func buildSubscriptionSummaries(subs []UserSubscription) ([]SubscriptionSummary, error) {
 	if len(subs) == 0 {
-		return []SubscriptionSummary{}
+		return []SubscriptionSummary{}, nil
 	}
-	fiveHourWindows := buildSubscriptionQuotaWindowSummaries(subs)
+	fiveHourWindows, err := buildSubscriptionQuotaWindowSummaries(subs)
+	if err != nil {
+		return nil, err
+	}
 	result := make([]SubscriptionSummary, 0, len(subs))
 	for _, sub := range subs {
 		subCopy := sub
@@ -1309,7 +1314,7 @@ func buildSubscriptionSummaries(subs []UserSubscription) []SubscriptionSummary {
 			FiveHourWindow: fiveHourWindows[sub.Id],
 		})
 	}
-	return result
+	return result, nil
 }
 
 // AdminInvalidateUserSubscription marks a user subscription as cancelled and ends it immediately.
@@ -1735,6 +1740,10 @@ type SubscriptionPreConsumeRecord struct {
 	Version            int64  `json:"version" gorm:"type:bigint;not null;default:1"`
 	SettledAt          int64  `json:"settled_at" gorm:"type:bigint;not null;default:0"`
 	RefundedAt         int64  `json:"refunded_at" gorm:"type:bigint;not null;default:0"`
+	SettlementPending  bool   `json:"-" gorm:"index"`
+	SettlementQuota    int64  `json:"-" gorm:"type:bigint;not null;default:0"`
+	SettlementTokenId  int    `json:"-" gorm:"not null;default:0"`
+	SettlementTokenPre int64  `json:"-" gorm:"type:bigint;not null;default:0"`
 	CreatedAt          int64  `json:"created_at" gorm:"bigint"`
 	UpdatedAt          int64  `json:"updated_at" gorm:"bigint;index"`
 }
@@ -2120,7 +2129,9 @@ func CleanupSubscriptionPreConsumeRecords(olderThanSeconds int64) (int64, error)
 		olderThanSeconds = 7 * 24 * 3600
 	}
 	cutoff := GetDBTimestamp() - olderThanSeconds
-	res := DB.Where("updated_at < ?", cutoff).Delete(&SubscriptionPreConsumeRecord{})
+	res := DB.Where("updated_at < ? AND status IN ?", cutoff, []string{SubscriptionUsageStateSettled, SubscriptionUsageStateRefunded}).
+		Where("settlement_pending = ? OR settlement_pending IS NULL", false).
+		Delete(&SubscriptionPreConsumeRecord{})
 	return res.RowsAffected, res.Error
 }
 

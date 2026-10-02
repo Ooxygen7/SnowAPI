@@ -19,6 +19,8 @@ For commercial licensing, please contact support@quantumnous.com
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 
+import { useAuthStore } from '@/stores/auth-store'
+
 import { getPublicPlans, getSelfSubscriptionFull } from './api'
 import {
   getEffectiveFiveHourWindow,
@@ -30,10 +32,11 @@ export const subscriptionOverviewQueryKey = [
 ] as const
 
 export function useSubscriptionOverview(enabled = true) {
+  const userId = useAuthStore((state) => state.auth.user?.id)
   const [, refreshClock] = useState(0)
   const query = useQuery({
-    queryKey: subscriptionOverviewQueryKey,
-    enabled,
+    queryKey: [...subscriptionOverviewQueryKey, userId],
+    enabled: enabled && !!userId,
     staleTime: 30 * 1000,
     refetchInterval: 30 * 1000,
     refetchIntervalInBackground: false,

@@ -117,6 +117,16 @@ function SubscriptionCheckout(
           maximumFractionDigits: 2,
         }).format(amount)
   const currency = usingBalance ? 'USD' : (method?.name ?? '')
+  let validity = formatDuration(plan, t)
+  if (quote?.is_upgrade) {
+    validity = '—'
+    if (quote.current_end_time) {
+      validity = new Intl.DateTimeFormat(toIntlLocale(i18n.language), {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }).format(quote.current_end_time * 1000)
+    }
+  }
   const showReveal = () => {
     timer.current = setTimeout(() => {
       if (useAuthStore.getState().auth.user?.id !== props.userId) return
@@ -255,8 +265,10 @@ function SubscriptionCheckout(
               </div>
               <dl>
                 <div>
-                  <dt>{t('Validity Period')}</dt>
-                  <dd>{formatDuration(plan, t)}</dd>
+                  <dt>
+                    {quote?.is_upgrade ? t('Expires at') : t('Validity Period')}
+                  </dt>
+                  <dd>{validity}</dd>
                 </div>
                 {quote?.is_upgrade && (
                   <div>

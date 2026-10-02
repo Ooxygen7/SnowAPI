@@ -16,11 +16,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { AxiosError } from 'axios'
+import { AxiosError, isCancel } from 'axios'
 import i18next from 'i18next'
 import { toast } from 'sonner'
 
 export function handleServerError(error: unknown) {
+  if (isCancel(error)) return
   // eslint-disable-next-line no-console
   console.log(error)
 

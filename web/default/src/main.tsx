@@ -22,13 +22,14 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
-import { AxiosError } from 'axios'
+import { AxiosError, isCancel } from 'axios'
 import i18next from 'i18next'
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import { toast } from 'sonner'
 
 import { SnowShieldGate } from '@/features/snow-shield'
+import { bindAccountQueryCache } from '@/lib/account-query-cache'
 import { getStatus } from '@/lib/api'
 import { installBuildMetadata } from '@/lib/build-metadata'
 import { APP_BASE_PATH } from '@/lib/deployment-mode'
@@ -61,6 +62,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: (failureCount, error) => {
+        if (isCancel(error)) return false
         // eslint-disable-next-line no-console
         if (import.meta.env.DEV) console.log({ failureCount, error })
 
@@ -107,6 +109,25 @@ const queryClient = new QueryClient({
 })
 
 // Create a new router instance
+bindAccountQueryCache(queryClient)
+
+// Another tab can replace the shared login cookie. Reload rather than mixing
+// its identity with this tab's mounted components and private local state.
+window.addEventListener('storage', (event) => {
+  if (event.key !== 'user' && event.key !== null) return
+  let nextId: number | undefined
+  try {
+    const saved = window.localStorage.getItem('user')
+    nextId = saved ? (JSON.parse(saved) as { id?: number }).id : undefined
+  } catch {
+    nextId = undefined
+  }
+  if (nextId !== useAuthStore.getState().auth.user?.id) {
+    queryClient.clear()
+    window.location.reload()
+  }
+})
+
 const router = createRouter({
   basepath: APP_BASE_PATH,
   routeTree,
